@@ -306,6 +306,7 @@
     inner.append(tools);
 
     if (c.num > 1 && [1, 3, 4].includes(bi)) { const rv = revisionCard(c, bi); if (rv) inner.append(rv); }
+    if (bi === 5) { const rp = repertoireCard(c); if (rp) inner.append(rp); }
     const ul = el("ul", { class: "exos" });
     let wasComplete = complete();
     b.exercices.forEach(e => ul.append(renderExo(c, b, e, checked => {
@@ -388,6 +389,53 @@
   }
 
   // Révision : un exercice déjà vu dans un cours précédent, tiré au sort (le même pour un cours donné)
+  // Morceaux au choix du palier : écouter, puis « Je le choisis » (gardé sur l'appareil, envoyé dans le bilan)
+  const choixDe = pal => (state.repertoire ||= {})[pal] ||= [];
+  function pieceRow(pz, pal) {
+    const pick = el("button", { class: "btn small pick-btn", type: "button" });
+    const li = el("li", { class: "piece" });
+    const sync = () => {
+      const on = choixDe(pal).includes(pz.id);
+      li.classList.toggle("chosen", on);
+      pick.setAttribute("aria-pressed", String(on));
+      pick.textContent = on ? "✓ Choisi" : "Je le choisis";
+    };
+    pick.addEventListener("click", () => {
+      const L = choixDe(pal), i = L.indexOf(pz.id);
+      if (i >= 0) L.splice(i, 1); else { L.push(pz.id); Sons.cling(); }
+      save(); sync(); li.closest(".repertoire")?.dispatchEvent(new Event("choix"));
+    });
+    li.append(
+      el("div", { class: "piece-head" }, el("span", { class: "chip", text: pz.style }), el("strong", { text: pz.titre }), el("span", { class: "muted small", text: pz.artiste })),
+      el("p", { class: "small", text: pz.travaille + " " + pz.pourquoi }),
+      el("div", { class: "row-tools" },
+        el("a", { class: "btn small", href: pz.ecouter, target: "_blank", rel: "noopener" }, "▶ Écouter"),
+        pz.tuto ? el("a", { class: "btn small ghost", href: pz.tuto, target: "_blank", rel: "noopener" }, "Tuto") : null,
+        pick));
+    sync();
+    return li;
+  }
+  function repertoireCard(c) {
+    const p = palierOf(c), list = p?.repertoire || [];
+    if (!list.length) return null;
+    const card = el("details", { class: "repertoire" });
+    const sum = el("summary");
+    const syncSum = () => {
+      const ch = list.filter(x => choixDe(p.num).includes(x.id)).map(x => x.titre);
+      sum.replaceChildren(el("span", { class: "eyebrow", text: `Tes morceaux au choix · palier ${p.num}` }),
+        el("span", { class: "small", text: ch.length ? "Choisi : " + ch.join(", ") : `${list.length} propositions de styles différents, à écouter avant de choisir` }));
+    };
+    card.addEventListener("choix", syncSum);
+    syncSum();
+    const ul = el("ul", { class: "pieces" }, list.map(pz => pieceRow(pz, p.num)));
+    card.append(sum, el("p", { class: "muted small", text: "En plus de ta mission, choisis 1 ou 2 morceaux qui te plaisent. Tu peux changer d'avis quand tu veux : ton choix part dans ton bilan, et j'ajoute la tablature et les passages difficiles au cours." }), ul);
+    if (p.num === 3 && DATA.bossa?.length) {
+      card.append(el("p", { class: "eyebrow", text: "Et après : la bossa nova (palier 4 proposé)" }),
+        el("ul", { class: "pieces" }, DATA.bossa.map(pz => pieceRow(pz, 4))));
+    }
+    return card;
+  }
+
   function revisionCard(c, bi) {
     const seen = new Set(), pool = [];
     for (const x of DATA.cours) {
@@ -689,6 +737,9 @@
     const L = [];
     L.push(`Bilan du cours ${c.num} (${c.titre}, palier ${c.palier}) — ${d.toLocaleDateString("fr-FR")}`);
     L.push(`Fait : ${pr.done}/${pr.total} exercices` + (s.duree ? ` · durée ${s.duree} min` : ""));
+    const pal = palierOf(c), pool = [...(pal?.repertoire || []), ...(DATA.bossa || [])];
+    const ch = [...(state.repertoire?.[c.palier] || []), ...(c.palier === 3 ? state.repertoire?.[4] || [] : [])].map(id => pool.find(x => x.id === id)?.titre).filter(Boolean);
+    if (ch.length) L.push("Morceaux choisis : " + ch.join(", "));
     for (const b of c.blocs) {
       L.push("");
       L.push(b.titre);

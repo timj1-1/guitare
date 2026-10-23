@@ -593,6 +593,52 @@ for p in PALIERS:
                               "tests": [{"id": f"t{i + 1}", "label": t, "objectif": o} for i, (t, o) in enumerate(p["bilan"])]}
             cours.append(c)
 
+# ---------- Répertoire : morceaux au choix par palier (il choisit dans l'app, bloc Morceau) ----------
+# vidéos choisies sur leur titre (YouTube n'est pas joignable d'ici pour les vérifier)
+YT = lambda v: "https://www.youtube.com/watch?v=" + v
+def piece(id, style, titre, artiste, travaille, pourquoi, ecouter, tuto=None):
+    return {"id": id, "style": style, "titre": titre, "artiste": artiste, "travaille": travaille, "pourquoi": pourquoi,
+            "ecouter": YT(ecouter), **({"tuto": YT(tuto)} if tuto else {})}
+REPERTOIRE = {
+    1: [
+        piece("sos", "Chanson française", "Tous les cris, les S.O.S.", "Daniel Balavoine", "Accords, enchaînements, accompagnement régulier.",
+              "Ton morceau : tu l'as déjà commencé, ce palier sert à le jouer vraiment propre.", "urWV2OjAmUQ"),
+        piece("tarrega-mim", "Classique, arpèges", "Étude en Mi mineur", "Francisco Tárrega", "Arpège p-i-m-a régulier, mélodie jouée par l'annulaire.",
+              "La même main droite que Fragile, sur des accords ouverts simples.", "5EdL4_J9Se0", "hUNcojDqvhI"),
+        piece("sevillanas", "Flamenco", "Sevillanas : le rythme de base", "Traditionnel", "Compter en 3 temps, premiers accents de la main droite.",
+              "Une entrée douce dans le flamenco, avant la rumba du palier 2.", "KGxuvqcVnEU"),
+        piece("fields", "Pop", "Fields of Gold", "Sting", "Arpèges sur une autre grille d'accords.",
+              "Si Fragile te plaît : le même style, un autre morceau.", "KLVq0IAzh1A"),
+    ],
+    2: [
+        piece("romance", "Classique, arpèges", "Romance anonyme (Jeux interdits), 1re partie", "Anonyme", "Arpèges en triolets, mélodie sur la corde aiguë, un barré haut sur le manche.",
+              "L'étude idéale de ce palier : les arpèges du palier 1 et les barrés du palier 2.", "vBgDq5N6lCs"),
+        piece("cestecrit", "Chanson française", "C'est écrit", "Francis Cabrel", "Accompagnement en arpèges, enchaînements d'accords avec barrés.",
+              "Ton morceau : il demande des barrés sûrs, c'est le bon moment.", "IkAhYtcDkc4", "XJX5Jjrzoy0"),
+        piece("djobi", "Rumba", "Djobi Djoba", "Gipsy Kings", "Rumba avec golpe, barrés, cadence andalouse.",
+              "Le même rythme que Bamboleo, pour varier.", "znxb6KtOo_c"),
+        piece("pompe", "Gypsy", "La pompe manouche sur Minor Swing", "Django Reinhardt", "Main droite alternée basse et accord, accords sans corde à vide.",
+              "La base du jazz manouche, avant un vrai thème au palier 3.", "VbBBpfOZ0z0"),
+    ],
+    3: [
+        piece("malaguena", "Flamenco", "Malagueña (version flamenco)", "Traditionnel", "Mélodie au pouce, rasgueados, Mi phrygien.",
+              "Tout le palier dans un morceau : la gamme de la cadence andalouse et le rasgueado.", "I3jWsoQ8W8g", "FR2lh1-thI0"),
+        piece("lagrima", "Classique", "Lágrima", "Francisco Tárrega", "Changements de position, barrés, son chanté.",
+              "L'étude du palier : écartement et déplacements sur le manche.", "jRA9lolwg90", "pfbZ1UhR-t0"),
+        piece("yeuxnoirs", "Gypsy", "Les Yeux noirs (thème)", "Django Reinhardt", "Mineure harmonique, pompe manouche.",
+              "Ta gamme mineure du palier 3, dans le style que tu aimes.", "39k4pNjusq8"),
+        piece("shape", "Pop", "Shape of My Heart", "Sting", "Arpèges plus riches, accords en position, sons tenus.",
+              "La suite naturelle de Fragile, un cran plus dur.", "NlwIDxCjL-8"),
+    ],
+}
+# après le palier 3 : un palier 4 « Bossa » proposé (accords 7e, pouce régulier contre doigts décalés)
+BOSSA = [
+    piece("ipanema", "Bossa nova", "Garota de Ipanema", "João Gilberto, Stan Getz", "Accords majeur 7 et mineur 7, rythme bossa.",
+          "Le standard pour commencer la bossa, en accompagnement.", "otGz6hz-AXo"),
+    piece("corcovado", "Bossa nova", "Corcovado", "João Gilberto, Stan Getz", "Accords enrichis, rythme bossa plus lent.",
+          "Le deuxième standard, tout en douceur.", "kjilv-saThE"),
+]
+
 # ---------- Le prof qui parle : intro au démarrage de la séance, bilan à « Terminer le cours » ----------
 GENRE = ["d'échauffement", "de gamme", "de pentatonique", "de notes du manche", "de barrés et de rythme", "de morceau"]
 ORDINAL = {"A": "la première", "B": "la deuxième", "C": "la dernière"}
@@ -713,7 +759,9 @@ out = {
         {"bloc": "Barrés et rythme", "duree": 15}, {"bloc": "Morceau", "duree": 15},
     ],
     "themes": THEMES,
-    "paliers": [{"num": p["num"], "nom": NOMS[p["num"]], "titre": p["titre"], "but": p["but"], "mission": p["mission"]} for p in PALIERS],
+    "paliers": [{"num": p["num"], "nom": NOMS[p["num"]], "titre": p["titre"], "but": p["but"], "mission": p["mission"],
+                 "repertoire": REPERTOIRE[p["num"]]} for p in PALIERS],
+    "bossa": BOSSA,
     "cours": cours,
 }
 root = os.path.join(os.path.dirname(__file__), "..")
