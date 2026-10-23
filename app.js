@@ -113,23 +113,53 @@
   $("#backToCours").addEventListener("click", () => go("cours"));
 
   // ---------- Onglets des cours ----------
+  // En haut : les 3 paliers, puis les 4 semaines du palier choisi ; la semaine ouverte montre ses 3 cours.
+  let navWeek = null; // semaine ouverte (par défaut, celle du cours affiché)
   function renderTabs() {
     const nav = $("#coursTabs");
     nav.replaceChildren();
-    let week = 0;
-    for (const c of DATA.cours) {
-      if (c.semaine !== week) { week = c.semaine; nav.append(el("span", { class: "tab-week", text: "S" + week })); }
-      const cls = ["ctab", isDone(c.id) ? "done" : isStarted(c.id) ? "started" : ""].join(" ");
-      nav.append(el("button", {
-        type: "button", class: cls, "aria-current": c.id === state.current ? "true" : "false",
-        "data-id": c.id, title: c.titre, onclick: () => selectCours(c.id),
-      }, el("span", { class: "dot", "aria-hidden": "true" }), "Cours " + c.num));
+    const cur = byId(state.current) || nextCours();
+    const week = navWeek ?? cur.semaine;
+    const pal = DATA.cours.find(c => c.semaine === week).palier;
+    const pals = el("div", { class: "pal-row", role: "tablist", "aria-label": "Paliers" });
+    for (const p of DATA.paliers) {
+      const pc = DATA.cours.filter(c => c.palier === p.num), fait = pc.filter(c => isDone(c.id)).length;
+      const bar = el("i", { class: "pal-bar", "aria-hidden": "true" }); bar.style.setProperty("--p", fait / pc.length);
+      pals.append(el("button", {
+        type: "button", class: "pal-btn", role: "tab", "aria-selected": String(p.num === pal),
+        title: `${p.titre} · semaines ${pc[0].semaine} à ${pc.at(-1).semaine} · cours ${pc[0].num} à ${pc.at(-1).num} · ${fait} / ${pc.length} faits`,
+        onclick: () => {
+          if (p.num === pal) return;
+          // la semaine à reprendre dans ce palier : celle du cours affiché, sinon la première pas finie
+          const w = (cur.palier === p.num ? cur : pc.find(c => !isDone(c.id)) || pc[0]).semaine;
+          navWeek = w; renderTabs();
+        },
+      }, el("span", { class: "pal-num", text: String(p.num) }), el("span", { class: "pal-nom", text: p.nom }), bar));
     }
-    const cur = nav.querySelector('[aria-current="true"]');
-    if (cur) requestAnimationFrame(() => cur.scrollIntoView({ inline: "center", block: "nearest" }));
+    const weeks = el("div", { class: "week-row" });
+    const wk = [...new Set(DATA.cours.filter(c => c.palier === pal).map(c => c.semaine))];
+    for (const w of wk) {
+      const wc = DATA.cours.filter(c => c.semaine === w);
+      const st = wc.every(c => isDone(c.id)) ? "done" : wc.some(c => isDone(c.id) || isStarted(c.id)) ? "started" : "";
+      const open = w === week;
+      const head = el("button", {
+        type: "button", class: "week-btn", "aria-expanded": String(open), title: `Semaine ${w} : cours ${wc[0].num} à ${wc.at(-1).num}`,
+        onclick: () => { navWeek = w; renderTabs(); },
+      }, el("span", { class: "week-long", text: "Semaine " }), el("span", { class: "week-short", text: "S" }), String(w));
+      const grp = el("div", { class: ["week", open ? "open" : "", st].join(" ") }, head);
+      if (open) for (const c of wc) {
+        const cls = ["ctab", isDone(c.id) ? "done" : isStarted(c.id) ? "started" : ""].join(" ");
+        grp.append(el("button", {
+          type: "button", class: cls, "aria-current": c.id === state.current ? "true" : "false",
+          "data-id": c.id, title: c.titre, onclick: () => selectCours(c.id),
+        }, el("span", { class: "dot", "aria-hidden": "true" }), el("span", { class: "ctab-w", text: "Cours " }), String(c.num)));
+      }
+      weeks.append(grp);
+    }
+    nav.append(pals, weeks);
   }
   function selectCours(id) {
-    state.current = id; save();
+    state.current = id; save(); navWeek = null;
     renderTabs(); renderCours(); updateSeance();
     window.scrollTo({ top: 0 });
   }
@@ -164,7 +194,7 @@
     frets.style.setProperty("--n", pr.total);
     const prLabel = el("span", { class: "progress-label" });
     const hero = el("header", { class: "hero" },
-      el("span", { class: "hero-kicker", text: `Palier ${p.num} · ${p.titre}` }),
+      el("span", { class: "hero-kicker", text: `Palier ${p.num} · ${p.nom}` }),
       el("h1", { text: "Cours " + c.num }),
       el("p", { class: "sub", text: c.titre }),
       frets, prLabel,
@@ -704,7 +734,7 @@
     body.append(el("div", { class: "stats" },
       el("div", { class: "stat" }, el("b", { text: String(done.length) }), el("span", { text: `cours sur ${DATA.cours.length}` })),
       el("div", { class: "stat" }, el("b", { text: String(Math.floor(totalMin / 60)) + " h" + (totalMin % 60 ? " " + String(totalMin % 60).padStart(2, "0") : "") }), el("span", { text: "de pratique" })),
-      el("div", { class: "stat" }, el("b", { text: "Palier " + nxt.palier }), el("span", { text: palierOf(nxt).titre })),
+      el("div", { class: "stat" }, el("b", { text: "Palier " + nxt.palier }), el("span", { text: palierOf(nxt).nom })),
     ));
     body.append(renderProgression());
     body.append(renderConstruction());
@@ -890,7 +920,7 @@
     const ul = el("ul", { class: "theme-ex" });
     let pal = 0;
     for (const g of groups.values()) {
-      if (g.palier !== pal) { pal = g.palier; ul.append(el("li", { class: "theme-pal", text: `Palier ${pal} · ${DATA.paliers.find(p => p.num === pal)?.titre || ""}` })); }
+      if (g.palier !== pal) { pal = g.palier; ul.append(el("li", { class: "theme-pal", text: `Palier ${pal} · ${DATA.paliers.find(p => p.num === pal)?.nom || ""}` })); }
       const nums = g.items.map(a => a.c.num), weeks = [...new Set(g.items.map(a => a.c.semaine))];
       const n = g.items.length, done = g.items.filter(a => a.x?.done).length;
       const fac = g.items.filter(a => a.x?.feel === "facile").length, gal = g.items.filter(a => a.x?.feel === "galere").length;
@@ -917,7 +947,7 @@
     for (const p of DATA.paliers) {
       const pc = DATA.cours.filter(c => c.palier === p.num);
       const d = el("details", { class: "constr-pal" }, el("summary", {},
-        el("strong", { text: `Palier ${p.num} · ${p.titre}` }),
+        el("strong", { text: `Palier ${p.num} · ${p.nom} : ${p.titre.toLowerCase()}` }),
         el("span", { class: "muted small", text: `Semaines ${pc[0].semaine} à ${pc.at(-1).semaine} · cours ${pc[0].num} à ${pc.at(-1).num}` })));
       d.append(el("p", { class: "small" }, el("strong", { text: "Le but : " }), p.but, " ", el("strong", { text: "Ta mission : " }), p.mission));
       const weeks = [...new Set(pc.map(c => c.semaine))];

@@ -9,6 +9,9 @@ ETIREMENTS = {
 }
 
 # Chaque palier : 6 blocs, chacun avec deux moitiés (semaines 1-2 / 3-4 du palier).
+# noms courts des paliers (navigation de l'app) : une progression vers l'autonomie
+NOMS = {1: "Fondations", 2: "Indépendance", 3: "Liberté"}
+
 PALIERS = [
   {
     "num": 1, "titre": "Les bases propres",
@@ -617,7 +620,7 @@ out = {
         {"bloc": "Barrés et rythme", "duree": 15}, {"bloc": "Morceau", "duree": 15},
     ],
     "themes": THEMES,
-    "paliers": [{"num": p["num"], "titre": p["titre"], "but": p["but"], "mission": p["mission"]} for p in PALIERS],
+    "paliers": [{"num": p["num"], "nom": NOMS[p["num"]], "titre": p["titre"], "but": p["but"], "mission": p["mission"]} for p in PALIERS],
     "cours": cours,
 }
 root = os.path.join(os.path.dirname(__file__), "..")

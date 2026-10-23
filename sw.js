@@ -1,5 +1,5 @@
 // Ma guitare : fonctionne hors ligne. Le cours et les retours du prof sont pris en ligne d'abord.
-const VERSION = "v10";
+const VERSION = "v11";
 // la voix : un fichier par phrase, nommé par son empreinte, donc gardé d'une version à l'autre
 const VOIX = "voix-1";
 const SHELL = ["./", "index.html", "style.css", "app.js", "sons.js", "jeux.js", "samples-nylon.js", "manche.html", "manifest.webmanifest",

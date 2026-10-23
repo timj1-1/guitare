@@ -116,19 +116,50 @@ main { flex: 1; }
 /* Onglets des cours */
 .cours-tabs {
   position: sticky; top: calc(52px + env(safe-area-inset-top, 0px)); z-index: 15;
-  display: flex; gap: 6px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+  display: flex; flex-direction: column; gap: 8px;
   padding: 6px max(16px, env(safe-area-inset-left, 0px)) 10px;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
   border-bottom: 1px solid var(--line);
 }
-.cours-tabs::-webkit-scrollbar { display: none; }
 @media (min-width: 852px) { .cours-tabs { padding-inline: calc((100vw - 820px) / 2 + 16px); } }
-.tab-week {
-  flex: none; align-self: center; font-size: .78rem; font-weight: 600;
-  color: var(--muted); padding: 0 2px 0 8px;
+/* les 3 paliers : un contrôle segmenté, avec une fine barre de progression */
+.pal-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px; border-radius: 12px; background: var(--surface-2, var(--line)); }
+.pal-btn {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0;
+  height: 36px; padding: 0 8px 3px; border: 0; border-radius: 9px; background: transparent; color: var(--muted);
+  font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; overflow: hidden;
 }
-.tab-week:first-child { padding-left: 0; }
+.pal-btn[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.pal-num { flex: none; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: .7rem; background: var(--line); color: var(--ink); }
+.pal-btn[aria-selected="true"] .pal-num { background: var(--tab-on); color: var(--tab-on-ink); }
+.pal-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pal-bar { position: absolute; left: 10px; right: 10px; bottom: 3px; height: 3px; border-radius: 2px; background: var(--line); }
+.pal-bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: calc(var(--p) * 100%); border-radius: 2px; background: var(--ok); }
+/* les semaines du palier ; la semaine ouverte montre ses 3 cours */
+.week-row { display: flex; gap: 6px; align-items: center; }
+.week { display: flex; align-items: center; gap: 4px; flex: none; border-radius: 999px; }
+.week.open { flex: 1; padding: 3px; gap: 4px; background: var(--surface-2, var(--line)); }
+.week-btn {
+  flex: none; height: 40px; min-width: 44px; padding: 0 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.week.open .week-btn { height: 34px; border-color: transparent; background: transparent; padding: 0 6px 0 10px; }
+.week.started:not(.open) .week-btn { border-color: var(--accent); }
+.week.done:not(.open) .week-btn { border-color: var(--ok); color: var(--ok); }
+.week-short { display: none; }
+.week:not(.open) .week-long { display: none; }
+.week:not(.open) .week-short { display: inline; }
+.week.open .ctab { flex: 1; justify-content: center; height: 34px; padding: 0 10px; }
+@media (max-width: 480px) {
+  .week.open .week-long { display: none; }
+  .week.open .week-short { display: inline; }
+  .ctab-w { display: none; }
+  .week.open .ctab { padding: 0 6px; min-width: 0; }
+  .pal-btn { font-size: .84rem; padding: 0 4px 3px; }
+  .pal-num { display: none; }
+}
 .ctab {
   flex: none; scroll-snap-align: center;
   display: inline-flex; align-items: center; gap: 6px;
