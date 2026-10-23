@@ -677,3 +677,9 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .voix-opt:disabled { opacity: .5; cursor: default; }
 .voix-play { flex: none; width: 48px; border-radius: 12px; }
 .voix-play:disabled { opacity: .4; }
+
+/* Intro du prof, sous le minuteur de séance */
+.seance-card:has(.seance-intro) { flex-wrap: wrap; }
+.seance-intro { flex-basis: 100%; display: flex; }
+.hero .seance-intro .speak-btn { background: rgba(255, 255, 255, .1); color: var(--nacre); border-color: transparent; }
+#recapVoix:not(:empty) { display: flex; }

@@ -30,10 +30,19 @@ empreinte = lambda t: hashlib.sha1(norm(t).encode("utf-8")).hexdigest()[:16]
 def phrases_cours():
     d = json.loads((ROOT / "data/cours.json").read_text(encoding="utf-8"))
     out = []
+    flat = lambda v: [v] if isinstance(v, str) else [y for x in (v.values() if isinstance(v, dict) else v) for y in flat(x)]
+    out += flat(d.get("prof", {}))
     for c in d["cours"]:
         for b in c["blocs"]:
             for segs in b.get("voix", {}).values():
                 out += segs
+            out += [e["label"] for e in b["exercices"]]  # lus dans l'intro et le bilan parlés
+        out += flat(c.get("prof", {}))
+        if c.get("mot"): out += re.split(r"\n+", c["mot"])
+    r = ROOT / "data/retours.json"
+    if r.exists():
+        for x in json.loads(r.read_text(encoding="utf-8")).get("retours", []):
+            out += re.split(r"\n+", x.get("texte", ""))
     return out
 
 FR = ["Do", "Do♯", "Ré", "Ré♯", "Mi", "Fa", "Fa♯", "Sol", "Sol♯", "La", "La♯", "Si"]

@@ -593,6 +593,94 @@ for p in PALIERS:
                               "tests": [{"id": f"t{i + 1}", "label": t, "objectif": o} for i, (t, o) in enumerate(p["bilan"])]}
             cours.append(c)
 
+# ---------- Le prof qui parle : intro au démarrage de la séance, bilan à « Terminer le cours » ----------
+GENRE = ["d'échauffement", "de gamme", "de pentatonique", "de notes du manche", "de barrés et de rythme", "de morceau"]
+ORDINAL = {"A": "la première", "B": "la deuxième", "C": "la dernière"}
+lower1 = lambda t: t[:1].lower() + t[1:]
+court = lambda b: b["titre"].split(". ", 1)[-1]
+num_fr = lambda n: {1: "une", 2: "deux", 3: "trois"}.get(n, str(n))
+
+def intro(c, prev):
+    p = next(x for x in PALIERS if x["num"] == c["palier"])
+    wk = (c["semaine"] - 1) % 4
+    bilan_num = (c["palier"]) * 12
+    nouveau = c["seance"] == "A" and wk in (0, 2)
+    salut = {"A": "Bonjour Timothée !", "B": "Re-bonjour Timothée !", "C": "Salut Timothée !"}[c["seance"]]
+    I = [f"{salut} Bienvenue au cours {c['num']}, {ORDINAL[c['seance']]} séance de la semaine {c['semaine']}."]
+    if wk == 0 and c["seance"] == "A":
+        I.append(f"On attaque le palier {p['num']} : {NOMS[p['num']]}. Le but : {lower1(p['but'])}")
+        I.append(f"Ta mission d'ici la fin du palier, dans quatre semaines : {lower1(p['mission'])}")
+    elif c.get("bilan"):
+        n = len(c["bilan"]["tests"])
+        I.append(f"Aujourd'hui, c'est le jour du bilan du palier {p['num']}, {NOMS[p['num']]} ! {n} tests t'attendent à la fin du cours. Avec {n - 1} tests réussis, tu passes au palier suivant.")
+    elif c["seance"] == "A":
+        I.append(f"On est dans le palier {p['num']}, {NOMS[p['num']]}, semaine {wk + 1} sur 4. Je te rappelle le but : {lower1(p['but'])}")
+        I.append(f"C'est la dernière semaine avant le bilan du palier, au cours {bilan_num}." if wk == 3
+                 else f"Le bilan du palier arrive dans {num_fr(3 - wk)} semaine{'s' if 3 - wk > 1 else ''}, au cours {bilan_num}. Ta mission : {lower1(p['mission'])}")
+    else:
+        I.append(f"On est toujours dans le palier {p['num']}, {NOMS[p['num']]}. Ta mission : {lower1(p['mission'])}")
+    return I, nouveau, wk
+
+def plan(c):
+    parts = [f"{b['duree']} minutes {GENRE[i]}" for i, b in enumerate(c["blocs"])]
+    return "Le déroulé, environ une heure dix : " + ", ".join(parts[:-1]) + ", et " + parts[-1] + "."
+
+def voix_prof(c, prev, nxt, avant=None, avant3=None):
+    I, nouveau, wk = intro(c, prev)
+    suite = []  # après le mot du prof et les difficultés du dernier cours (ajoutés par l'app)
+    # les exercices nouveaux d'un bloc, par rapport au même bloc deux semaines plus tôt
+    def ex1(b, ref):
+        labels = [e["label"] for e in b["exercices"] if not e["label"].lower().startswith("étirements")]
+        if ref:
+            old = {e["label"] for rb in ref["blocs"] if rb["id"] == b["id"] for e in rb["exercices"]}
+            labels = [l for l in labels if l not in old] or labels
+        return ", puis ".join(labels[:2])
+    if nouveau and wk == 0:
+        suite.append("Aujourd'hui, il y a du nouveau dans chaque bloc. Voilà ce qu'on travaille, et pourquoi.")
+        suite += [f"{court(b)} : {b['sert']}" for b in c["blocs"]]
+    elif nouveau:
+        suite.append("Aujourd'hui, de nouveaux exercices arrivent dans chaque bloc. Les voici.")
+        suite += [f"{court(b)} : {ex1(b, avant)}." for b in c["blocs"] if ex1(b, avant)]
+    elif c["seance"] == "A":
+        suite.append("Rappel de la semaine dernière : tu as découvert de nouveaux exercices dans chaque bloc. Cette semaine, on les consolide : le même contenu, un peu plus propre et un peu plus vite.")
+        suite.append(f"En gamme : {ex1(c['blocs'][1], avant3)}. En barrés et rythme : {ex1(c['blocs'][4], avant3)}.")
+    else:
+        suite.append("Pas de nouveauté aujourd'hui : on reprend les exercices de la dernière fois, pour qu'ils deviennent automatiques. C'est la répétition qui fait progresser.")
+    suite.append(plan(c))
+    suite.append("Prends ta guitare, vérifie l'accord, et on commence par l'échauffement. Allez, c'est parti !")
+    fin = [f"Cours {c['num']} terminé, bravo !"]
+    if c.get("bilan"):
+        pn = c["palier"]
+        apres = (f"Envoie-moi tes résultats : je te dirai si tu passes au palier {pn + 1}, {NOMS[pn + 1]}." if pn < 3
+                 else "C'était le dernier bilan du cours. Envoie-moi tes résultats, et on choisira ensemble la suite.")
+        suite_fin = f"C'était le bilan du palier {pn}. {apres}"
+    elif nxt:
+        n_wk = (nxt["semaine"] - 1) % 4
+        if nxt["seance"] == "A" and n_wk in (0, 2):
+            suite_fin = f"Au prochain cours, le cours {nxt['num']}, il y a du nouveau dans chaque bloc. J'ai hâte !"
+        else:
+            suite_fin = f"Au prochain cours, le cours {nxt['num']}, on continue sur la même lancée."
+    else:
+        suite_fin = ""
+    return {"intro": I, "intro_suite": suite, "fin": fin, "fin_suite": [suite_fin] if suite_fin else []}
+
+# morceaux du bilan parlé, assemblés par l'app selon ce que tu as fait (app.js : bilanParle)
+PROF = {
+    "tout": "Tu as fait tous les exercices. Super travail !",
+    "presque": "Tu as fait presque tous les exercices, c'est très bien.",
+    "moitie": "Tu as fait plus de la moitié des exercices.",
+    "peu": "Tu as fait une partie des exercices. Ce n'est pas grave : ce qui compte, c'est de revenir régulièrement.",
+    "minutes": {str(n): f"Tu as joué environ {n} minutes." for n in range(5, 125, 5)},
+    "facile": "Ce qui a été facile :",
+    "galere": "Ce qui t'a donné du mal :",
+    "galere_fin": "Pas d'inquiétude : j'en tiens compte pour la suite. Au prochain cours, on le reprend doucement, au tempo de départ.",
+    "rien_galere": "Rien ne t'a vraiment posé de problème : c'est bon signe, on pourra bientôt monter le tempo.",
+    "tempo": {str(k): f"Ton tempo a monté sur {k} exercice{'s' if k > 1 else ''}." for k in range(1, 13)},
+    "envoie": "Dernière chose : copie ton bilan et envoie-le-moi. Je lis tout, et j'adapte le prochain cours.",
+    "intro_galere": "Au dernier cours, ce qui t'a donné du mal :",
+    "intro_galere_fin": "On y va doucement aujourd'hui, au tempo de départ, en visant un son propre.",
+}
+
 # Adaptations après tes bilans : data/adaptations.json, rangées par cours.
 # {"c4": {"mot": "…", "blocs": {"b2": {"faire": "…", "exercices": [...]}}}}
 ADAPT = os.path.join(os.path.dirname(__file__), "..", "data", "adaptations.json")
@@ -611,8 +699,13 @@ if os.path.exists(ADAPT):
             else:
                 c[k] = v
 
+for i, c in enumerate(cours):
+    same_pal = lambda j: cours[j] if j >= 0 and cours[j]["palier"] == c["palier"] else None
+    c["prof"] = voix_prof(c, cours[i - 1] if i else None, cours[i + 1] if i + 1 < len(cours) else None, same_pal(i - 6), same_pal(i - 9))
+
 out = {
     "version": 1,
+    "prof": PROF,
     "maj": __import__("datetime").datetime.now().strftime("%Y-%m-%dT%H:%M"),
     "seance_type": [
         {"bloc": "Échauffement et technique", "duree": 10}, {"bloc": "Gamme", "duree": 10},

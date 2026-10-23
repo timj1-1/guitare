@@ -351,7 +351,7 @@
     b.addEventListener("click", async () => {
       if (b.classList.contains("speaking")) return Sons.tais();
       b.classList.add("speaking"); txt.textContent = "Arrêter";
-      try { await Sons.dire(segs, { force: true }); } finally { b.classList.remove("speaking"); txt.textContent = label; }
+      try { await Sons.dire(typeof segs === "function" ? segs() : segs, { force: true }); } finally { b.classList.remove("speaking"); txt.textContent = label; }
     });
     return b;
   }
@@ -554,6 +554,36 @@
     );
   }
 
+  // ---------- Le prof qui parle : intro au démarrage de la séance, bilan à « Terminer le cours » ----------
+  // Tous les morceaux sont enregistrés d'avance (data/cours.json : prof, et les exercices) : seul l'assemblage dépend de toi.
+  const lignes = t => String(t || "").split(/\n+/).map(x => x.trim()).filter(Boolean);
+  const profOn = () => { try { return localStorage.getItem("maguitare:prof") !== "0"; } catch { return true; } };
+  const exNotes = c => allEx(c).map(a => ({ ...a, x: state.cours[c.id]?.ex[a.key] || {} }));
+  function introSegs(c) {
+    const P = DATA.prof, pr = c.prof || {}, S = [...(pr.intro || [])];
+    if (c.mot) S.push(...lignes(c.mot));
+    RETOURS.filter(r => r.pour === c.id).forEach(r => S.push(...lignes(r.texte)));
+    const prev = DATA.cours[DATA.cours.indexOf(c) - 1];
+    const dur = prev ? exNotes(prev).filter(a => a.x.feel === "galere").slice(0, 2) : [];
+    if (dur.length) S.push(P.intro_galere, ...dur.map(a => a.e.label), P.intro_galere_fin);
+    return [...S, ...(pr.intro_suite || [])];
+  }
+  function finSegs(c) {
+    const P = DATA.prof, pr = c.prof || {}, s = cs(c.id), all = exNotes(c);
+    const S = [...(pr.fin || [])];
+    const q = progressOf(c), r = q.total ? q.done / q.total : 0;
+    S.push(r >= 1 ? P.tout : r >= .8 ? P.presque : r >= .5 ? P.moitie : P.peu);
+    if (s.duree >= 5) S.push(P.minutes[String(Math.min(120, Math.round(s.duree / 5) * 5))]);
+    const fac = all.filter(a => a.x.feel === "facile").slice(0, 2), gal = all.filter(a => a.x.feel === "galere").slice(0, 3);
+    if (fac.length) S.push(P.facile, ...fac.map(a => a.e.label));
+    if (gal.length) S.push(P.galere, ...gal.map(a => a.e.label), P.galere_fin);
+    else if (r >= .8) S.push(P.rien_galere);
+    const up = all.filter(a => a.e.tempo && a.x.bpm > Math.max(40, a.e.tempo - 10)).length;
+    if (up) S.push(P.tempo[String(Math.min(12, up))]);
+    S.push(...(pr.fin_suite || []), P.envoie);
+    return S.filter(Boolean);
+  }
+
   function finish(c) {
     const s = cs(c.id);
     seancePause(c.id);
@@ -564,6 +594,7 @@
     renderTabs(); renderCours(); updateSeance();
     Sons.fanfare();
     showRecap(c);
+    if (profOn()) setTimeout(() => { if (recapSheet.open) Sons.dire(finSegs(c), { force: true }); }, 1600);
   }
 
   // ---------- Minuteur de séance : de « Démarrer » à « Terminer le cours » ----------
@@ -581,6 +612,7 @@
   function seanceStart(c) {
     Object.keys(state.cours).forEach(id => { if (id !== c.id) seancePause(id); });
     const s = cs(c.id);
+    if (!s.seance && profOn()) setTimeout(() => Sons.dire(introSegs(c), { force: true }), 700); // première fois : le prof présente le cours
     s.seance ||= { acc: 0, start: null };
     s.seance.start ||= Date.now();
     touch(c); flush(); updateSeance();
@@ -640,7 +672,8 @@
     const card = el("section", { class: "card seance-card" },
       withIcon(el("div", { class: "seance-ic" }), ICON_TIMER),
       el("div", { class: "seance-txt" }, label, time, el("span", { class: "muted small", text: "Il s'arrête quand tu touches « Terminer le cours »." })),
-      el("div", { class: "seance-btns" }, reset, btn));
+      el("div", { class: "seance-btns" }, reset, btn),
+      c.prof ? el("div", { class: "seance-intro" }, speakBtn(() => introSegs(c), "Intro du prof", "Le prof présente le cours : le palier, les objectifs, le programme")) : null);
     seanceUI = { c, card, time, label, btn, reset, duree: null };
     requestAnimationFrame(updateSeance);
     return card;
@@ -691,6 +724,7 @@
   let recapCurrent = "";
   function showRecap(c) {
     recapCurrent = recapText(c);
+    $("#recapVoix").replaceChildren(speakBtn(() => finSegs(c), "Écouter le bilan du prof", "Le prof te fait le compte-rendu du cours"));
     $("#recapText").textContent = recapCurrent;
     $("#recapStatus").textContent = "";
     $("#recapShare").hidden = !navigator.share;
@@ -703,6 +737,7 @@
       let ok = false; try { ok = document.execCommand("copy"); } catch {} ta.remove(); return ok;
     }
   }
+  recapSheet.addEventListener("close", () => Sons.tais());
   $("#recapCopy").addEventListener("click", async () => {
     $("#recapStatus").textContent = (await copy(recapCurrent))
       ? "Copié. Ouvre ton projet Guitare sur Claude et colle-le dans la conversation."
@@ -835,6 +870,7 @@
       toggle("Petits sons", "Un « cling » quand tu coches un exercice, une mélodie quand un bloc ou un cours est fini.", () => Sons.sfx, v => { Sons.sfx = v; if (v) Sons.cling(); }));
     if (Sons.voixDispo) {
       reglages.append(toggle("Voix dans les jeux", "Une voix naturelle lit les questions et les réponses des jeux.", () => Sons.voix, v => { Sons.voix = v; if (v) Sons.dire("D'accord, je lis les consignes des jeux."); }));
+      reglages.append(toggle("Le prof te parle", "Il présente le cours quand tu lances la séance, et fait le bilan quand tu le termines.", profOn, v => { try { localStorage.setItem("maguitare:prof", v ? "1" : "0"); } catch {} if (!v) Sons.tais(); }));
       reglages.append(choixVoix());
       reglages.append(el("p", { class: "muted small", text: "Dans chaque bloc, les boutons « Écouter » lisent la consigne, le « pourquoi » et l'explication. Les phrases sont enregistrées d'avance : une phrase toute neuve (après une adaptation du cours) est lue par la voix de ton appareil, le temps que je l'enregistre." }));
     }
