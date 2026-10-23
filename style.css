@@ -572,3 +572,58 @@ dialog.schema-view::backdrop { background: var(--surface); }
 .hero .seance-txt { line-height: 1.25; }
 @media (prefers-reduced-motion: reduce) { .frets i { transition: none; } }
 @media (max-width: 380px) { .hero .seance-ic { display: none; } }
+
+/* Pourquoi c'est utile, et quand tu t'en serviras */
+details.quand { border-radius: 12px; background: var(--surface-2); padding: 10px 14px; }
+details.quand > summary { cursor: pointer; font-weight: 700; font-size: .95rem; color: var(--ink); list-style: none; display: flex; align-items: center; gap: 8px; }
+details.quand > summary::-webkit-details-marker { display: none; }
+details.quand > summary::before { content: "💡"; }
+details.quand > summary::after { content: "▸"; margin-left: auto; color: var(--muted); transition: transform .15s; }
+details.quand[open] > summary::after { transform: rotate(90deg); }
+.quand-in { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 8px; }
+.quand-in ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.speak-btn.speaking { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+
+/* Minuteurs */
+.mini-timer.paused { background: var(--surface-2); color: var(--muted); }
+.mini-timer.paused b::after { content: " ⏸"; font-size: .8em; }
+.seance-btns { flex: none; display: flex; gap: 8px; align-items: center; }
+@media (max-width: 420px) { .seance-btns { width: 100%; } .seance-btns .btn { flex: 1; } }
+.tm { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 14px; background: var(--surface-2); }
+.tm-name { font-size: .95rem; }
+.tm-name:empty { display: none; }
+.tm-time { font-family: var(--f-display); font-weight: 400; font-size: 2.4rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tm .row-tools { margin-top: 6px; }
+
+/* Ma progression : un thème se déplie */
+details.prog-row > summary { list-style: none; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+details.prog-row > summary::-webkit-details-marker { display: none; }
+.prog-voir { color: var(--accent); font-weight: 600; margin-left: 6px; white-space: nowrap; }
+.prog-voir::before { content: "· "; color: var(--muted); font-weight: 400; }
+.prog-voir::after { content: " ▸"; }
+details.prog-row[open] .prog-voir::after { content: " ▾"; }
+details.prog-row[open] { grid-column: 1 / -1; }
+.theme-ex { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.theme-pal { font-size: .82rem; font-weight: 600; color: var(--muted); margin-top: 6px; }
+.theme-item { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.ti-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.ti-top strong { font-size: .92rem; font-weight: 600; }
+.theme-item .pill { flex: none; }
+.pill.now { background: var(--accent-soft); color: var(--accent); }
+.pill.next, .pill.todo { background: var(--surface-2); color: var(--muted); }
+.pill.mid { background: var(--mid-soft); color: var(--mid); }
+
+/* Comment est construit ton cours */
+.construction { display: flex; flex-direction: column; gap: 10px; }
+.construction > p { margin: 0; }
+details.constr-pal { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+details.constr-pal > summary { cursor: pointer; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+details.constr-pal > summary::-webkit-details-marker { display: none; }
+details.constr-pal > summary strong::after { content: " ▸"; color: var(--muted); }
+details.constr-pal[open] > summary strong::after { content: " ▾"; }
+details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
+.constr-blocs { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: .88rem; }
+.constr-blocs li strong { display: block; font-weight: 600; }
+.constr-bilan { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--accent-soft); }
+.hero .seance-card .icon-btn { background: rgba(255, 255, 255, .1); border-color: transparent; color: var(--nacre); }
+@media (max-width: 420px) { .hero .seance-btns { width: auto; } .hero .seance-btns .btn { flex: none; } }

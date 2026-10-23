@@ -29,42 +29,12 @@
     return n;
   };
 
-  // ---------- Son : les mêmes guitares nylon que Mon manche ----------
-  let ctx = null, buffers = null, loading = null;
-  const getCtx = () => (window.Sons ? Sons.ctx() : (ctx ||= new (window.AudioContext || window.webkitAudioContext)()));
-  function loadSamples() {
-    if (loading) return loading;
-    loading = new Promise(res => {
-      const go = async () => {
-        const src = window.NYLON_SAMPLES || {}, c = getCtx(), out = [];
-        await Promise.all(Object.entries(src).map(async ([m, b64]) => {
-          try {
-            const bin = atob(b64), buf = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-            const decoded = await new Promise((ok, ko) => { const p = c.decodeAudioData(buf.buffer, ok, ko); if (p?.then) p.then(ok, ko); });
-            out.push({ m: +m, buf: decoded });
-          } catch {}
-        }));
-        buffers = out.sort((a, b) => a.m - b.m); res();
-      };
-      if (window.NYLON_SAMPLES) go();
-      else { const s = document.createElement("script"); s.src = "samples-nylon.js"; s.onload = go; s.onerror = () => { buffers = []; res(); }; document.head.append(s); }
-    });
-    return loading;
-  }
-  function unlock() {
-    if (window.Sons) return Sons.unlock();
-    const c = getCtx(); if (c.state === "suspended") c.resume();
-    const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0);
-  }
+  // ---------- Son : les mêmes guitares nylon que Mon manche (chargées par sons.js) ----------
+  const unlock = () => window.Sons?.unlock();
+  const loadSamples = () => window.Sons?.guitare.charge();
   function play(midi) {
-    if (!soundOn || quiet || !buffers?.length) return;
-    const c = getCtx();
-    const near = buffers.reduce((a, b) => (Math.abs(b.m - midi) < Math.abs(a.m - midi) ? b : a));
-    const s = c.createBufferSource(), g = c.createGain();
-    s.buffer = near.buf; s.playbackRate.value = Math.pow(2, (midi - near.m) / 12);
-    g.gain.value = 0.9; s.connect(g).connect(c.destination); s.start();
-    g.gain.setTargetAtTime(0, c.currentTime + 1.4, 0.25); s.stop(c.currentTime + 2.6);
+    if (!soundOn || quiet) return;
+    window.Sons?.guitare.note(midi);
   }
   let soundOn = true;
   try { soundOn = localStorage.getItem("maguitare:son") !== "0"; } catch {}
@@ -174,7 +144,7 @@
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     if (!isCurrent()) { stream.getTracks().forEach(t => t.stop()); return false; }
     stopMic();
-    const c = getCtx(); if (c.state === "suspended") await c.resume();
+    const c = Sons.ctx(); if (c.state === "suspended") await c.resume();
     const src = c.createMediaStreamSource(stream), an = c.createAnalyser(), mute = c.createGain();
     an.fftSize = 4096; mute.gain.value = 0;
     src.connect(an); an.connect(mute); mute.connect(c.destination);
@@ -290,10 +260,11 @@
     const fb = el("p", { class: "jeu-fb", role: "status" });
     const hintBtn = el("button", { class: "btn small", type: "button", text: "💡 Indice" });
     const solveBtn = el("button", { class: "btn small", type: "button", text: "Résoudre" });
+    const retryBtn = el("button", { class: "btn small", type: "button", text: "↺ Réessayer", hidden: true, title: "Rejouer ce tour (il compte comme aidé)" });
     const nextBtn = el("button", { class: "btn small primary", type: "button", text: "Suivant →", hidden: true });
     const listenBtn = el("button", { class: "btn small listen-btn", type: "button", "aria-pressed": String(listen), title: "Jouer les notes sur ta guitare : le micro les reconnaît" });
     listenBtn.innerHTML = ICON_MIC; listenBtn.append(listen ? "Écoute : oui" : "Mode écoute");
-    const actions = el("div", { class: "jeu-actions" }, hintBtn, solveBtn, nextBtn, listenBtn);
+    const actions = el("div", { class: "jeu-actions" }, hintBtn, solveBtn, retryBtn, nextBtn, listenBtn);
     const level = el("i");
     const heardTxt = el("span", { text: "Je prépare le micro…" });
     const listenBar = el("div", { class: "jeu-listen", hidden: !listen }, el("span", { class: "jl-level", "aria-hidden": "true" }, level), heardTxt);
@@ -316,12 +287,13 @@
     const curString = r => (left(r)[0] || [])[0];
     const setFb = (text, cls = "", speak = true) => { fb.textContent = text; fb.className = "jeu-fb" + (cls ? " " + cls : ""); if (speak) say(text); };
 
-    function showRound() {
+    // retry : le même tour, rejoué après « Résoudre » (il reste compté comme aidé)
+    function showRound(retry = false) {
       const r = R();
-      board.clear(); run.found = new Set(); run.roundErr = 0; run.hintLevel = 0; run.roundHelp = false; run.locked = false; run.wrongSeen = new Set();
+      board.clear(); run.found = new Set(); run.roundErr = 0; run.hintLevel = 0; run.roundHelp = retry; run.locked = false; run.wrongSeen = new Set();
       fb.textContent = ""; fb.className = "jeu-fb";
       prog.textContent = `${run.i + 1} / ${rounds.length}`;
-      hintBtn.hidden = solveBtn.hidden = false; nextBtn.hidden = true; hintBtn.disabled = false;
+      hintBtn.hidden = solveBtn.hidden = false; nextBtn.hidden = retryBtn.hidden = true; hintBtn.disabled = false;
       q.textContent = r.seq ? `${r.q} : commence par ${corde(curString(r))}` : r.q;
       board.dim(r.only || (r.ask ? [r.ask[0]] : r.seq ? [curString(r)] : null));
       answers.hidden = !r.ask;
@@ -341,6 +313,7 @@
       showRound();
     }
     nextBtn.addEventListener("click", () => run && next());
+    retryBtn.addEventListener("click", () => { if (run) { clearTimeout(run.timer); showRound(true); } });
 
     function answer(n) {
       if (run.locked) return;
@@ -354,7 +327,8 @@
         say(`Oui, ${r.answer} !`);
       } else {
         run.errors++; board.set(s, f, "bad", r.answer);
-        setFb(`Non, c'est un ${r.answer} (case ${f}).`, "bad");
+        setFb(`Non, c'est un ${r.answer} (case ${f}).`, "bad", false);
+        say(`Non, c'est un ${r.answer}.`);
       }
       hintBtn.hidden = solveBtn.hidden = true;
       run.timer = setTimeout(next, n === r.answer ? 900 : 1900);
@@ -461,8 +435,8 @@
         shown.forEach(([s, f]) => board.set(s, f, "sol", nameOf(s, f)));
         setFb(r.anyOf || shown.length === 1 ? `Voilà : case ${shown[0][1]} sur ${corde(shown[0][0])}.` : `Voilà les ${shown.length} qui restaient. Regarde-les bien.`, "hint");
       }
-      hintBtn.hidden = solveBtn.hidden = true; nextBtn.hidden = false;
-      nextBtn.focus({ preventScroll: true });
+      hintBtn.hidden = solveBtn.hidden = true; nextBtn.hidden = retryBtn.hidden = false;
+      retryBtn.focus({ preventScroll: true });
     });
 
     listenBtn.addEventListener("click", () => {
@@ -485,7 +459,7 @@
       fb.textContent = (isAsk ? `${score} bonnes réponses sur ${rounds.length}` : `${score} tours sur ${rounds.length} sans aide ni erreur, ${run.errors} erreur${run.errors > 1 ? "s" : ""}`)
         + (run.hints ? `, ${run.hints} indice${run.hints > 1 ? "s" : ""}` : "") + (run.solved ? `, ${run.solved} résolu${run.solved > 1 ? "s" : ""}` : "")
         + (avg ? ` · ${(avg / 1000).toFixed(1).replace(".", ",")} s par note` : "") + ".";
-      say(bravo + " " + fb.textContent);
+      say(`${bravo} ${score} ${isAsk ? "bonnes réponses" : "tours"} sur ${rounds.length}${isAsk ? "" : " sans faute"}.`);
       window.Sons?.[pct >= 0.8 ? "bloc" : "cling"]?.();
       boardHost.append(el("div", { class: "jeu-end" },
         el("button", { class: "btn primary big", type: "button", text: "Rejouer", onclick: () => open(cfg, onDone) }),
