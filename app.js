@@ -242,6 +242,19 @@
     card.append(head, inner);
 
     inner.append(el("blockquote", { class: "sert", text: b.sert }));
+    if (b.quand?.length) {
+      // ouvert quand la notion est nouvelle (premier cours du palier), sinon replié
+      const prevC = DATA.cours[DATA.cours.indexOf(c) - 1];
+      const isNew = !prevC || prevC.palier !== c.palier;
+      const quandKey = openKey + "/quand";
+      const q = el("details", { class: "quand", open: state.open[quandKey] ?? isNew },
+        el("summary", {}, "Pourquoi c'est utile, et quand tu t'en serviras"));
+      q.addEventListener("toggle", () => { state.open[quandKey] = q.open; save(); });
+      q.append(el("div", { class: "quand-in" },
+        el("ul", {}, b.quand.map(t => el("li", { text: t }))),
+        b.voix?.quand ? speakBtn(b.voix.quand, "Écouter", "Écouter pourquoi c'est utile") : null));
+      inner.append(q);
+    }
     inner.append(el("p", { class: "faire" }, el("strong", { text: "À faire : " }), b.faire));
 
     const sch = (b.schemas || []).map(k => SCHEMAS[k]).filter(Boolean);
@@ -249,12 +262,7 @@
 
     const tools = el("div", { class: "row-tools" });
     tools.append(withIcon(el("button", { class: "btn small", type: "button", onclick: () => startTimer(b.duree, b.titre.replace(/^\d+\.\s*/, "")) }), ICON_TIMER, `Minuteur ${b.duree} min`));
-    if (window.Sons?.voixDispo) {
-      tools.append(withIcon(el("button", { class: "btn small", type: "button", title: "Écouter la consigne", onclick: () => {
-        if (Sons.parle()) return Sons.tais();
-        Sons.dire(`${b.titre.replace(/^\d+\.\s*/, "")}. ${b.sert} À faire : ${b.faire}`, { force: true });
-      } }), ICON_SPEAK, "Écouter"));
-    }
+    tools.append(speakBtn(b.voix?.consigne || [`${b.titre.replace(/^\d+\.\s*/, "")}.`, b.sert, `À faire : ${b.faire}`], "Écouter", "Écouter la consigne"));
     (b.positions || []).forEach(pz => {
       const btn = el("button", { class: "btn small pos-btn", type: "button", title: "Voir sur le manche", onclick: () => go("manche", { pos: pz.code }) });
       btn.innerHTML = ICON_POS; btn.append(pz.label);
@@ -275,6 +283,7 @@
 
     const more = el("details", { class: "more" }, el("summary", { text: "Explication et vidéos" }));
     const mi = el("div", { class: "more-in" });
+    if (b.voix?.explication?.length) mi.append(el("div", { class: "row-tools" }, speakBtn(b.voix.explication, "Écouter l'explication", "Écouter l'explication")));
     b.explication.forEach(t => {
       if (typeof t === "string") return mi.append(el("p", { text: t }));
       if (t.titre) mi.append(el("h4", { class: "expl-titre", text: t.titre }));
@@ -286,7 +295,8 @@
           el("tbody", {}, rows.map(r => el("tr", {}, r.map((c, i) => el(i ? "td" : "th", { text: c }))))))));
       }
     });
-    if (b.explication.some(t => typeof t === "object")) more.open = true;
+    // ouvert tant qu'un exercice demande de lire l'explication (« Lire « Comprendre les barrés… » »)
+    if (b.exercices.some(e => /^Lire\b/.test(e.label) && !s.ex[exKey(b, e)]?.done)) more.open = true;
     if (b.videos?.length) {
       const vl = el("ul", { class: "videos" });
       b.videos.forEach(v => vl.append(el("li", {}, el("a", { href: v.u, target: "_blank", rel: "noopener" }, el("span", { class: "play", "aria-hidden": "true" }), v.t))));
@@ -295,6 +305,19 @@
     more.append(mi);
     inner.append(more);
     return card;
+  }
+
+  // Bouton « Écouter » : lit une suite de phrases ; retouché pendant la lecture, il l'arrête.
+  function speakBtn(segs, label, title) {
+    const txt = document.createTextNode(label);
+    const b = withIcon(el("button", { class: "btn small speak-btn", type: "button", title }), ICON_SPEAK);
+    b.append(txt);
+    b.addEventListener("click", async () => {
+      if (b.classList.contains("speaking")) return Sons.tais();
+      b.classList.add("speaking"); txt.textContent = "Arrêter";
+      try { await Sons.dire(segs, { force: true }); } finally { b.classList.remove("speaking"); txt.textContent = label; }
+    });
+    return b;
   }
 
   // ---------- Schémas (les mêmes que dans le cours du Claude Doc) ----------
@@ -479,6 +502,11 @@
     touch(c); flush(); updateSeance();
     Sons.unlock(); Sons.cling();
   }
+  function seanceReset(c) {
+    if (!confirm(`Remettre le minuteur de séance du cours ${c.num} à zéro ?`)) return;
+    delete cs(c.id).seance; flush(); updateSeance();
+    toast("Minuteur de séance remis à zéro.");
+  }
   function seanceToggle(c) {
     const s = cs(c.id);
     if (s.seance?.start) { seancePause(c.id); flush(); updateSeance(); toast("Séance en pause."); }
@@ -498,7 +526,7 @@
     if (c) {
       seanceChip.querySelector("b").textContent = fmt(seanceMs(s));
       seanceChip.classList.toggle("paused", !running);
-      seanceChip.title = `Séance du cours ${c.num} : touche pour ${running ? "mettre en pause" : "reprendre"}`;
+      seanceChip.title = `Séance du cours ${c.num} : touche pour la mettre en pause, la reprendre ou la remettre à zéro`;
     }
     const u = seanceUI;
     if (u.card && u.c) {
@@ -508,21 +536,24 @@
       u.label.textContent = on ? "Séance en cours" : has ? "Séance en pause" : "Minuteur de séance";
       u.btn.textContent = on ? "Pause" : has ? "Reprendre" : "▶ Démarrer la séance";
       u.btn.className = "btn " + (on ? "" : "primary");
+      u.reset.hidden = !has;
       if (u.duree && has) u.duree.placeholder = String(Math.max(1, Math.round(seanceMs(us) / 60000)));
     }
+    updateTimers();
     const any = DATA?.cours.some(x => state.cours[x.id]?.seance?.start);
     if (any && !seanceTick) seanceTick = setInterval(updateSeance, 1000);
     if (!any && seanceTick) { clearInterval(seanceTick); seanceTick = null; }
   }
-  seanceChip.addEventListener("click", () => { const c = seanceShown(); if (c) seanceToggle(c); });
+  seanceChip.addEventListener("click", () => openTimers());
   function renderSeance(c) {
     const time = el("b", { class: "seance-time" }), label = el("span", { class: "eyebrow" });
     const btn = el("button", { type: "button", onclick: () => seanceToggle(c) });
+    const reset = el("button", { class: "icon-btn", type: "button", title: "Remettre à zéro", "aria-label": "Remettre le minuteur de séance à zéro", text: "↺", hidden: true, onclick: () => seanceReset(c) });
     const card = el("section", { class: "card seance-card" },
       withIcon(el("div", { class: "seance-ic" }), ICON_TIMER),
       el("div", { class: "seance-txt" }, label, time, el("span", { class: "muted small", text: "Il s'arrête quand tu touches « Terminer le cours »." })),
-      btn);
-    seanceUI = { c, card, time, label, btn, duree: null };
+      el("div", { class: "seance-btns" }, reset, btn));
+    seanceUI = { c, card, time, label, btn, reset, duree: null };
     requestAnimationFrame(updateSeance);
     return card;
   }
@@ -618,6 +649,7 @@
       el("div", { class: "stat" }, el("b", { text: "Palier " + nxt.palier }), el("span", { text: palierOf(nxt).titre })),
     ));
     body.append(renderProgression());
+    body.append(renderConstruction());
 
     // Les retours du prof
     if (RETOURS.length) {
@@ -692,8 +724,8 @@
       el("h2", { text: "Sons et voix" }),
       toggle("Petits sons", "Un « cling » quand tu coches un exercice, une mélodie quand un bloc ou un cours est fini.", () => Sons.sfx, v => { Sons.sfx = v; if (v) Sons.cling(); }));
     if (Sons.voixDispo) {
-      reglages.append(toggle("Voix dans les jeux", "Elle lit les questions et les réponses. C'est la voix de ton iPhone ou de ton Mac : gratuite, sans Internet.", () => Sons.voix, v => { Sons.voix = v; if (v) Sons.dire("D'accord, je lis les consignes des jeux."); }));
-      reglages.append(el("p", { class: "muted small", text: "Dans chaque bloc, le bouton « Écouter » lit la consigne à voix haute. Sur iPhone, une voix plus naturelle se télécharge dans Réglages, Accessibilité, Contenu énoncé, Voix, Français." }));
+      reglages.append(toggle("Voix dans les jeux", "Une voix naturelle lit les questions et les réponses des jeux.", () => Sons.voix, v => { Sons.voix = v; if (v) Sons.dire("D'accord, je lis les consignes des jeux."); }));
+      reglages.append(el("p", { class: "muted small", text: "Dans chaque bloc, les boutons « Écouter » lisent la consigne, le « pourquoi » et l'explication. Les phrases sont enregistrées d'avance : une phrase toute neuve (après une adaptation du cours) est lue par la voix de ton appareil, le temps que je l'enregistre." }));
     }
     body.append(reglages);
 
@@ -723,7 +755,7 @@
   // Barres de progression : tout le parcours, puis chaque thème (exercices cochés sur les 36 cours).
   const BLOC_THEME = ["technique", "gammes", "penta", "manche", "barres", "morceaux"];
   function renderProgression() {
-    const all = DATA.cours.flatMap(c => c.blocs.flatMap((b, bi) => b.exercices.map(e => ({ c, e, theme: e.theme || BLOC_THEME[bi] || "morceaux", x: state.cours[c.id]?.ex[exKey(b, e)] }))));
+    const all = DATA.cours.flatMap(c => c.blocs.flatMap((b, bi) => b.exercices.map(e => ({ c, b, bi, e, theme: e.theme || BLOC_THEME[bi] || "morceaux", x: state.cours[c.id]?.ex[exKey(b, e)] }))));
     const pct = (n, t) => (t ? Math.round((n / t) * 100) : 0);
     const bar = (n, t, cls = "") => el("div", { class: "progress " + cls, "aria-hidden": "true" }, el("i", { style: `width:${t ? (n / t) * 100 : 0}%` }));
     const nbDone = DATA.cours.filter(c => isDone(c.id)).length;
@@ -743,12 +775,83 @@
       const bits = [`${d} / ${mine.length} exercices`];
       if (fac) bits.push(`${fac} facile${fac > 1 ? "s" : ""}`);
       if (gal) bits.push(`${gal} galère${gal > 1 ? "s" : ""}`);
-      list.append(el("div", { class: "prog-row" },
+      const row = el("details", { class: "prog-row" });
+      const sum = el("summary", {},
         el("div", { class: "prog-top" }, el("span", { text: t.label }), el("span", { class: "prog-pct", text: pct(d, mine.length) + " %" })),
         bar(d, mine.length, "theme"),
-        el("span", { class: "muted small", text: bits.join(" · ") })));
+        el("span", { class: "muted small" }, bits.join(" · "), el("span", { class: "prog-voir", text: "Voir les exercices" })));
+      row.append(sum);
+      row.addEventListener("toggle", () => { if (row.open && !row.dataset.built) { row.dataset.built = "1"; row.append(themeDetail(mine)); } });
+      list.append(row);
     }
     card.append(list);
+    return card;
+  }
+
+  // Les exercices d'un thème, regroupés : leur palier, quand ils arrivent, où tu en es.
+  const plage = nums => {
+    const out = []; let i = 0;
+    while (i < nums.length) {
+      let j = i; while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++;
+      if (j - i >= 2) out.push(`${nums[i]} à ${nums[j]}`); else for (let k = i; k <= j; k++) out.push(String(nums[k]));
+      i = j + 1;
+    }
+    return out.length > 1 ? out.slice(0, -1).join(", ") + " et " + out.at(-1) : out[0];
+  };
+  function themeDetail(mine) {
+    const groups = new Map();
+    for (const a of mine) {
+      const k = a.c.palier + "|" + a.bi + "|" + a.e.label;
+      if (!groups.has(k)) groups.set(k, { label: a.e.label, palier: a.c.palier, bi: a.bi, items: [] });
+      groups.get(k).items.push(a);
+    }
+    const now = nextCours().num;
+    const ul = el("ul", { class: "theme-ex" });
+    let pal = 0;
+    for (const g of groups.values()) {
+      if (g.palier !== pal) { pal = g.palier; ul.append(el("li", { class: "theme-pal", text: `Palier ${pal} · ${DATA.paliers.find(p => p.num === pal)?.titre || ""}` })); }
+      const nums = g.items.map(a => a.c.num), weeks = [...new Set(g.items.map(a => a.c.semaine))];
+      const n = g.items.length, done = g.items.filter(a => a.x?.done).length;
+      const fac = g.items.filter(a => a.x?.feel === "facile").length, gal = g.items.filter(a => a.x?.feel === "galere").length;
+      const [st, cls] = done === n ? ["Fait", "ok"] : nums.includes(now) ? ["C'est maintenant", "now"] : nums[0] > now ? ["À venir", "next"] : done ? ["Pas fini", "mid"] : ["Pas fait", "todo"];
+      const quand = `${weeks.length > 1 ? "Semaines " + plage(weeks) : "Semaine " + weeks[0]} · cours ${plage(nums)}`;
+      const bits = [`Fait ${done} fois sur ${n}`];
+      if (fac) bits.push(`${fac} facile${fac > 1 ? "s" : ""}`);
+      if (gal) bits.push(`${gal} galère${gal > 1 ? "s" : ""}`);
+      ul.append(el("li", { class: "theme-item" },
+        el("div", { class: "ti-top" }, el("strong", { text: g.label }), el("span", { class: "pill " + cls, text: st })),
+        el("span", { class: "muted small", text: `${quand} · bloc ${g.bi + 1}` }),
+        el("span", { class: "small", text: bits.join(" · ") })));
+    }
+    return ul;
+  }
+
+  // Comment le cours est construit, tiré du cours lui-même
+  function renderConstruction() {
+    const card = el("section", { class: "card construction" }, el("h2", { text: "Comment est construit ton cours" }));
+    const P = t => card.append(el("p", { text: t }));
+    P(`${DATA.cours.length} cours : 12 semaines de 3 séances (A, B et C), en 3 paliers de 4 semaines. Chaque séance dure environ 1 h 10 et suit toujours les mêmes 6 blocs, dans le même ordre : échauffement, gamme, pentatonique, notes du manche, barrés et rythme, morceau.`);
+    P("Le contenu change toutes les 2 semaines : chaque bloc apporte une nouveauté en semaine 1 et en semaine 3 de chaque palier. Pendant ces 2 semaines, tes 6 séances reprennent les mêmes exercices, et seul le bloc Morceau change un peu selon la séance. C'est voulu : un geste s'installe quand on le répète plusieurs jours de suite.");
+    P("Les cours 12, 24 et 36 finissent chaque palier par un bilan de tests. Avec 5 tests réussis, tu passes au palier suivant. Sinon, on ajoute une semaine sur ce qui manque. Et chaque bilan que tu m'envoies me sert à adapter les cours suivants.");
+    for (const p of DATA.paliers) {
+      const pc = DATA.cours.filter(c => c.palier === p.num);
+      const d = el("details", { class: "constr-pal" }, el("summary", {},
+        el("strong", { text: `Palier ${p.num} · ${p.titre}` }),
+        el("span", { class: "muted small", text: `Semaines ${pc[0].semaine} à ${pc.at(-1).semaine} · cours ${pc[0].num} à ${pc.at(-1).num}` })));
+      d.append(el("p", { class: "small" }, el("strong", { text: "Le but : " }), p.but, " ", el("strong", { text: "Ta mission : " }), p.mission));
+      const weeks = [...new Set(pc.map(c => c.semaine))];
+      for (let h = 0; h < weeks.length; h += 2) {
+        const six = pc.filter(c => c.semaine === weeks[h] || c.semaine === weeks[h + 1]);
+        d.append(el("h4", { text: `Semaines ${weeks[h]} et ${weeks[h + 1]} · cours ${six[0].num} à ${six.at(-1).num}` }));
+        d.append(el("ol", { class: "constr-blocs" }, six[0].blocs.map((b, bi) => {
+          const labels = [...new Set(six.flatMap(c => c.blocs[bi].exercices.map(e => e.label)))];
+          return el("li", {}, el("strong", { text: b.titre.replace(/^\d+\.\s*/, "") }), el("span", { class: "muted", text: labels.join(" · ") }));
+        })));
+      }
+      const bil = pc.find(c => c.bilan);
+      if (bil) d.append(el("p", { class: "small constr-bilan" }, el("strong", { text: `Cours ${bil.num} · ${bil.bilan.titre} (${bil.bilan.tests.length} tests) : ` }), bil.bilan.tests.map(t => t.label).join(" · ") + "."));
+      card.append(d);
+    }
     return card;
   }
 
@@ -779,24 +882,74 @@
   }
 
   // ---------- Minuteur de bloc ----------
-  let timer = null;
   const mini = $("#miniTimer");
+  let blocT = null; // { label, min, end (0 = en pause), left, id }
+  const blocLeft = () => (!blocT ? 0 : blocT.end ? Math.max(0, blocT.end - Date.now()) : blocT.left);
+  function blocTick() {
+    if (!blocT) return;
+    const left = blocLeft();
+    mini.querySelector("b").textContent = fmt(left + 999);
+    mini.classList.toggle("paused", !blocT.end);
+    if (blocT.end && left <= 0) {
+      const label = blocT.label;
+      stopTimer(); Sons.alarme();
+      toast(`Fin du bloc « ${label} ». Pause d'une minute !`); navigator.vibrate?.([200, 100, 200]);
+    }
+    updateTimers();
+  }
   function startTimer(min, label) {
     stopTimer();
-    const end = Date.now() + min * 60000;
-    const tick = () => {
-      const left = Math.max(0, end - Date.now());
-      const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
-      mini.querySelector("b").textContent = `${m}:${String(sec).padStart(2, "0")}`;
-      if (left <= 0) { stopTimer(); ding(); toast(`Fin du bloc « ${label} ». Pause d'une minute !`); navigator.vibrate?.([200, 100, 200]); }
-    };
-    mini.hidden = false; mini.title = label + " (touche pour arrêter)";
-    timer = setInterval(tick, 250); tick();
-    unlockAudio();
+    blocT = { label, min, end: Date.now() + min * 60000, left: 0, id: setInterval(blocTick, 250) };
+    mini.hidden = false; mini.title = `Minuteur « ${label} » : touche pour le mettre en pause, le recommencer ou l'arrêter`;
+    blocTick(); unlockAudio();
     toast(`Minuteur lancé : ${min} min.`);
   }
-  function stopTimer() { clearInterval(timer); timer = null; mini.hidden = true; }
-  mini.addEventListener("click", () => { stopTimer(); toast("Minuteur arrêté."); });
+  const pauseTimer = () => { if (blocT?.end) { blocT.left = blocLeft(); blocT.end = 0; blocTick(); } };
+  const resumeTimer = () => { if (blocT && !blocT.end) { blocT.end = Date.now() + blocT.left; blocTick(); } };
+  function stopTimer() { if (blocT) clearInterval(blocT.id); blocT = null; mini.hidden = true; updateTimers(); }
+  mini.addEventListener("click", () => openTimers());
+
+  // ---------- Les minuteurs : la feuille ouverte depuis le haut de l'écran ----------
+  let tm = null;
+  function openTimers() {
+    if (!tm) {
+      const part = (title, btns) => {
+        const label = el("span", { class: "eyebrow", text: title }), name = el("strong", { class: "tm-name" }), time = el("b", { class: "tm-time" }), note = el("p", { class: "muted small" });
+        return { label, name, time, note, box: el("section", { class: "tm" }, label, name, time, note, el("div", { class: "row-tools" }, btns)) };
+      };
+      const sToggle = el("button", { class: "btn", type: "button", onclick: () => { const c = seanceTarget(); if (c) seanceToggle(c); } });
+      const sReset = el("button", { class: "btn", type: "button", text: "↺ Remettre à zéro", onclick: () => { const c = seanceTarget(); if (c) seanceReset(c); } });
+      const bToggle = el("button", { class: "btn", type: "button", onclick: () => (blocT?.end ? pauseTimer() : resumeTimer()) });
+      const bRestart = el("button", { class: "btn", type: "button", text: "↺ Recommencer", onclick: () => blocT && startTimer(blocT.min, blocT.label) });
+      const bStop = el("button", { class: "btn", type: "button", text: "Arrêter", onclick: () => { stopTimer(); toast("Minuteur arrêté."); } });
+      const S = part("Minuteur de séance", [sToggle, sReset]), B = part("Minuteur de bloc", [bToggle, bRestart, bStop]);
+      const d = el("dialog", { class: "sheet", "aria-labelledby": "tmTitle" }, el("div", { class: "sheet-in" },
+        el("div", { class: "sheet-head" }, el("h2", { id: "tmTitle", text: "Minuteurs" }), el("button", { class: "icon-btn", type: "button", "data-close": true, "aria-label": "Fermer", text: "✕" })),
+        S.box, B.box));
+      d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-close]")) d.close(); });
+      document.body.append(d);
+      tm = { d, S, B, sToggle, sReset, bToggle, bRestart, bStop };
+    }
+    openSheet(tm.d); updateTimers();
+  }
+  // la séance qui tourne, sinon celle du cours ouvert
+  const seanceTarget = () => seanceShown() || (DATA && byId(state.current) && !isDone(state.current) ? byId(state.current) : null);
+  function updateTimers() {
+    if (!tm?.d.open) return;
+    const c = seanceTarget(), s = c && state.cours[c.id], on = !!s?.seance?.start, has = !!s?.seance;
+    tm.S.name.textContent = c ? `Cours ${c.num}` : "";
+    tm.S.time.textContent = fmt(seanceMs(s));
+    tm.S.note.textContent = !c ? "Ouvre un cours pour lancer sa séance." : on ? "Il tourne. Il s'arrête tout seul quand tu touches « Terminer le cours »." : has ? "En pause." : "Pas encore lancé.";
+    tm.sToggle.hidden = !c; tm.sToggle.textContent = on ? "Pause" : has ? "Reprendre" : "▶ Démarrer";
+    tm.sToggle.className = "btn " + (on ? "" : "primary");
+    tm.sReset.hidden = !has;
+    tm.B.name.textContent = blocT ? blocT.label : "";
+    tm.B.time.textContent = blocT ? fmt(blocLeft() + 999) : "–";
+    tm.B.note.textContent = !blocT ? "Lance-le depuis un bloc, avec le bouton « Minuteur »." : blocT.end ? `${blocT.min} min, en cours.` : "En pause.";
+    tm.bToggle.textContent = blocT?.end ? "Pause" : "Reprendre";
+    tm.bToggle.className = "btn " + (blocT?.end ? "" : "primary");
+    tm.bToggle.hidden = tm.bRestart.hidden = tm.bStop.hidden = !blocT;
+  }
 
   // ---------- Métronome ----------
   const getCtx = () => Sons.ctx();
@@ -808,16 +961,6 @@
     g.gain.exponentialRampToValueAtTime(accent ? 0.9 : 0.55, time + 0.002);
     g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
     o.connect(g).connect(ctx.destination); o.start(time); o.stop(time + 0.06);
-  }
-  function ding() {
-    try {
-      const ctx = getCtx(), t = ctx.currentTime;
-      [880, 1318.5].forEach((f, i) => {
-        const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f;
-        g.gain.setValueAtTime(0.0001, t + i * 0.25); g.gain.exponentialRampToValueAtTime(0.6, t + i * 0.25 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.25 + 0.6);
-        o.connect(g).connect(ctx.destination); o.start(t + i * 0.25); o.stop(t + i * 0.25 + 0.65);
-      });
-    } catch {}
   }
   const metro = { bpm: state.bpm || 60, beats: state.beats || 4, on: false, next: 0, beat: 0, id: null };
   const out = $("#metroOut"), range = $("#metroRange"), dots = $("#metroDots"), badge = $("#metroBadge");

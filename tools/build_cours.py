@@ -339,6 +339,114 @@ PALIERS = [
   },
 ]
 
+# « Pourquoi c'est utile, et quand tu t'en serviras » : une liste par bloc, dans l'ordre des paliers.
+QUAND = {
+    1: [
+        [
+            "L'araignée t'apprend la règle « un doigt par case ». C'est la position de main de toutes tes gammes (blocs 2 et 3) et de presque tous les solos : sans elle, la main se déplace tout le temps et des notes sautent.",
+            "Elle rend l'annulaire et l'auriculaire aussi précis que l'index. C'est exactement ce qui manque pour les barrés, où l'auriculaire doit tenir sa case pendant que l'index appuie.",
+            "Les arpèges p-i-m-a, c'est le geste de main droite de Fragile, et de tous les morceaux joués en arpège plutôt qu'en grattant : ballades, guitare classique, accompagnements doux.",
+            "Quand t'en servir : au début de chaque séance. Les mains chaudes se crispent moins, et tu évites les petites douleurs.",
+        ],
+        [
+            "La gamme majeure est l'alphabet de la musique. Les mélodies que tu connais sont faites de ses notes, et les accords aussi : Do majeur, ce sont les notes 1, 3 et 5 de la gamme de Do (Do, Mi, Sol).",
+            "Tu t'en serviras pour jouer une mélodie, pour comprendre pourquoi un accord porte son nom, et au palier 3 pour la gamme de La mineur, qui a exactement les mêmes notes.",
+            "La butée sert quand une note doit chanter avec un son plein : une gamme, un solo, la mélodie d'un morceau. Le pincé sert pour les arpèges et les accompagnements, quand plusieurs cordes doivent sonner ensemble : la butée couperait la corde du dessus.",
+            "Alterner index et majeur, c'est ce qui te permettra d'aller vite plus tard. Le picado, les traits rapides du flamenco, ce n'est rien d'autre que cette alternance en butée, très vite.",
+        ],
+        [
+            "La pentatonique est la gamme la plus utilisée pour improviser, en blues, en rock, en pop comme en rumba. Une grande partie des solos de guitare que tu connais en sortent.",
+            "Elle n'a que 5 notes, sans les 2 notes « délicates » de la gamme complète : sur un morceau en La mineur, presque tout ce que tu joues sonne juste. C'est pour ça qu'on commence l'impro avec elle.",
+            "Tu t'en serviras au palier 2 pour ta mini-impro sur Bamboleo, et au palier 3 pour ta minute d'impro.",
+            "Chaque nouvelle position t'ouvre une nouvelle zone du manche : tu n'es plus coincé dans 4 cases quand tu improvises.",
+        ],
+        [
+            "Connaître le nom de chaque case, c'est ce qui te permet de trouver un accord barré (son nom est la note sous l'index), de repérer d'où part une gamme, et de jouer une mélodie sans tablature.",
+            "La corde de Mi grave donne le nom des barrés forme Mi, la corde de La celui des barrés forme La. Ce bloc prépare donc directement tes barrés.",
+            "Les octaves te servent de raccourci : à partir d'une note que tu connais, tu la retrouves partout sur le manche, sans tout apprendre par cœur.",
+            "En impro, c'est ce qui te permet de savoir où sont tes La, tes notes de repos.",
+        ],
+        [
+            "Les accords ouverts (Do, Ré, Mi, Sol, La…) n'existent qu'à un seul endroit du manche. Dès qu'un morceau demande Fa, Si, Si bémol ou Fa dièse mineur, il n'y a pas de version ouverte simple : il faut un barré.",
+            "Tu en croises partout : Fa dans Let It Be des Beatles (Do, Sol, La mineur, Fa) et dans Bamboleo (La mineur, Sol, Fa, Mi), Si mineur et Fa dièse dans Hotel California des Eagles.",
+            "Changer de tonalité : si un morceau est trop aigu ou trop grave, pour chanter ou pour jouer avec quelqu'un, tu décales simplement tous tes barrés de quelques cases. Même forme, autre accord.",
+            "Rester au même endroit du manche : au lieu de sauter d'un accord ouvert à l'autre, tu enchaînes des barrés proches. C'est plus fluide, et le son est plus homogène.",
+            "En rumba et en musique gitane, on joue beaucoup en barré : il suffit de relâcher un peu la main gauche pour étouffer les cordes et faire des coups secs.",
+        ],
+        [
+            "Un morceau, c'est là que les exercices deviennent de la musique : tu vérifies que tes arpèges, tes changements d'accords et ton rythme tiennent quand tout arrive en même temps.",
+            "Fragile est un classique de la guitare nylon : des arpèges et des accords qui s'enchaînent sans casser le rythme. C'est exactement le travail de tes blocs 1 et 2.",
+            "T'enregistrer te sert à t'entendre de l'extérieur. À l'écoute, on remarque une note étouffée ou un tempo qui accélère, qu'on ne sent pas en jouant.",
+        ],
+    ],
+    2: [
+        [
+            "Dans un vrai morceau, les doigts ne jouent jamais dans l'ordre 1, 2, 3, 4. Les permutations préparent ta main à tous les ordres possibles, comme dans une mélodie.",
+            "L'annulaire et l'auriculaire sont en partie reliés par les tendons : c'est pour ça qu'ils sont maladroits. Ces exercices les rendent indépendants.",
+            "Les liés servent à jouer deux notes avec une seule attaque de la main droite : le son est plus fluide, et on peut aller plus vite. On les entend dans presque tous les solos, et dans les ornements de la guitare flamenca et gitane.",
+            "Tu t'en serviras dans ton impro du palier 3, et pour les petits ornements de Bamboleo.",
+        ],
+        [
+            "Une gamme sans corde à vide se transporte : le même dessin donne Sol majeur en case 2, La majeur en case 4, Do majeur en case 7. Tu apprends une seule forme, et tu as les 12 gammes majeures.",
+            "C'est utile dès qu'un morceau n'est pas en Do : pour jouer sa mélodie, improviser dessus ou comprendre ses accords.",
+            "C'est aussi un exercice de précision : un doigt par case, la main immobile, comme l'araignée.",
+        ],
+        [
+            "Plus tu as de positions reliées, plus tu peux voyager sur le manche pendant une impro, au lieu de tourner en rond dans 4 cases.",
+            "La mini-impro t'apprend à faire des phrases : quelques notes, un silence, une fin sur une note de repos. C'est ce qui fait qu'une impro sonne comme de la musique, et pas comme une gamme récitée.",
+            "Tu t'en serviras sur Bamboleo, et sur n'importe quel morceau en La mineur.",
+        ],
+        [
+            "Les cordes de Sol et de Si sont celles où passent la plupart des mélodies et des solos.",
+            "La corde de Si est la seule accordée différemment de ses voisines : c'est pour ça que les octaves et les formes se décalent d'une case à cet endroit. Le savoir t'évite de te perdre.",
+            "Avec 5 cordes connues, tu peux nommer presque toutes les notes d'un accord, et retrouver vite où jouer une mélodie.",
+        ],
+        [
+            "La forme La te donne une 2e place pour chaque accord : Do en case 3 avec la forme La, ou en case 8 avec la forme Mi. Tu prends celle qui est la plus proche de l'accord d'avant.",
+            "Elle est indispensable pour des accords comme Si bémol, Si mineur ou Do dièse mineur, très fréquents dans les chansons.",
+            "La rumba est le rythme de la guitare gitane, celui des Gipsy Kings : c'est ce qui fait danser un morceau. Tu peux l'utiliser pour accompagner presque n'importe quelle chanson avec une couleur espagnole.",
+            "La cadence andalouse (La mineur, Sol, Fa, Mi) est la grille la plus jouée de la musique espagnole. Tu la retrouves dans le flamenco, dans Bamboleo, et même dans Hit the Road Jack.",
+        ],
+        [
+            "Bamboleo réunit tout le palier : le Fa barré rapide, la rumba avec le golpe et la cadence andalouse.",
+            "Une fois Bamboleo en place, beaucoup d'autres rumbas s'ouvrent à toi : elles utilisent les mêmes accords et le même rythme.",
+            "C'est aussi ton test de régularité : 8 tours sans t'arrêter, c'est ce qu'il faut pour accompagner quelqu'un qui chante ou qui joue la mélodie.",
+        ],
+    ],
+    3: [
+        [
+            "Beaucoup d'accords et de gammes demandent d'atteindre 4 ou 5 cases sans bouger la main, surtout près de la tête du manche, où les cases sont les plus larges. L'écartement te le permet sans te crisper.",
+            "Il rend aussi les barrés plus faciles : l'auriculaire atteint sa case sans tirer sur la main.",
+            "Les liés avec un doigt fixe t'apprennent à faire travailler un doigt pendant que les autres tiennent leur place. C'est ce qui se passe dans tous les morceaux où une basse ou un accord reste tenu pendant la mélodie.",
+        ],
+        [
+            "C'est la gamme des morceaux en La mineur, comme Bamboleo : ton impro peut utiliser toutes les notes du morceau, pas seulement les 5 de la pentatonique.",
+            "Elle a les mêmes notes que Do majeur : en connaissant l'une, tu connais l'autre. On dit que La mineur est la « relative » de Do majeur, et c'est pour ça que ces deux tonalités vont si bien ensemble.",
+            "L'alternance a-m et les triolets préparent ta main droite aux traits rapides et aux rythmes en trois de la musique espagnole.",
+        ],
+        [
+            "Avec les 5 positions, il n'y a plus d'endroit du manche où tu es perdu : tu improvises en bas, au milieu ou en haut, et tu passes de l'un à l'autre.",
+            "C'est la carte de toute la pentatonique de La : après la case 12, les positions recommencent.",
+            "Le même dessin, déplacé, te donne la pentatonique de n'importe quelle note : la position 1 en case 0, c'est Mi mineur ; en case 3, c'est Sol mineur.",
+        ],
+        [
+            "Connaître les 6 cordes, c'est savoir où tu es partout : trouver un accord, une note de mélodie ou le départ d'une gamme sans compter les cases.",
+            "Le quiz en moins de 3 secondes, c'est la vitesse qu'il faut pour que ça te serve pendant que tu joues, et pas seulement quand tu prends le temps de réfléchir.",
+        ],
+        [
+            "Le rasgueado, c'est le roulement des doigts de la guitare flamenca : il donne de la puissance et marque les accents et les fins de phrase.",
+            "Tu l'utilises à la fin d'un tour de grille, sur un accent, ou pour finir un morceau en beauté. Dans Bamboleo, il remplace un coup simple pour donner du relief.",
+            "Il travaille aussi l'indépendance des doigts de la main droite, comme les permutations pour la main gauche.",
+        ],
+        [
+            "C'est la synthèse des 12 semaines : barrés, rumba, rasgueado, pentatonique et liés dans un seul morceau.",
+            "L'impro sur la grille te prouve que tu sais utiliser tes gammes en musique, et pas seulement les réciter.",
+            "Fragile en entretien garde tes arpèges vivants : ce qu'on ne joue plus, on finit par le perdre.",
+        ],
+    ],
+}
+
+
 FRAGILE_ENTRETIEN = {"id": "fragile", "label": "Fragile une fois en entier, pour l'entretenir", "theme": "morceaux"}
 
 
@@ -405,6 +513,30 @@ def jeux_for(palier, moitie, e):
     return None
 
 
+QUAND_TITRE = "Pourquoi c'est utile, et quand tu t'en serviras"
+
+
+def voix_explication(b):
+    """Ce que lit le bouton « Écouter » de « Explication et vidéos » : un segment par paragraphe ou par point."""
+    seg = []
+    for t in b["explication"]:
+        if isinstance(t, str):
+            seg.append(t)
+            continue
+        if t.get("titre"):
+            seg.append(t["titre"] + ".")
+        seg += t.get("liste", [])
+        if t.get("table"):
+            head, *rows = t["table"]
+            cols = [h.split(" (")[0] for h in head[1:]]
+            for r in rows:
+                seg.append(r[0] + " : " + ", ".join(f"{c.lower()} {v}" for c, v in zip(cols, r[1:])) + ".")
+    n = len(b["videos"])
+    if n:
+        seg.append("Il y a aussi une vidéo juste en dessous, pour voir le geste." if n == 1 else f"Il y a aussi {n} vidéos juste en dessous, pour voir le geste.")
+    return seg
+
+
 def bloc_for(palier, b, bi, moitie, seance):
     m = b["moities"][moitie]
     ex = [dict(e) for e in m["ex"]]
@@ -424,12 +556,18 @@ def bloc_for(palier, b, bi, moitie, seance):
                 ex = [FRAGILE_ENTRETIEN] + ex
             elif seance == "C":
                 faire = "Au choix : Bamboleo, Fragile ou un morceau que tu aimes. " + faire
+    quand = QUAND[palier["num"]][bi]
     return {
         "id": f"b{bi + 1}", "titre": f"{bi + 1}. {titre}", "duree": b["duree"],
-        "sert": b["sert"], "faire": faire, "explication": b["explication"],
+        "sert": b["sert"], "quand": quand, "faire": faire, "explication": b["explication"],
         "videos": b["videos"], "positions": m.get("positions", b.get("positions", [])),
         "schemas": SCHEMAS[palier["num"]][bi],
         "exercices": ex,
+        "voix": {
+            "consigne": [titre + ".", b["sert"], "À faire : " + faire],
+            "quand": [QUAND_TITRE + "."] + quand,
+            "explication": voix_explication(b),
+        },
     }
 
 
@@ -465,6 +603,7 @@ if os.path.exists(ADAPT):
             if k == "blocs":
                 for b in c["blocs"]:
                     b.update(v.get(b["id"], {}))
+                    b["voix"]["consigne"] = [b["titre"].split(". ", 1)[-1] + ".", b["sert"], "À faire : " + b["faire"]]
             else:
                 c[k] = v
 

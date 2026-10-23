@@ -1,4 +1,5 @@
-/* Sons et voix de l'app : un seul contexte audio, petits sons de réussite, voix française de l'appareil. */
+/* Sons et voix de l'app : un seul contexte audio, petits sons en notes de guitare,
+   et une voix française naturelle enregistrée d'avance (dossier voix/, voix neuronale Kokoro). */
 (() => {
   "use strict";
 
@@ -7,7 +8,7 @@
   let sfxOn = read("maguitare:sfx", true);
   let voixOn = read("maguitare:voix", true);
 
-  // ---------- Contexte audio partagé (métronome, jeux, petits sons) ----------
+  // ---------- Contexte audio partagé (métronome, jeux, petits sons, voix) ----------
   let actx = null;
   const ctx = () => (actx ||= new (window.AudioContext || window.webkitAudioContext)());
   function unlock() {
@@ -16,65 +17,164 @@
     const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0);
     // sur iPhone : jouer même quand le bouton silencieux est activé
     try { if (navigator.audioSession && navigator.audioSession.type !== "play-and-record") navigator.audioSession.type = "playback"; } catch {}
+    guitare.charge();
   }
 
-  // Une note de clochette : fondamentale + partiels inharmoniques, attaque nette, longue chute.
-  function bell(freq, at, { gain = 0.35, decay = 0.9 } = {}) {
+  // ---------- Guitare nylon (les mêmes sons que Mon manche) ----------
+  const guitare = (() => {
+    let buffers = null, loading = null;
+    function charge() {
+      if (loading) return loading;
+      loading = new Promise(res => {
+        const go = async () => {
+          const src = window.NYLON_SAMPLES || {}, c = ctx(), out = [];
+          await Promise.all(Object.entries(src).map(async ([m, b64]) => {
+            try {
+              const bin = atob(b64), buf = new Uint8Array(bin.length);
+              for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+              const decoded = await new Promise((ok, ko) => { const p = c.decodeAudioData(buf.buffer, ok, ko); if (p?.then) p.then(ok, ko); });
+              out.push({ m: +m, buf: decoded });
+            } catch {}
+          }));
+          buffers = out.sort((a, b) => a.m - b.m); res();
+        };
+        if (window.NYLON_SAMPLES) go();
+        else { const s = document.createElement("script"); s.src = "samples-nylon.js"; s.onload = go; s.onerror = () => { buffers = []; res(); }; document.head.append(s); }
+      });
+      return loading;
+    }
+    // une note pincée ; at = moment (contexte audio), dur = durée avant l'étouffement
+    function note(midi, { at = 0, gain = 0.9, dur = 1.4 } = {}) {
+      if (!buffers?.length) return false;
+      const c = ctx(), t = Math.max(c.currentTime, at);
+      const near = buffers.reduce((a, b) => (Math.abs(b.m - midi) < Math.abs(a.m - midi) ? b : a));
+      const s = c.createBufferSource(), g = c.createGain();
+      s.buffer = near.buf; s.playbackRate.value = Math.pow(2, (midi - near.m) / 12);
+      g.gain.setValueAtTime(gain, t);
+      s.connect(g).connect(c.destination); s.start(t);
+      g.gain.setTargetAtTime(0, t + dur, 0.22); s.stop(t + dur + 1.2);
+      return true;
+    }
+    return { charge, note, pret: () => !!buffers?.length };
+  })();
+
+  // Repli si les sons de guitare ne sont pas encore chargés : une petite clochette.
+  function bell(freq, at, gain = 0.25, decay = 0.6) {
     const c = ctx(), out = c.createGain();
-    out.gain.setValueAtTime(0.0001, at);
-    out.gain.exponentialRampToValueAtTime(gain, at + 0.006);
-    out.gain.exponentialRampToValueAtTime(0.0001, at + decay);
+    out.gain.setValueAtTime(0.0001, at); out.gain.exponentialRampToValueAtTime(gain, at + 0.006); out.gain.exponentialRampToValueAtTime(0.0001, at + decay);
     out.connect(c.destination);
-    [[1, 1], [2.76, 0.32], [5.4, 0.12]].forEach(([r, g]) => {
-      const o = c.createOscillator(), og = c.createGain();
-      o.type = "sine"; o.frequency.value = freq * r; og.gain.value = g;
-      o.connect(og).connect(out); o.start(at); o.stop(at + decay + 0.05);
-    });
+    const o = c.createOscillator(); o.frequency.value = freq; o.connect(out); o.start(at); o.stop(at + decay + 0.05);
   }
-  const play = notes => {
-    if (!sfxOn) return;
-    try { unlock(); const t = ctx().currentTime + 0.02; notes.forEach(([f, dt, o]) => bell(f, t + dt, o)); } catch {}
-  };
-  const cling = () => play([[1568, 0, { gain: 0.28, decay: 0.55 }], [2349.3, 0.07, { gain: 0.2, decay: 0.7 }]]);
-  const bloc = () => play([[1046.5, 0, {}], [1318.5, 0.11, {}], [1568, 0.22, {}], [2093, 0.33, { decay: 1.3 }]]);
-  const fanfare = () => play([[784, 0, {}], [1046.5, 0.14, {}], [1318.5, 0.28, {}], [1568, 0.42, {}], [2093, 0.6, { gain: 0.4, decay: 1.8 }], [1568, 0.6, { gain: 0.2, decay: 1.8 }]]);
-  const oups = () => play([[392, 0, { gain: 0.18, decay: 0.35 }]]);
+  // notes : [midi, décalage en s, gain, durée]
+  function joue(notes, force = false) {
+    if (!sfxOn && !force) return;
+    try {
+      unlock();
+      const t0 = ctx().currentTime + 0.03;
+      if (guitare.pret()) notes.forEach(([m, dt, g = 0.8, d = 1.2]) => guitare.note(m, { at: t0 + dt, gain: g, dur: d }));
+      else notes.forEach(([m, dt, g = 0.8]) => bell(440 * Math.pow(2, (m - 69) / 12), t0 + dt, g * 0.3));
+    } catch {}
+  }
+  // « Cling » : deux notes aiguës de guitare, Mi puis Si
+  const cling = () => joue([[76, 0, 0.75, 0.9], [83, 0.085, 0.6, 1.1]]);
+  // Bloc terminé : petit arpège montant de Mi majeur
+  const bloc = () => joue([[64, 0, 0.7], [68, 0.11, 0.7], [71, 0.22, 0.7], [76, 0.33, 0.8, 1.6]]);
+  // Cours terminé : accord de Mi gratté, puis l'arpège qui monte
+  const fanfare = () => joue([[40, 0, 0.6, 2.4], [47, 0.025, 0.55, 2.4], [52, 0.05, 0.55, 2.4], [56, 0.075, 0.55, 2.4], [59, 0.1, 0.55, 2.4], [64, 0.125, 0.6, 2.4],
+    [68, 0.75, 0.7], [71, 0.87, 0.7], [76, 0.99, 0.75], [80, 1.11, 0.8, 2.2]]);
+  const oups = () => joue([[50, 0, 0.45, 0.4]]);
+  // Fin d'un minuteur : La, Do dièse, Mi, deux fois (même quand les petits sons sont coupés)
+  const alarme = () => joue([[69, 0, 0.8], [73, 0.14, 0.8], [76, 0.28, 0.85, 1.4], [69, 0.95, 0.8], [73, 1.09, 0.8], [76, 1.23, 0.9, 2]], true);
 
-  // ---------- Voix (gratuite : celle de l'iPhone ou du Mac) ----------
+  // ---------- Voix ----------
+  // Chaque phrase est un fichier voix/<empreinte>.mp3 : les 16 premiers caractères du SHA-1 du texte exact.
+  // Une phrase sans fichier est lue par la voix de l'appareil (repli).
   const synth = window.speechSynthesis;
   let voice = null;
   function pickVoice() {
     if (!synth) return;
     const fr = synth.getVoices().filter(v => /^fr/i.test(v.lang));
     const frFR = fr.filter(v => /fr[-_]FR/i.test(v.lang));
-    voice = frFR.find(v => /Amélie|Audrey|Aurélie|Marie|Thomas|Google/i.test(v.name) && !/Compact/i.test(v.name))
-      || frFR.find(v => v.localService) || frFR[0] || fr[0] || null;
+    const rank = v => (/premium/i.test(v.name) ? 3 : /enhanced|amélior/i.test(v.name) ? 2 : /Google/i.test(v.name) ? 1 : 0);
+    voice = [...frFR].sort((a, b) => rank(b) - rank(a))[0] || fr[0] || null;
   }
   if (synth) { pickVoice(); synth.addEventListener?.("voiceschanged", pickVoice); }
   const propre = t => String(t)
-    .replace(/♯|#/g, " dièse").replace(/\bSib\b/g, "Si bémol").replace(/♭/g, " bémol")
-    .replace(/→/g, ", ").replace(/\bp-i-m-a\b/gi, "p, i, m, a").replace(/\bi-m\b/g, "i, m")
-    .replace(/\s+/g, " ").trim();
-  let parleJusqua = 0;
-  function dire(text, { force = false } = {}) {
-    if (!synth || !text || (!voixOn && !force)) return;
-    try {
-      synth.cancel();
-      const u = new SpeechSynthesisUtterance(propre(text));
-      u.lang = "fr-FR"; if (voice) u.voice = voice; u.rate = 1.02;
-      u.onend = u.onerror = () => { parleJusqua = performance.now() + 350; };
-      parleJusqua = Infinity;
-      synth.speak(u);
-    } catch {}
+    .replace(/♯|#/g, " dièse").replace(/\bSib\b/g, "Si bémol").replace(/→/g, ", ").replace(/\s+/g, " ").trim();
+
+  const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  async function empreinte(text) {
+    if (!crypto?.subtle) return null;
+    return hex(await crypto.subtle.digest("SHA-1", new TextEncoder().encode(text))).slice(0, 16);
   }
-  const tais = () => { try { synth?.cancel(); } catch {} parleJusqua = performance.now() + 200; };
+  const cache = new Map(); // texte -> Promise<AudioBuffer|null>
+  function charge(text) {
+    if (!cache.has(text)) {
+      cache.set(text, (async () => {
+        try {
+          const id = await empreinte(text); if (!id) return null;
+          const r = await fetch("voix/" + id + ".mp3");
+          if (!r.ok) return null;
+          const data = await r.arrayBuffer();
+          return await new Promise((ok, ko) => { const p = ctx().decodeAudioData(data, ok, ko); if (p?.then) p.then(ok, ko); });
+        } catch { return null; }
+      })());
+      if (cache.size > 80) cache.delete(cache.keys().next().value);
+    }
+    return cache.get(text);
+  }
+
+  let tour = 0, source = null, parleJusqua = 0;
+  const manque = new Set();
+  function tais() {
+    tour++;
+    try { source?.stop(); } catch {}
+    source = null;
+    try { synth?.cancel(); } catch {}
+    parleJusqua = performance.now() + 200;
+  }
+  function repli(text) {
+    return new Promise(res => {
+      if (!synth) return res();
+      const u = new SpeechSynthesisUtterance(propre(text));
+      u.lang = "fr-FR"; if (voice) u.voice = voice; u.rate = 1;
+      u.onend = u.onerror = () => res();
+      synth.speak(u);
+    });
+  }
+  // texte : une phrase ou une liste de phrases, lues à la suite
+  async function dire(texte, { force = false } = {}) {
+    const segs = (Array.isArray(texte) ? texte : [texte]).map(t => String(t || "").replace(/\s+/g, " ").trim()).filter(Boolean);
+    if (!segs.length || (!voixOn && !force)) return;
+    tais();
+    const moi = ++tour;
+    parleJusqua = Infinity;
+    try { unlock(); } catch {}
+    segs.slice(0, 2).forEach(charge);
+    for (let i = 0; i < segs.length; i++) {
+      if (moi !== tour) return;
+      if (segs[i + 1]) charge(segs[i + 1]);
+      const buf = await charge(segs[i]);
+      if (moi !== tour) return;
+      if (buf) {
+        await new Promise(res => {
+          const c = ctx(), s = c.createBufferSource();
+          s.buffer = buf; s.connect(c.destination); s.onended = res; source = s; s.start();
+        });
+      } else {
+        manque.add(segs[i]);
+        await repli(segs[i]);
+      }
+    }
+    if (moi === tour) { source = null; parleJusqua = performance.now() + 350; }
+  }
   // vrai pendant que la voix parle (et un court instant après) : le micro du mode écoute l'ignore
-  const parle = () => !!synth && (synth.speaking || performance.now() < parleJusqua);
+  const parle = () => performance.now() < parleJusqua || !!synth?.speaking;
 
   window.Sons = {
-    ctx, unlock, cling, bloc, fanfare, oups, dire, tais, parle,
+    ctx, unlock, cling, bloc, fanfare, oups, alarme, dire, tais, parle, guitare, manque,
     get sfx() { return sfxOn; }, set sfx(v) { sfxOn = !!v; write("maguitare:sfx", sfxOn); },
     get voix() { return voixOn; }, set voix(v) { voixOn = !!v; write("maguitare:voix", voixOn); if (!voixOn) tais(); },
-    voixDispo: !!synth,
+    voixDispo: true,
   };
 })();
