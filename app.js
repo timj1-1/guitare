@@ -55,7 +55,7 @@
   }
 
   // ---------- Navigation entre sections ----------
-  const VIEWS = ["cours", "manche", "bilan"];
+  const VIEWS = ["cours", "morceaux", "manche", "bilan"];
   // En revenant au cours (barre du bas, « ← Cours N », balayage), on retrouve l'endroit où on était.
   function go(view, opts = {}) {
     if (!VIEWS.includes(view)) view = "cours";
@@ -66,6 +66,7 @@
     document.querySelectorAll(".tabbar button").forEach(b => { if (b.dataset.go === view) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
     if (view === "manche") openManche(opts.pos); else $("#backToCours").hidden = true;
     if (view === "bilan") renderBilan();
+    if (view === "morceaux") renderMorceaux();
     if (view !== "cours") window.scrollTo({ top: 0 });
     else if (from !== "cours" || opts.restore) window.scrollTo({ top: coursScroll });
   }
@@ -159,6 +160,7 @@
     nav.append(pals, weeks);
   }
   function selectCours(id) {
+    Sons.tais();
     state.current = id; save(); navWeek = null;
     renderTabs(); renderCours(); updateSeance();
     window.scrollTo({ top: 0 });
@@ -223,7 +225,7 @@
       body.append(el("div", { class: "card prof-card" },
         el("span", { class: "eyebrow", text: "Comment ça marche" }),
         el("p", { text: "Coche chaque exercice fait, dis si c'était facile, correct ou une galère, note ton tempo et un commentaire si besoin." }),
-        el("p", { text: "À la fin, touche « Terminer le cours » et envoie-moi ton bilan : j'adapte le cours suivant." }),
+        el("p", { text: "À la fin, touche « Terminer le cours ». Après la séance C, envoie-moi ton bilan de la semaine : j'adapte la semaine suivante." }),
       ));
     }
     if (p.num && c.num === (p.num - 1) * 12 + 1) {
@@ -306,7 +308,7 @@
     inner.append(tools);
 
     if (c.num > 1 && [1, 3, 4].includes(bi)) { const rv = revisionCard(c, bi); if (rv) inner.append(rv); }
-    if (bi === 5) { const rp = repertoireCard(c); if (rp) inner.append(rp); }
+    if (bi === 5) { const sm = semaineCard(c); if (sm) inner.append(sm); }
     const ul = el("ul", { class: "exos" });
     let wasComplete = complete();
     b.exercices.forEach(e => ul.append(renderExo(c, b, e, checked => {
@@ -388,56 +390,128 @@
     openSheet(schemaView);
   }
 
-  // Morceaux au choix du palier : écouter, puis « Je le choisis » (gardé sur l'appareil, envoyé dans le bilan)
-  const choixDe = pal => (state.repertoire ||= {})[pal] ||= [];
+  // ---------- Mes morceaux : les missions du cours, les morceaux au choix et les tiens ----------
+  // statut : « travail » (je le travaille), « maitrise », ou rien (je pourrais le travailler).
+  // Les missions (Fragile, Bamboleo) sont travaillées d'office dès leur semaine ; tes morceaux à toi aussi.
   const NIVEAU = ["", "Abordable", "Moyen", "Costaud"];
-  function pieceRow(pz, pal, c) {
-    const pick = el("button", { class: "btn small pick-btn", type: "button" });
-    // pas encore la technique : on peut écouter, pas encore choisir (la semaine atteinte compte, même en revenant à un cours plus ancien)
-    const lock = Math.max(c.semaine, nextCours().semaine) < (pz.des || 1);
-    const li = el("li", { class: "piece" + (lock ? " locked" : "") });
-    const sync = () => {
-      if (lock) { pick.disabled = true; pick.textContent = pz.des > 12 ? "Après le palier 3" : `Dès la semaine ${pz.des}`; return; }
-      const on = choixDe(pal).includes(pz.id);
-      li.classList.toggle("chosen", on);
-      pick.setAttribute("aria-pressed", String(on));
-      pick.textContent = on ? "✓ Choisi" : "Je le choisis";
-    };
-    pick.addEventListener("click", () => {
-      const L = choixDe(pal), i = L.indexOf(pz.id);
-      if (i >= 0) L.splice(i, 1); else { L.push(pz.id); Sons.cling(); }
-      save(); sync(); li.closest(".repertoire")?.dispatchEvent(new Event("choix"));
-    });
-    li.append(
-      el("div", { class: "piece-head" }, el("span", { class: "chip", text: pz.style }),
-        el("span", { class: "niveau n" + (pz.niveau || 1), title: "Difficulté pour ce palier", text: "●".repeat(pz.niveau || 1) + "○".repeat(3 - (pz.niveau || 1)) + " " + NIVEAU[pz.niveau || 1] }),
-        el("strong", { text: pz.titre }), el("span", { class: "muted small", text: pz.artiste })),
-      el("p", { class: "small", text: pz.travaille + " " + pz.pourquoi }),
-      el("div", { class: "row-tools" },
-        el("a", { class: "btn small", href: pz.ecouter, target: "_blank", rel: "noopener" }, "▶ Écouter"),
-        pz.tuto ? el("a", { class: "btn small ghost", href: pz.tuto, target: "_blank", rel: "noopener" }, "Tuto") : null,
-        pick));
-    sync();
+  const NIVEAUX = { 1: "Fondations", 2: "Indépendance", 3: "Liberté", 4: "Bossa nova" };
+  const tousMorceaux = () => [...(DATA.morceaux || []), ...(state.mesPieces || []).map(x => ({ ...x, perso: true }))];
+  const morceau = id => tousMorceaux().find(x => x.id === id);
+  const semaineAtteinte = c => Math.max(c?.semaine || 0, nextCours().semaine);
+  const verrou = (pz, sem) => !pz.perso && sem < (pz.des || 1);
+  const statutDe = (pz, sem) => (state.morceaux ||= {})[pz.id] || (pz.perso || (pz.mission && !verrou(pz, sem)) ? "travail" : "");
+  const setStatut = (pz, st) => { (state.morceaux ||= {})[pz.id] = st; save(); };
+  const missionDe = c => morceau(c.palier === 1 ? "fragile" : "bamboleo");
+  const quandTxt = pz => (pz.des > 12 ? "Après le palier 3" : `Dès la semaine ${pz.des}`);
+  const tri = (a, b) => (a.palier || 9) - (b.palier || 9) || (a.des || 0) - (b.des || 0) || (a.niveau || 0) - (b.niveau || 0);
+
+  function morceauCard(pz, sem, refresh) {
+    const lock = verrou(pz, sem), st = statutDe(pz, sem);
+    const li = el("li", { class: "piece" + (lock ? " locked" : "") + (st === "travail" ? " chosen" : "") + (st === "maitrise" ? " mastered" : "") });
+    const nv = pz.niveau || 0;
+    li.append(el("div", { class: "piece-head" },
+      pz.mission ? el("span", { class: "chip mission", text: "Mission du cours" }) : null,
+      pz.perso ? el("span", { class: "chip", text: "Ton morceau" }) : el("span", { class: "chip", text: pz.style }),
+      nv ? el("span", { class: "niveau n" + nv, title: "Difficulté dans son niveau", text: "●".repeat(nv) + "○".repeat(3 - nv) + " " + NIVEAU[nv] }) : null,
+      el("strong", { text: pz.titre }), pz.artiste ? el("span", { class: "muted small", text: pz.artiste }) : null));
+    if (pz.interet) li.append(el("p", { class: "small" }, el("strong", { text: "Pourquoi le travailler : " }), pz.interet));
+    if (pz.techniques?.length) li.append(el("div", { class: "tech" }, el("span", { class: "muted small", text: "Ce qu'il te fait travailler :" }),
+      el("ul", {}, pz.techniques.map(t => el("li", { text: t })))));
+    if (!pz.perso) li.append(el("p", { class: "muted small quand-pz", text: lock ? `${quandTxt(pz)} : tu peux l'écouter, et le travailler quand le cours t'aura donné sa technique.` : pz.mission && pz.id === "fragile" && sem > 4 ? "En entretien : une fois en entier à la séance A." : "Débloqué : tu as la technique." }));
+    const tools = el("div", { class: "row-tools" });
+    if (pz.ecouter) tools.append(el("a", { class: "btn small", href: pz.ecouter, target: "_blank", rel: "noopener" }, "▶ Écouter"));
+    if (pz.tuto) tools.append(el("a", { class: "btn small ghost", href: pz.tuto, target: "_blank", rel: "noopener" }, "Tuto"));
+    const act = (text, fn, cls = "") => el("button", { class: "btn small pick-btn " + cls, type: "button", onclick: () => { fn(); refresh(); } }, text);
+    if (lock) tools.append(el("button", { class: "btn small pick-btn", type: "button", disabled: true }, quandTxt(pz)));
+    else if (st === "travail") {
+      tools.append(act("✓ Je le maîtrise", () => { setStatut(pz, "maitrise"); Sons.bloc(); }, "maitrise-btn"));
+      if (!pz.mission && !pz.perso) tools.append(act("Je ne le travaille plus", () => setStatut(pz, "")));
+    } else if (st === "maitrise") tools.append(act("Le retravailler", () => setStatut(pz, "travail")));
+    else tools.append(act("Je le travaille", () => { setStatut(pz, "travail"); Sons.cling(); }, "primary"));
+    if (pz.perso) tools.append(el("button", { class: "link-btn", type: "button", text: "Supprimer", onclick: () => {
+      if (!confirm(`Retirer « ${pz.titre} » de tes morceaux ?`)) return;
+      state.mesPieces = (state.mesPieces || []).filter(x => x.id !== pz.id); delete state.morceaux?.[pz.id]; save(); refresh();
+    } }));
+    li.append(tools);
     return li;
   }
-  function repertoireCard(c) {
-    const p = palierOf(c), list = p?.repertoire || [];
-    if (!list.length) return null;
-    const card = el("details", { class: "repertoire" });
-    const sum = el("summary");
-    const syncSum = () => {
-      const ch = list.filter(x => choixDe(p.num).includes(x.id)).map(x => x.titre);
-      sum.replaceChildren(el("span", { class: "eyebrow", text: `Tes morceaux au choix · palier ${p.num}` }),
-        el("span", { class: "small", text: ch.length ? "Choisi : " + ch.join(", ") : `${list.length} propositions de styles différents, à écouter avant de choisir` }));
-    };
-    card.addEventListener("choix", syncSum);
-    syncSum();
-    const ul = el("ul", { class: "pieces" }, [...list].sort((a, b) => (a.des - b.des) || (a.niveau - b.niveau)).map(pz => pieceRow(pz, p.num, c)));
-    card.append(sum, el("p", { class: "muted small", text: "Fragile reste ta mission. Ces morceaux sont en plus, à choisir quand tu veux, 1 ou 2 par palier : tu peux aussi n'en choisir aucun. Ils sont rangés du plus abordable au plus costaud, et chacun se débloque quand le cours t'a donné sa technique. Ton choix part dans ton bilan." }), ul);
-    if (p.num === 3 && DATA.bossa?.length) {
-      card.append(el("p", { class: "eyebrow", text: "Et après : la bossa nova (palier 4 proposé)" }),
-        el("ul", { class: "pieces" }, DATA.bossa.map(pz => pieceRow(pz, 4, c))));
+
+  function renderMorceaux() {
+    const body = $("#morceauxBody");
+    const sem = semaineAtteinte(), all = tousMorceaux().sort(tri);
+    const refresh = () => { const y = window.scrollY; renderMorceaux(); window.scrollTo({ top: y }); };
+    const by = st => all.filter(pz => statutDe(pz, sem) === st);
+    const enCours = by("travail").sort((a, b) => !!b.mission - !!a.mission), possibles = by(""), faits = by("maitrise");
+    body.replaceChildren(el("div", { class: "cours-head" },
+      el("span", { class: "eyebrow", text: `Semaine ${Math.min(sem, 12)} du cours` }),
+      el("h1", { text: "Mes morceaux" }),
+      el("p", { class: "sub", text: "Ceux que tu travailles, et ceux que tu pourras travailler, rangés par niveau. Fragile et Bamboleo restent tes morceaux de base ; les autres sont en plus." })));
+    const section = (titre, hint, kids) => body.append(el("section", { class: "card morceaux-sec" }, el("h2", { text: titre }), hint ? el("p", { class: "muted small", text: hint }) : null, kids));
+    const swap = morceau(state.semaineMorceau?.[sem]);
+    section("Je les travaille", swap ? `Cette semaine, dans le cours : ${swap.titre}, à la place de ta mission.` : "Ta mission du moment, et les morceaux que tu as ajoutés.",
+      el("ul", { class: "pieces" }, enCours.map(pz => morceauCard(pz, sem, refresh))));
+    const groupes = el("div", { class: "niveaux" });
+    for (const n of [1, 2, 3, 4]) {
+      const list = possibles.filter(pz => pz.palier === n);
+      if (!list.length) continue;
+      const pc = DATA.cours.filter(c => c.palier === n);
+      groupes.append(el("h3", { class: "lvl-head" }, `Niveau ${n} · ${NIVEAUX[n]}`,
+        el("span", { class: "muted small", text: pc.length ? ` · semaines ${pc[0].semaine} à ${pc.at(-1).semaine}` : " · après le palier 3" })),
+        el("ul", { class: "pieces" }, list.map(pz => morceauCard(pz, sem, refresh))));
     }
+    if (possibles.length) section("Je pourrais les travailler", "Du plus abordable au plus costaud. Chacun se débloque quand le cours t'a donné sa technique.", groupes);
+    if (faits.length) section("Je les maîtrise", null, el("ul", { class: "pieces" }, faits.map(pz => morceauCard(pz, sem, refresh))));
+    // un morceau à toi : il part dans ton bilan, et j'ajoute sa tablature et ses passages difficiles au cours
+    const titre = el("input", { type: "text", placeholder: "Titre", "aria-label": "Titre du morceau" });
+    const artiste = el("input", { type: "text", placeholder: "Artiste (facultatif)", "aria-label": "Artiste" });
+    const lien = el("input", { type: "url", placeholder: "Lien YouTube (facultatif)", "aria-label": "Lien pour l'écouter" });
+    const add = el("details", { class: "card add-piece" }, el("summary", { text: "+ Ajouter un morceau à moi" }),
+      el("p", { class: "muted small", text: "Un morceau que tu travailles en dehors du cours. Il part dans ton bilan : je regarde sa difficulté et j'ajoute sa tablature au cours." }),
+      titre, artiste, lien,
+      el("button", { class: "btn primary", type: "button", onclick: () => {
+        const t = titre.value.trim(); if (!t) { titre.focus(); return; }
+        const u = lien.value.trim();
+        (state.mesPieces ||= []).push({ id: "perso-" + Date.now().toString(36), titre: t, artiste: artiste.value.trim(), ecouter: /^https?:\/\//.test(u) ? u : "" });
+        save(); Sons.cling(); toast(`« ${t} » ajouté à tes morceaux.`); refresh();
+      } }, "Ajouter"));
+    body.append(add);
+  }
+
+  // Dans le bloc Morceau : la mission reste le morceau de base ; on peut la changer pour une semaine seulement.
+  function semaineCard(c) {
+    const base = missionDe(c); if (!base) return null;
+    const card = el("div", { class: "morceau-semaine" });
+    const draw = () => {
+      const sem = semaineAtteinte(c), pz = morceau(state.semaineMorceau?.[c.semaine]);
+      card.classList.toggle("swapped", !!pz);
+      const kids = [el("span", { class: "eyebrow", text: `Ton morceau de la semaine ${c.semaine}` })];
+      if (pz) {
+        kids.push(el("p", {}, el("strong", { text: pz.titre }), ` à la place de ${base.titre}. Fais les exercices ci-dessous avec ce morceau.`));
+        const t = el("div", { class: "row-tools" });
+        if (pz.ecouter) t.append(el("a", { class: "btn small", href: pz.ecouter, target: "_blank", rel: "noopener" }, "▶ Écouter"));
+        if (pz.tuto) t.append(el("a", { class: "btn small ghost", href: pz.tuto, target: "_blank", rel: "noopener" }, "Tuto"));
+        t.append(el("button", { class: "btn small", type: "button", onclick: () => { delete state.semaineMorceau[c.semaine]; save(); draw(); } }, `Revenir à ${base.titre}`));
+        kids.push(t);
+      } else {
+        kids.push(el("p", { class: "small" }, el("strong", { text: base.titre }), ", ta mission. Tu peux le changer pour cette semaine seulement."));
+        // la liste est faite au moment du toucher : elle suit ce que tu as changé dans « Mes morceaux »
+        const list = el("div", { class: "swap-list", hidden: true });
+        const ouvrir = () => {
+          if (!list.hidden) { list.hidden = true; return; }
+          const choix = tousMorceaux().filter(x => x.id !== base.id && !verrou(x, sem) && statutDe(x, sem) !== "maitrise")
+            .sort((a, b) => (statutDe(b, sem) === "travail") - (statutDe(a, sem) === "travail") || tri(a, b));
+          list.replaceChildren(...(choix.length ? choix.map(x => el("button", { class: "btn small", type: "button", onclick: () => {
+            (state.semaineMorceau ||= {})[c.semaine] = x.id; save(); Sons.cling(); draw();
+          } }, x.titre)) : [el("p", { class: "muted small", text: "Pas encore d'autre morceau débloqué : regarde dans « Mes morceaux »." })]));
+          list.hidden = false;
+        };
+        kids.push(el("div", { class: "row-tools" },
+          el("button", { class: "btn small", type: "button", onclick: ouvrir }, "Changer pour cette semaine"),
+          el("button", { class: "link-btn", type: "button", text: "Voir tous mes morceaux →", onclick: () => go("morceaux") })), list);
+      }
+      card.replaceChildren(...kids);
+    };
+    draw();
     return card;
   }
 
@@ -584,7 +658,8 @@
       return el("section", { class: "card done-card" },
         el("span", { class: "eyebrow", text: "Cours terminé" }),
         el("p", { text: `Terminé le ${d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}` + (s.duree ? `, en ${s.duree} min.` : ".") }),
-        el("button", { class: "btn primary", type: "button", onclick: () => showRecap(c) }, "Revoir et renvoyer mon bilan"),
+        el("button", { class: "btn primary", type: "button", onclick: () => showRecap(c) }, semaineDe(c.semaine).every(x => isDone(x.id)) || c.seance === "C" ? "Revoir et renvoyer mon bilan de la semaine" : "Voir mon bilan de la semaine (en cours)"),
+        speakBtn(() => finSegs(c), "Écouter le bilan du prof", "Le prof te fait le compte-rendu du cours"),
         el("button", { class: "btn ghost", type: "button", onclick: () => { delete s.finishedAt; save(); renderTabs(); renderCours(); } }, "Rouvrir ce cours"));
     }
     const field = (k, label, hint) => {
@@ -634,7 +709,8 @@
     else if (r >= .8) S.push(P.rien_galere);
     const up = all.filter(a => a.e.tempo && a.x.bpm > Math.max(40, a.e.tempo - 10)).length;
     if (up) S.push(P.tempo[String(Math.min(12, up))]);
-    S.push(...(pr.fin_suite || []), P.envoie);
+    const envoi = c.seance === "C" || semaineDe(c.semaine).every(x => x.id === c.id || isDone(x.id));
+    S.push(...(pr.fin_suite || []), envoi ? P.envoie : P.envoie_plus_tard);
     return S.filter(Boolean);
   }
 
@@ -647,8 +723,11 @@
     flush();
     renderTabs(); renderCours(); updateSeance();
     Sons.fanfare();
-    showRecap(c);
-    if (profOn()) setTimeout(() => { if (recapSheet.open) Sons.dire(finSegs(c), { force: true }); }, 1600);
+    // un bilan par semaine : il part quand la semaine est finie, ou à la séance C
+    const envoi = c.seance === "C" || semaineDe(c.semaine).every(x => isDone(x.id));
+    if (envoi) showRecap(c);
+    else toast(`Cours ${c.num} terminé ! Ton bilan partira à la fin de la semaine, après la séance C.`);
+    if (profOn()) setTimeout(() => { if (!envoi || recapSheet.open) Sons.dire(finSegs(c), { force: true }); }, 1600);
   }
 
   // ---------- Minuteur de séance : de « Démarrer » à « Terminer le cours » ----------
@@ -736,51 +815,69 @@
 
   // ---------- Bilan envoyé au prof ----------
   const FEEL = { facile: "facile", correct: "correct", galere: "GALÈRE" };
-  function recapText(c) {
-    const s = cs(c.id);
-    const d = s.finishedAt ? new Date(s.finishedAt) : new Date();
-    const pr = progressOf(c);
+  // Un bilan par semaine : les 3 séances regroupées, exercice par exercice (elles reprennent les mêmes exercices).
+  const semaineDe = w => DATA.cours.filter(x => x.semaine === w);
+  function recapSemaine(w) {
+    const wk = semaineDe(w), c0 = wk[0], faits = wk.filter(x => isDone(x.id));
+    const last = faits.map(x => state.cours[x.id].finishedAt).sort().at(-1);
     const L = [];
-    L.push(`Bilan du cours ${c.num} (${c.titre}, palier ${c.palier}) — ${d.toLocaleDateString("fr-FR")}`);
-    L.push(`Fait : ${pr.done}/${pr.total} exercices` + (s.duree ? ` · durée ${s.duree} min` : ""));
-    const pal = palierOf(c), pool = [...(pal?.repertoire || []), ...(DATA.bossa || [])];
-    const ch = [...(state.repertoire?.[c.palier] || []), ...(c.palier === 3 ? state.repertoire?.[4] || [] : [])].map(id => pool.find(x => x.id === id)?.titre).filter(Boolean);
-    if (ch.length) L.push("Morceaux choisis : " + ch.join(", "));
-    for (const b of c.blocs) {
-      L.push("");
-      L.push(b.titre);
-      for (const e of b.exercices) {
-        const x = s.ex[exKey(b, e)] || {};
-        let line = `${x.done ? "[x]" : "[ ]"} ${e.label}`;
-        const bits = [];
-        if (x.feel) bits.push(FEEL[x.feel]);
-        if (x.tempo) bits.push(`${x.tempo} bpm` + (e.tempo ? ` (objectif ${e.tempo})` : ""));
-        if (bits.length) line += " — " + bits.join(", ");
-        L.push(line);
-        if (x.note) L.push(`    « ${x.note.trim().replace(/\s*\n\s*/g, " / ")} »`);
-        for (const r of Object.values(x.jeux || {})) L.push(`    Jeu ${window.Jeux ? Jeux.resume(r) : r.label}`);
+    L.push(`Bilan de la semaine ${w} (cours ${wk.map(x => x.num).join(", ").replace(/, (\d+)$/, " et $1")}, palier ${c0.palier}) — ${(last ? new Date(last) : new Date()).toLocaleDateString("fr-FR")}`);
+    const durees = faits.map(x => state.cours[x.id].duree).filter(Boolean);
+    const pas = wk.filter(x => !isDone(x.id));
+    L.push(`Cours terminés : ${faits.length ? faits.map(x => x.num).join(", ") : "aucun"}` + (pas.length ? ` · pas terminé${pas.length > 1 ? "s" : ""} : ${pas.map(x => x.num).join(", ")}` : "")
+      + (durees.length ? ` · durée ${durees.reduce((a, b) => a + b, 0)} min (${durees.join(" + ")})` : ""));
+    const tot = wk.reduce((n, x) => { const q = progressOf(x); n[0] += q.done; n[1] += q.total; return n; }, [0, 0]);
+    L.push(`Fait : ${tot[0]}/${tot[1]} exercices`);
+    const swap = morceau(state.semaineMorceau?.[w]);
+    if (swap) L.push(`Morceau de la semaine : ${swap.titre} (à la place de ${missionDe(c0)?.titre})`);
+    const sem = semaineAtteinte(c0), nom = x => x.titre + (x.perso && x.artiste ? ` (${x.artiste})` : "") + (x.perso ? ", ajouté par moi" : "");
+    const aussi = tousMorceaux().filter(x => !x.mission && statutDe(x, sem) === "travail").map(nom);
+    if (aussi.length) L.push("Je travaille aussi : " + aussi.join(", "));
+    c0.blocs.forEach((b, bi) => {
+      L.push(""); L.push(b.titre);
+      const groups = new Map(); // un exercice, et ce que tu en as dit à chaque séance
+      for (const x of wk) for (const e of x.blocs[bi]?.exercices || []) {
+        if (!groups.has(e.label)) groups.set(e.label, { e, occ: [] });
+        groups.get(e.label).occ.push({ c: x, v: state.cours[x.id]?.ex[exKey(x.blocs[bi], e)] || {} });
       }
-    }
-    if (c.bilan) {
-      L.push(""); L.push(c.bilan.titre);
-      for (const t of c.bilan.tests) {
+      for (const { e, occ } of groups.values()) {
+        const n = occ.filter(o => o.v.done).length, bits = [];
+        const fe = {}; occ.forEach(o => { if (o.v.feel) fe[o.v.feel] = (fe[o.v.feel] || 0) + 1; });
+        for (const k of ["facile", "correct", "galere"]) if (fe[k]) bits.push(FEEL[k] + (fe[k] > 1 ? ` ×${fe[k]}` : ""));
+        const tp = Math.max(0, ...occ.map(o => o.v.tempo || 0));
+        if (tp) bits.push(`${tp} bpm` + (e.tempo ? ` (objectif ${e.tempo})` : ""));
+        L.push(`[${n}/${occ.length}] ${e.label}` + (bits.length ? " — " + bits.join(", ") : ""));
+        for (const o of occ) {
+          if (o.v.note) L.push(`    « cours ${o.c.num} : ${o.v.note.trim().replace(/\s*\n\s*/g, " / ")} »`);
+          for (const r of Object.values(o.v.jeux || {})) L.push(`    Jeu, cours ${o.c.num} : ${window.Jeux ? Jeux.resume(r) : r.label}`);
+        }
+      }
+    });
+    for (const x of wk) if (x.bilan) {
+      const s = cs(x.id);
+      L.push(""); L.push(x.bilan.titre);
+      for (const t of x.bilan.tests) {
         const r = s.tests[t.id] || {};
         L.push(`${r.res === "ok" ? "[réussi]" : r.res === "ko" ? "[pas encore]" : "[non fait]"} ${t.label} (objectif : ${t.objectif})` + (r.note ? ` — ${r.note.trim()}` : ""));
       }
     }
-    const add = (lab, v) => { if (v) { L.push(""); L.push(lab + " : " + v.trim()); } };
-    add("Là où j'ai galéré", s.galere);
-    add("Ce qui a bien marché", s.bien);
-    add("Pour mon prof", s.autre);
+    const add = (lab, k) => {
+      const v = wk.filter(x => state.cours[x.id]?.[k]?.trim()).map(x => `(cours ${x.num}) ${state.cours[x.id][k].trim().replace(/\s*\n\s*/g, " / ")}`);
+      if (v.length) { L.push(""); L.push(lab + " : " + v.join(" · ")); }
+    };
+    add("Là où j'ai galéré", "galere");
+    add("Ce qui a bien marché", "bien");
+    add("Pour mon prof", "autre");
     L.push("");
-    L.push("Fais-moi la synthèse, un petit récap, et adapte le cours suivant dans l'app.");
+    L.push("Fais-moi la synthèse, un petit récap, et adapte la semaine suivante dans l'app.");
     return L.join("\n");
   }
 
   const recapSheet = $("#recapSheet");
   let recapCurrent = "";
   function showRecap(c) {
-    recapCurrent = recapText(c);
+    recapCurrent = recapSemaine(c.semaine);
+    $("#recapTitle").textContent = `Ton bilan de la semaine ${c.semaine}`;
     $("#recapVoix").replaceChildren(speakBtn(() => finSegs(c), "Écouter le bilan du prof", "Le prof te fait le compte-rendu du cours"));
     $("#recapText").textContent = recapCurrent;
     $("#recapStatus").textContent = "";
@@ -860,14 +957,16 @@
 
     // Historique
     if (done.length) {
+      // une ligne par semaine : son bilan regroupe ses 3 séances
       const ul = el("ul", { class: "list" });
-      [...done].reverse().forEach(c => {
-        const s = state.cours[c.id];
+      [...new Set(done.map(c => c.semaine))].reverse().forEach(w => {
+        const wk = semaineDe(w), f = wk.filter(c => isDone(c.id));
+        const last = f.map(c => state.cours[c.id].finishedAt).sort().at(-1);
         ul.append(el("li", {},
-          el("span", { class: "t" }, "Cours " + c.num, el("small", { text: `${c.titre} · ${new Date(s.finishedAt).toLocaleDateString("fr-FR")}` })),
-          el("button", { class: "btn small", type: "button", onclick: () => showRecap(c) }, "Bilan")));
+          el("span", { class: "t" }, "Semaine " + w, el("small", { text: `${f.length} cours sur ${wk.length} terminé${f.length > 1 ? "s" : ""} (${f.map(c => c.num).join(", ").replace(/, (\d+)$/, " et $1")}) · ${new Date(last).toLocaleDateString("fr-FR")}` })),
+          el("button", { class: "btn small", type: "button", onclick: () => showRecap(f.at(-1)) }, "Bilan")));
       });
-      body.append(el("section", { class: "card" }, el("h2", { text: "Mes cours terminés" }), el("div", { style: "height:8px" }), ul));
+      body.append(el("section", { class: "card" }, el("h2", { text: "Mes semaines" }), el("div", { style: "height:8px" }), ul));
     }
 
     // Jeux du manche, en libre
@@ -1035,7 +1134,7 @@
     const P = t => card.append(el("p", { text: t }));
     P(`${DATA.cours.length} cours : 12 semaines de 3 séances (A, B et C), en 3 paliers de 4 semaines. Chaque séance dure environ 1 h 10 et suit toujours les mêmes 6 blocs, dans le même ordre : échauffement, gamme, pentatonique, notes du manche, barrés et rythme, morceau.`);
     P("Le contenu change toutes les 2 semaines : chaque bloc apporte une nouveauté en semaine 1 et en semaine 3 de chaque palier. Pendant ces 2 semaines, tes 6 séances reprennent les mêmes exercices, et seul le bloc Morceau change un peu selon la séance. C'est voulu : un geste s'installe quand on le répète plusieurs jours de suite.");
-    P(`Les cours ${DATA.cours.filter(c => c.bilan).map(c => c.num).join(", ").replace(/, (\d+)$/, " et $1")} finissent chaque palier par un bilan de tests. Avec tous les tests réussis sauf un au plus, tu passes au palier suivant. Sinon, on ajoute une semaine sur ce qui manque. Et chaque bilan que tu m'envoies me sert à adapter les cours suivants.`);
+    P(`Les cours ${DATA.cours.filter(c => c.bilan).map(c => c.num).join(", ").replace(/, (\d+)$/, " et $1")} finissent chaque palier par un bilan de tests. Avec tous les tests réussis sauf un au plus, tu passes au palier suivant. Sinon, on ajoute une semaine sur ce qui manque. Et ton bilan de chaque semaine, envoyé après la séance C, me sert à adapter la semaine suivante.`);
     for (const p of DATA.paliers) {
       const pc = DATA.cours.filter(c => c.palier === p.num);
       const d = el("details", { class: "constr-pal" }, el("summary", {},
@@ -1233,9 +1332,11 @@
       return;
     }
     DATA = cours; RETOURS = retours.retours || []; SCHEMAS = schemas;
+    // anciens choix « Je le choisis » (par palier) : ils deviennent « Je le travaille »
+    if (state.repertoire) { for (const ids of Object.values(state.repertoire)) for (const id of ids) (state.morceaux ||= {})[id] ||= "travail"; delete state.repertoire; save(); }
     if (!state.current || !byId(state.current)) state.current = nextCours().id;
     renderTabs(); renderCours(); updateSeance();
-    go(state.view === "bilan" ? "bilan" : "cours");
+    go(["bilan", "morceaux"].includes(state.view) ? state.view : "cours");
   }
   boot();
 

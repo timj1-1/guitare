@@ -351,7 +351,7 @@ details.more .more-in { display: flex; flex-direction: column; gap: 10px; paddin
 /* Barre du bas */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  display: grid; grid-template-columns: repeat(4, 1fr);
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   padding: 0 max(8px, env(safe-area-inset-left, 0px)) env(safe-area-inset-bottom, 0px) max(8px, env(safe-area-inset-right, 0px));
   background: color-mix(in srgb, var(--surface) 92%, transparent);
@@ -685,10 +685,6 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 #recapVoix:not(:empty) { display: flex; }
 
 /* Morceaux au choix du palier (bloc Morceau) */
-.repertoire { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); }
-.repertoire > summary { cursor: pointer; display: flex; flex-direction: column; gap: 2px; list-style: none; }
-.repertoire > summary::-webkit-details-marker { display: none; }
-.repertoire[open] > summary { margin-bottom: 8px; }
 .pieces { list-style: none; margin: 8px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .piece { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
 .piece.chosen { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok); }
@@ -700,3 +696,26 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .piece.locked .pick-btn { font-weight: 500; }
 .niveau { font-size: .72rem; color: var(--muted); white-space: nowrap; }
 .niveau.n3 { color: var(--accent); }
+
+/* Mes morceaux */
+.morceaux-sec { display: flex; flex-direction: column; gap: 6px; }
+.morceaux-sec .pieces { margin-top: 4px; }
+.lvl-head { margin: 14px 0 0; font-size: 1rem; }
+.lvl-head:first-child { margin-top: 4px; }
+.piece .chip.mission { background: var(--ok-soft); color: var(--ok); }
+.piece.mastered { border-color: var(--line); background: var(--ok-soft); }
+.maitrise-btn { border-color: var(--ok); color: var(--ok); }
+.tech { display: flex; flex-direction: column; gap: 4px; }
+.tech ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.tech li { font-size: .78rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
+.quand-pz { margin: 0; }
+.add-piece input { display: block; width: 100%; box-sizing: border-box; }
+.add-piece > summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+.add-piece input { font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.add-piece input + input, .add-piece p + input { margin-top: 8px; }
+.add-piece .btn { margin-top: 10px; align-self: flex-start; }
+.morceau-semaine { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); display: flex; flex-direction: column; gap: 6px; }
+.morceau-semaine p { margin: 0; }
+.morceau-semaine.swapped { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.swap-list { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 380px) { .tabbar button { font-size: .66rem; } }
