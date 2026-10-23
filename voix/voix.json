@@ -1,0 +1,54 @@
+{
+ "exemple": "Salut Timothée ! Aujourd'hui, on travaille la gamme de Do majeur. Prends ton temps : un son propre vaut mieux qu'un tempo rapide.",
+ "voix": [
+  {
+   "id": "siwis",
+   "nom": "Siwis",
+   "genre": "Femme",
+   "desc": "La voix d'origine de l'app, gratuite et sans compte.",
+   "prete": true
+  },
+  {
+   "id": "remy",
+   "nom": "Rémy",
+   "genre": "Homme",
+   "desc": "Une voix claire et enjouée.",
+   "prete": false
+  },
+  {
+   "id": "remy-hd",
+   "nom": "Rémy HD",
+   "genre": "Homme",
+   "desc": "Rémy en haute définition, encore plus naturel.",
+   "prete": false
+  },
+  {
+   "id": "vivienne",
+   "nom": "Vivienne",
+   "genre": "Femme",
+   "desc": "Une voix chaleureuse et détendue.",
+   "prete": false
+  },
+  {
+   "id": "vivienne-hd",
+   "nom": "Vivienne HD",
+   "genre": "Femme",
+   "desc": "Vivienne en haute définition, encore plus naturelle.",
+   "prete": false
+  },
+  {
+   "id": "celeste",
+   "nom": "Céleste",
+   "genre": "Femme",
+   "desc": "Une voix jeune, posée et professionnelle.",
+   "prete": false
+  },
+  {
+   "id": "yvette",
+   "nom": "Yvette",
+   "genre": "Femme",
+   "desc": "Une voix vive et animée.",
+   "prete": false
+  }
+ ]
+}

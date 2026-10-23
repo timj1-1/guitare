@@ -772,6 +772,28 @@
           el("button", { class: "btn jeu-btn", type: "button", onclick: () => Jeux.open({ mode: "quiz", label: "Quiz du manche" }) }, "▶ Quiz 6 cordes"))));
     }
 
+    // Choix de la voix : la liste vient de voix/voix.json (une voix « prete » a toutes ses phrases enregistrées)
+    function choixVoix() {
+      const list = el("div", { class: "voix-list", role: "radiogroup", "aria-label": "Voix du prof" });
+      const wrap = el("div", { class: "voix-choix" }, el("strong", { text: "La voix du prof" }),
+        el("span", { class: "muted small", text: "Touche ▶ pour écouter une voix, puis touche son nom pour la choisir." }), list);
+      fetch("voix/voix.json").then(r => r.json()).then(({ exemple, voix }) => {
+        const sync = () => list.querySelectorAll(".voix-opt").forEach(o => o.setAttribute("aria-checked", String(o.dataset.id === Sons.voixNom)));
+        voix.forEach(v => {
+          const opt = el("button", { class: "voix-opt", type: "button", role: "radio", "data-id": v.id, disabled: !v.prete },
+            el("span", { class: "voix-nom" }, el("b", { text: v.nom }), el("span", { class: "muted small", text: " · " + v.genre })),
+            el("span", { class: "muted small", text: v.prete ? v.desc : "Pas encore enregistrée." }));
+          opt.addEventListener("click", () => { Sons.voixNom = v.id; sync(); Sons.dire(exemple, { force: true }); });
+          const play = el("button", { class: "icon-btn voix-play", type: "button", "aria-label": "Écouter " + v.nom, disabled: !v.prete }, "▶");
+          play.addEventListener("click", () => Sons.dire(exemple, { force: true, nom: v.id }));
+          list.append(el("div", { class: "voix-row" }, opt, play));
+        });
+        if (!voix.some(v => v.id === Sons.voixNom && v.prete)) Sons.voixNom = "siwis";
+        sync();
+      }).catch(() => wrap.remove());
+      return wrap;
+    }
+
     // Sons et voix
     const toggle = (label, hint, get, set) => {
       const b = el("button", { class: "switch", type: "button", role: "switch", "aria-checked": String(get()) });
@@ -783,6 +805,7 @@
       toggle("Petits sons", "Un « cling » quand tu coches un exercice, une mélodie quand un bloc ou un cours est fini.", () => Sons.sfx, v => { Sons.sfx = v; if (v) Sons.cling(); }));
     if (Sons.voixDispo) {
       reglages.append(toggle("Voix dans les jeux", "Une voix naturelle lit les questions et les réponses des jeux.", () => Sons.voix, v => { Sons.voix = v; if (v) Sons.dire("D'accord, je lis les consignes des jeux."); }));
+      reglages.append(choixVoix());
       reglages.append(el("p", { class: "muted small", text: "Dans chaque bloc, les boutons « Écouter » lisent la consigne, le « pourquoi » et l'explication. Les phrases sont enregistrées d'avance : une phrase toute neuve (après une adaptation du cours) est lue par la voix de ton appareil, le temps que je l'enregistre." }));
     }
     body.append(reglages);

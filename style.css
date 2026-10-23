@@ -633,3 +633,16 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 /* Révision tirée au sort */
 .revision { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--accent); background: var(--accent-soft); }
 .revision p { font-weight: 600; }
+
+/* Choix de la voix */
+.voix-choix { display: flex; flex-direction: column; gap: 6px; }
+.voix-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.voix-row { display: flex; align-items: stretch; gap: 8px; }
+.voix-opt { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 12px 10px 38px; position: relative;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: inherit; font: inherit; cursor: pointer; }
+.voix-opt::before { content: ""; position: absolute; left: 12px; top: 50%; width: 16px; height: 16px; margin-top: -8px; border-radius: 50%; border: 2px solid var(--line); }
+.voix-opt[aria-checked="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.voix-opt[aria-checked="true"]::before { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 45%, transparent 50%); }
+.voix-opt:disabled { opacity: .5; cursor: default; }
+.voix-play { flex: none; width: 48px; border-radius: 12px; }
+.voix-play:disabled { opacity: .4; }

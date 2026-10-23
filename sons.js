@@ -7,6 +7,9 @@
   const write = (k, v) => { try { localStorage.setItem(k, v ? "1" : "0"); } catch {} };
   let sfxOn = read("maguitare:sfx", true);
   let voixOn = read("maguitare:voix", true);
+  // la voix choisie dans les réglages : « siwis » (fichiers à la racine de voix/) ou une voix Microsoft (voix/<id>/)
+  let voixNom = "siwis";
+  try { voixNom = localStorage.getItem("maguitare:voixNom") || "siwis"; } catch {}
 
   // ---------- Contexte audio partagé (métronome, jeux, petits sons, voix) ----------
   let actx = null, triedAt = 0;
@@ -119,13 +122,17 @@
     if (!crypto?.subtle) return null;
     return hex(await crypto.subtle.digest("SHA-1", new TextEncoder().encode(text))).slice(0, 16);
   }
-  const cache = new Map(); // texte -> Promise<AudioBuffer|null>
-  function charge(text) {
-    if (!cache.has(text)) {
-      cache.set(text, (async () => {
+  const cache = new Map(); // voix + texte -> Promise<AudioBuffer|null>
+  const dossier = nom => (nom && nom !== "siwis" ? "voix/" + nom + "/" : "voix/");
+  function charge(text, nom = voixNom) {
+    const k = nom + "|" + text;
+    if (!cache.has(k)) {
+      cache.set(k, (async () => {
         try {
           const id = await empreinte(text); if (!id) return null;
-          const r = await fetch("voix/" + id + ".mp3");
+          let r = await fetch(dossier(nom) + id + ".mp3");
+          // phrase pas encore enregistrée avec cette voix : la voix d'origine
+          if (!r.ok && nom !== "siwis") r = await fetch(dossier("siwis") + id + ".mp3");
           if (!r.ok) return null;
           const data = await r.arrayBuffer();
           return await new Promise((ok, ko) => { const p = ctx().decodeAudioData(data, ok, ko); if (p?.then) p.then(ok, ko); });
@@ -133,7 +140,7 @@
       })());
       if (cache.size > 80) cache.delete(cache.keys().next().value);
     }
-    return cache.get(text);
+    return cache.get(k);
   }
 
   let tour = 0, source = null, parleJusqua = 0;
@@ -155,18 +162,18 @@
     });
   }
   // texte : une phrase ou une liste de phrases, lues à la suite
-  async function dire(texte, { force = false } = {}) {
+  async function dire(texte, { force = false, nom = voixNom } = {}) {
     const segs = (Array.isArray(texte) ? texte : [texte]).map(t => String(t || "").replace(/\s+/g, " ").trim()).filter(Boolean);
     if (!segs.length || (!voixOn && !force)) return;
     tais();
     const moi = ++tour;
     parleJusqua = Infinity;
     try { unlock(); } catch {}
-    segs.slice(0, 2).forEach(charge);
+    segs.slice(0, 2).forEach(t => charge(t, nom));
     for (let i = 0; i < segs.length; i++) {
       if (moi !== tour) return;
-      if (segs[i + 1]) charge(segs[i + 1]);
-      const buf = await charge(segs[i]);
+      if (segs[i + 1]) charge(segs[i + 1], nom);
+      const buf = await charge(segs[i], nom);
       if (moi !== tour) return;
       if (buf) {
         await new Promise(res => {
@@ -188,5 +195,6 @@
     get sfx() { return sfxOn; }, set sfx(v) { sfxOn = !!v; write("maguitare:sfx", sfxOn); },
     get voix() { return voixOn; }, set voix(v) { voixOn = !!v; write("maguitare:voix", voixOn); if (!voixOn) tais(); },
     voixDispo: true,
+    get voixNom() { return voixNom; }, set voixNom(v) { voixNom = String(v || "siwis"); try { localStorage.setItem("maguitare:voixNom", voixNom); } catch {} tais(); },
   };
 })();
