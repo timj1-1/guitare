@@ -142,6 +142,7 @@
   const ICON_ZOOM = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const withIcon = (node, icon, text) => { node.insertAdjacentHTML("afterbegin", icon); if (text != null) node.append(text); return node; };
 
+  const FRET_INLAYS = new Set([3, 5, 7, 9, 12, 15, 17, 19]);
   function progressOf(c) {
     const list = allEx(c), s = state.cours[c.id];
     const done = list.filter(x => s?.ex[x.key]?.done).length;
@@ -157,24 +158,28 @@
     body.replaceChildren();
     seanceUI = {};
 
+    // En-tête : un manche en bois, une case par exercice, qui s'allume quand il est fait
     const pr = progressOf(c);
-    const bar = el("i", { style: `width:${pr.total ? (pr.done / pr.total) * 100 : 0}%` });
-    const prLabel = el("span", { class: "progress-label", text: `${pr.done} / ${pr.total} exercices faits` });
-    body.append(el("div", { class: "cours-head" },
-      el("span", { class: "eyebrow", text: `Palier ${p.num} · ${p.titre}` }),
+    const frets = el("div", { class: "frets", "aria-hidden": "true" });
+    frets.style.setProperty("--n", pr.total);
+    const prLabel = el("span", { class: "progress-label" });
+    const hero = el("header", { class: "hero" },
+      el("span", { class: "hero-kicker", text: `Palier ${p.num} · ${p.titre}` }),
       el("h1", { text: "Cours " + c.num }),
       el("p", { class: "sub", text: c.titre }),
-      el("div", { class: "progress", "aria-hidden": "true" }, bar),
-      prLabel,
-    ));
-    if (!s.finishedAt) body.append(renderSeance(c));
+      frets, prLabel,
+    );
+    body.append(hero);
+    if (!s.finishedAt) hero.append(renderSeance(c));
     const updateProgress = () => {
       const q = progressOf(c);
-      bar.style.width = (q.total ? (q.done / q.total) * 100 : 0) + "%";
+      const keys = allEx(c).map(x => !!s.ex[x.key]?.done);
+      frets.replaceChildren(...keys.map((on, k) => el("i", { class: (on ? "on " : "") + (FRET_INLAYS.has(k + 1) ? "inlay" + (k + 1 === 12 ? " double" : "") : "") })));
       prLabel.textContent = `${q.done} / ${q.total} exercices faits`;
       const tab = document.querySelector(`.ctab[data-id="${c.id}"]`);
       if (tab && !isDone(c.id)) tab.classList.toggle("started", isStarted(c.id));
     };
+    updateProgress();
 
     // Le mot du prof (retours écrits après tes bilans)
     const mots = RETOURS.filter(r => r.pour === c.id);
@@ -534,7 +539,7 @@
       u.card.dataset.state = on ? "on" : has ? "pause" : "off";
       u.time.textContent = has ? fmt(seanceMs(us)) : "0:00";
       u.label.textContent = on ? "Séance en cours" : has ? "Séance en pause" : "Minuteur de séance";
-      u.btn.textContent = on ? "Pause" : has ? "Reprendre" : "▶ Démarrer la séance";
+      u.btn.textContent = on ? "Pause" : has ? "Reprendre" : "▶ Démarrer";
       u.btn.className = "btn " + (on ? "" : "primary");
       u.reset.hidden = !has;
       if (u.duree && has) u.duree.placeholder = String(Math.max(1, Math.round(seanceMs(us) / 60000)));
