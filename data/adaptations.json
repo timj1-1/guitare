@@ -1,0 +1,4 @@
+{
+  "_aide": "Adaptations du cours après chaque bilan, rangées par cours (c1 … c36). Clés possibles : mot, titre, blocs.{b1…b6}.{faire, exercices, positions…}. Relancer tools/build_cours.py après modification.",
+  "cours": {}
+}

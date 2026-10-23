@@ -328,9 +328,37 @@ PALIERS = [
 FRAGILE_ENTRETIEN = {"id": "fragile", "label": "Fragile une fois en entier, pour l'entretenir"}
 
 
+# Jeux du manche, selon la corde travaillée à ce moment du parcours (cordes : 6 = Mi grave … 1 = Mi aigu).
+JEUX_NOTES = {
+    (1, 0): {"corde": 5, "vues": [6, 5], "note": "La", "octave": [6, 5]},
+    (1, 1): {"corde": 4, "vues": [6, 5, 4], "note": "Ré", "octave": [6, 5, 4]},
+    (2, 0): {"corde": 3, "vues": [6, 5, 4, 3], "note": "Sol", "octave": [6, 5, 4, 3]},
+    (2, 1): {"corde": 2, "vues": [6, 5, 4, 3, 2], "note": "Si", "octave": [6, 5, 4, 3]},
+    (3, 0): {"corde": 1, "vues": [6, 5, 4, 3, 2, 1], "note": "Mi", "octave": [6, 5, 4, 3]},
+}
+
+
+def jeux_for(palier, moitie, e):
+    cfg = JEUX_NOTES.get((palier["num"], moitie))
+    if e["id"] == "corde" and cfg:
+        return [{"mode": "trouve", "cordes": [cfg["corde"]], "label": "Trouve les notes"},
+                {"mode": "nomme", "cordes": [cfg["corde"]], "label": "Quelle note ?"},
+                {"mode": "nomme", "cordes": cfg["vues"], "label": "Révision : toutes mes cordes"}]
+    if e["id"] == "octaves" and cfg:
+        return [{"mode": "partout", "note": cfg["note"], "label": f"Tous les {cfg['note']}"},
+                {"mode": "octave", "cordes": cfg["octave"], "label": "Octaves"}]
+    if e["id"] == "quiz":
+        return [{"mode": "quiz", "label": "Quiz : une note, toutes les cordes"},
+                {"mode": "nomme", "cordes": [6, 5, 4, 3, 2, 1], "label": "Quelle note ? (6 cordes)"}]
+    return None
+
+
 def bloc_for(palier, b, bi, moitie, seance):
     m = b["moities"][moitie]
     ex = [dict(e) for e in m["ex"]]
+    for e in ex:
+        j = jeux_for(palier, moitie, e)
+        if j: e["jeux"] = j
     faire = m["faire"]
     titre = b["titre"]
     if b.get("morceau"):
@@ -369,9 +397,26 @@ for p in PALIERS:
                               "tests": [{"id": f"t{i + 1}", "label": t, "objectif": o} for i, (t, o) in enumerate(p["bilan"])]}
             cours.append(c)
 
+# Adaptations après tes bilans : data/adaptations.json, rangées par cours.
+# {"c4": {"mot": "…", "blocs": {"b2": {"faire": "…", "exercices": [...]}}}}
+ADAPT = os.path.join(os.path.dirname(__file__), "..", "data", "adaptations.json")
+if os.path.exists(ADAPT):
+    with open(ADAPT, encoding="utf-8") as f:
+        adapt = json.load(f).get("cours", {})
+    for c in cours:
+        a = adapt.get(c["id"])
+        if not a:
+            continue
+        for k, v in a.items():
+            if k == "blocs":
+                for b in c["blocs"]:
+                    b.update(v.get(b["id"], {}))
+            else:
+                c[k] = v
+
 out = {
     "version": 1,
-    "maj": "2026-10-23",
+    "maj": __import__("datetime").datetime.now().strftime("%Y-%m-%dT%H:%M"),
     "seance_type": [
         {"bloc": "Échauffement et technique", "duree": 10}, {"bloc": "Gamme", "duree": 10},
         {"bloc": "Pentatonique", "duree": 10}, {"bloc": "Notes du manche", "duree": 10},

@@ -300,6 +300,24 @@
     nb.addEventListener("click", () => { noteWrap.hidden = !noteWrap.hidden; if (!noteWrap.hidden) ta.focus(); });
     moreRow.append(nb);
     li.append(moreRow, noteWrap);
+    if (e.jeux?.length && window.Jeux) {
+      const row = el("div", { class: "exo-jeux" });
+      const last = el("p", { class: "jeu-last" });
+      const showLast = () => {
+        const r = Object.values(x.jeux || {}).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+        last.textContent = r ? "Dernier jeu · " + Jeux.resume(r) : ""; last.hidden = !r;
+      };
+      e.jeux.forEach(j => row.append(el("button", {
+        class: "btn small jeu-btn", type: "button",
+        onclick: () => Jeux.open(j, res => {
+          x.jeux ||= {}; x.jeux[j.label] = res;
+          if (!x.done && res.score / res.total >= 0.8) { x.done = true; box.checked = true; li.classList.add("is-done"); }
+          touch(c); save(); showLast(); onChange();
+        }),
+      }, "▶ " + j.label)));
+      showLast();
+      li.append(row, last);
+    }
     return li;
   }
 
@@ -389,6 +407,7 @@
         if (bits.length) line += " — " + bits.join(", ");
         L.push(line);
         if (x.note) L.push(`    « ${x.note.trim().replace(/\s*\n\s*/g, " / ")} »`);
+        for (const r of Object.values(x.jeux || {})) L.push(`    Jeu ${window.Jeux ? Jeux.resume(r) : r.label}`);
       }
     }
     if (c.bilan) {
@@ -494,6 +513,30 @@
           el("button", { class: "btn small", type: "button", onclick: () => showRecap(c) }, "Bilan")));
       });
       body.append(el("section", { class: "card" }, el("h2", { text: "Mes cours terminés" }), el("div", { style: "height:8px" }), ul));
+    }
+
+    // Jeux du manche, en libre
+    if (window.Jeux) {
+      const sel = new Set(state.jeuxCordes || [6, 5]);
+      const chips = el("div", { class: "row-tools" });
+      [6, 5, 4, 3, 2, 1].forEach(n => {
+        const b = el("button", { class: "btn small corde-chip", type: "button", "aria-pressed": String(sel.has(n)), text: Jeux.NOM_CORDE[n] });
+        b.addEventListener("click", () => {
+          if (sel.has(n) && sel.size > 1) sel.delete(n); else sel.add(n);
+          b.setAttribute("aria-pressed", String(sel.has(n))); state.jeuxCordes = [...sel]; save();
+        });
+        chips.append(b);
+      });
+      const cfg = mode => ({ mode, cordes: [...sel].sort((a, b) => b - a), label: Jeux.MODES[mode].titre });
+      body.append(el("section", { class: "card", style: "display:flex;flex-direction:column;gap:10px" },
+        el("h2", { text: "Jeux du manche" }),
+        el("p", { class: "muted small", text: "En dehors des cours, pour t'entraîner quand tu veux. Choisis tes cordes :" }),
+        chips,
+        el("div", { class: "row-tools" },
+          el("button", { class: "btn jeu-btn", type: "button", onclick: () => Jeux.open(cfg("trouve")) }, "▶ Trouve les notes"),
+          el("button", { class: "btn jeu-btn", type: "button", onclick: () => Jeux.open(cfg("nomme")) }, "▶ Quelle note ?"),
+          el("button", { class: "btn jeu-btn", type: "button", onclick: () => Jeux.open(cfg("octave")) }, "▶ Octaves"),
+          el("button", { class: "btn jeu-btn", type: "button", onclick: () => Jeux.open({ mode: "quiz", label: "Quiz du manche" }) }, "▶ Quiz 6 cordes"))));
     }
 
     // Sauvegarde
