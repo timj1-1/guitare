@@ -700,8 +700,6 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 /* Mes morceaux */
 .morceaux-sec { display: flex; flex-direction: column; gap: 6px; }
 .morceaux-sec .pieces { margin-top: 4px; }
-.lvl-head { margin: 14px 0 0; font-size: 1rem; }
-.lvl-head:first-child { margin-top: 4px; }
 .piece .chip.mission { background: var(--ok-soft); color: var(--ok); }
 .piece.mastered { border-color: var(--line); background: var(--ok-soft); }
 .maitrise-btn { border-color: var(--ok); color: var(--ok); }
@@ -719,3 +717,42 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .morceau-semaine.swapped { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .swap-list { display: flex; flex-wrap: wrap; gap: 6px; }
 @media (max-width: 380px) { .tabbar button { font-size: .66rem; } }
+
+/* Fiche d'un morceau : vidéo dans l'app, tablatures, ajouts */
+.piece-fiche > summary { cursor: pointer; list-style: none; }
+.piece-fiche > summary::-webkit-details-marker { display: none; }
+.piece-fiche > summary.piece-head { position: relative; padding-right: 4px; }
+.piece-fiche .voir { margin-left: auto; font-size: 0; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.piece-fiche .voir::after { font-size: .78rem; content: "Voir la fiche ▾"; }
+.piece-fiche[open] .voir::after { content: "Fermer ▴"; }
+.piece-corps { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.fiche { display: flex; flex-direction: column; gap: 8px; }
+.fiche .eyebrow { margin-top: 4px; }
+.lecteur { display: flex; flex-direction: column; gap: 8px; }
+.lecteur .row-tools { align-items: center; }
+.vid-btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.yt { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #000; }
+.yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.lecteur-slot { display: flex; flex-direction: column; gap: 6px; }
+.tab-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tab-links li { display: flex; align-items: center; gap: 6px; font-size: .92rem; }
+.tab-links a, .tab-links .link-btn { color: var(--accent); font-weight: 600; text-align: left; }
+.link-btn.x { color: var(--muted); padding: 2px 6px; }
+.ajout { border-top: 1px dashed var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.ajout > summary { cursor: pointer; font-weight: 600; color: var(--accent); font-size: .92rem; }
+.ajout[open] > summary { margin-bottom: 4px; }
+.ajout input[type="text"], .ajout input[type="url"] { display: block; width: 100%; box-sizing: border-box; font: inherit; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.lvl { border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px; margin-top: 8px; background: var(--surface); }
+.lvl > summary { cursor: pointer; list-style: none; display: flex; flex-direction: column; gap: 2px; padding: 8px 0; }
+.lvl > summary::-webkit-details-marker { display: none; }
+.lvl > summary strong::after { content: " ▾"; color: var(--accent); }
+.lvl[open] > summary strong::after { content: " ▴"; }
+.lvl[open] > .pieces { margin-bottom: 10px; }
+.lvl-head { margin: 0; font-size: 1rem; }
+.fichier-view { border: 0; padding: 0; width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; background: var(--bg); color: var(--ink); }
+.fichier-view[open] { display: flex; flex-direction: column; }
+.fichier-view::backdrop { background: rgba(0, 0, 0, .6); }
+.fv-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); padding-top: max(12px, env(safe-area-inset-top, 0px)); }
+.fv-scroll { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y pinch-zoom; }
+.fv-scroll img { display: block; width: 100%; height: auto; }
+@media (min-width: 900px) { .fv-scroll img { width: min(100%, 1100px); margin: 0 auto; } }

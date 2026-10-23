@@ -596,23 +596,27 @@ for p in PALIERS:
 # ---------- Répertoire : morceaux au choix par palier (il choisit dans l'app, bloc Morceau) ----------
 # vidéos choisies sur leur titre (YouTube n'est pas joignable d'ici pour les vérifier)
 YT = lambda v: "https://www.youtube.com/watch?v=" + v
-def piece(id, style, titre, artiste, travaille, pourquoi, ecouter, tuto=None, des=1, niveau=1, techniques=(), interet="", palier=None, mission=False):
+def piece(id, style, titre, artiste, travaille, pourquoi, ecouter, tuto=None, des=1, niveau=1, techniques=(), interet="", palier=None, mission=False, tabs=(), plus=()):
     # des : semaine à partir de laquelle il se débloque ; niveau : 1 abordable, 2 moyen, 3 costaud (dans son palier)
     # techniques : ce qu'il fait travailler (puces) ; interet : pourquoi le travailler (onglet « Mes morceaux »)
+    # tabs : [(titre, lien)] tablatures, partitions ou accords ; plus : [(titre, id YouTube)] autres vidéos
     lien = lambda v: v if v.startswith("http") else YT(v)
     return {"id": id, "style": style, "titre": titre, "artiste": artiste, "travaille": travaille, "pourquoi": pourquoi,
-            "ecouter": lien(ecouter), **({"tuto": lien(tuto)} if tuto else {}), "des": des, "niveau": niveau,
-            "techniques": list(techniques), "interet": interet, "palier": palier, **({"mission": True} if mission else {})}
+            "ecouter": lien(ecouter) if ecouter else "", **({"tuto": lien(tuto)} if tuto else {}), "des": des, "niveau": niveau,
+            "techniques": list(techniques), "interet": interet, "palier": palier, **({"mission": True} if mission else {}),
+            "tabs": [{"t": t, "u": u} for t, u in tabs], "plus": [{"t": t, "u": lien(v)} for t, v in plus]}
 YT_CHERCHE = lambda q: "https://www.youtube.com/results?search_query=" + q.replace(" ", "+")
 # Les missions du cours : elles restent les morceaux de base, dans le bloc Morceau
 MISSIONS = [
     piece("fragile", "Pop, arpèges", "Fragile", "Sting", "Arpèges p-i-m-a, pouce sur les basses, accords qui s'enchaînent.",
-          "Ta mission du palier 1, puis en entretien.", YT_CHERCHE("Sting Fragile"), "rxFkOUI49v0", des=1, niveau=2,
+          "Ta mission du palier 1, puis en entretien.", "lB6a-iD6ZOY", "rxFkOUI49v0", des=1, niveau=2,
+          tabs=[("Tablature (Ultimate Guitar, 4,75/5)", "https://tabs.ultimate-guitar.com/tab/sting/fragile-tabs-84266")],
           techniques=["Arpèges p-i-m-a", "Pouce sur les basses", "Enchaînements d'accords"],
           interet="Il réunit tout le palier 1 : ta main droite en arpèges et des accords qui changent sans casser le rythme. Un classique de la guitare nylon, dans le style que tu aimes.",
           palier=1, mission=True),
     piece("bamboleo", "Rumba", "Bamboleo", "Gipsy Kings", "Rumba avec golpe, Fa barré rapide, cadence andalouse, puis rasgueados.",
-          "Ta mission des paliers 2 et 3.", YT_CHERCHE("Gipsy Kings Bamboleo"), "gHorqf4fA_c", des=5, niveau=2,
+          "Ta mission des paliers 2 et 3.", "w-isTDv6hq0", "gHorqf4fA_c", des=5, niveau=2,
+          tabs=[("Tablature (Ultimate Guitar, 4,3/5)", "https://tabs.ultimate-guitar.com/tab/gipsy-kings/bamboleo-tabs-12401")],
           techniques=["Rumba avec golpe", "Fa barré rapide", "Cadence andalouse", "Rasgueado (palier 3)"],
           interet="La rumba gitane, sur la grille la plus célèbre de la musique espagnole. Il rend ton Fa barré rapide et ta main droite rythmique solide, et sert de base à ton impro du palier 3.",
           palier=2, mission=True),
@@ -624,21 +628,25 @@ REPERTOIRE = {
               techniques=["Accords ouverts", "Changements d'accords en rythme", "Accompagnement régulier"],
               interet="Tu le connais déjà en partie. Le jouer vraiment propre, c'est vérifier que chaque changement d'accord tombe pile en rythme, sans trou ni corde qui frise."),
         piece("sevillanas", "Flamenco", "Sevillanas : le rythme de base", "Traditionnel", "Compter en 3 temps sur des accords simples, premiers accents de la main droite.",
-              "Une entrée douce dans le flamenco, avant la rumba du palier 2.", "KGxuvqcVnEU", des=1, niveau=1,
+              "Une entrée douce dans le flamenco, avant la rumba du palier 2.", "", "KGxuvqcVnEU", des=1, niveau=1,
               techniques=["Mesure à 3 temps", "Accents de la main droite", "Accords simples"],
               interet="Une première porte vers le flamenco, avec des accords que tu connais déjà. Compter en 3 temps et placer les accents prépare la rumba et le rasgueado."),
         piece("fields", "Pop", "Fields of Gold", "Sting", "Arpèges sur une grille d'accords, avec un Fa barré.",
               "Si Fragile te plaît : le même style, quand ton Fa barré tient.", "KLVq0IAzh1A", des=2, niveau=2,
+              tabs=[("Accords et tablature (JustinGuitar)", "https://www.justinguitar.com/songs/sting-fields-of-gold-chords-tabs-guitar-lesson-bs-803"), ("Tablature (Ultimate Guitar)", "https://tabs.ultimate-guitar.com/tab/sting/fields-of-gold-tabs-84265")],
               techniques=["Arpèges", "Fa barré", "Enchaînements d'accords"],
               interet="Le même univers que Fragile, sur une autre grille. Il met ton Fa barré dans un vrai morceau, au milieu des arpèges : le barré doit sonner sans casser le flux."),
         piece("tarrega-mim", "Classique, arpèges", "Étude en Mi mineur", "Francisco Tárrega", "Arpège p-i-m-a régulier, formes d'accords qui se déplacent sur le manche.",
-              "Le plus exigeant du palier : quand ton arpège p-i-m-a est régulier.", "5EdL4_J9Se0", "hUNcojDqvhI", des=3, niveau=3,
+              "Le plus exigeant du palier : quand ton arpège p-i-m-a est régulier.", "5EdL4_J9Se0", "G2r-rdjuAWI", des=3, niveau=3,
+              tabs=[("Partition et tablature, PDF gratuit (This is Classical Guitar)", "https://thisisclassicalguitar.com/estudio-in-e-minor-tarrega-free-pdf"), ("Tablature (Ultimate Guitar)", "https://tabs.ultimate-guitar.com/tab/325357")],
+              plus=[("Leçon pas à pas, en espagnol", "hUNcojDqvhI")],
               techniques=["Arpège p-i-m-a régulier", "Formes d'accords qui se déplacent", "Une vraie étude classique"],
               interet="Une étude courte, écrite exprès pour la main droite. Elle rend ton arpège parfaitement régulier, la base de tout le répertoire classique."),
     ],
     2: [
         piece("cestecrit", "Chanson française", "C'est écrit", "Francis Cabrel", "Accompagnement en arpèges, enchaînements d'accords avec barrés.",
               "Ton morceau : il demande des barrés sûrs, c'est le bon moment.", "IkAhYtcDkc4", "XJX5Jjrzoy0", des=5, niveau=2,
+              tabs=[("Accords (Ultimate Guitar)", "https://tabs.ultimate-guitar.com/tab/1482172")],
               techniques=["Arpèges d'accompagnement", "Barrés", "Enchaînements d'accords"],
               interet="Il demande des barrés sûrs et un accompagnement en arpèges qui coule. Au palier 2, tu as enfin les deux : c'est le moment de le maîtriser."),
         piece("djobi", "Rumba", "Djobi Djoba", "Gipsy Kings", "Rumba avec golpe, barrés, cadence andalouse.",
@@ -646,11 +654,14 @@ REPERTOIRE = {
               techniques=["Rumba avec golpe", "Barrés", "Cadence andalouse"],
               interet="La même famille que Bamboleo, en plus enlevé. Un rythme s'installe vraiment quand on le joue dans plusieurs morceaux : celui-ci fixe ta rumba."),
         piece("pompe", "Gypsy", "La pompe manouche sur Minor Swing", "Django Reinhardt", "Main droite alternée basse et accord, accords sans corde à vide.",
-              "La base du jazz manouche, quand tes barrés forme La sont en place.", "VbBBpfOZ0z0", des=6, niveau=2,
+              "La base du jazz manouche, quand tes barrés forme La sont en place.", "", "VbBBpfOZ0z0", des=6, niveau=2,
+              tabs=[("La pompe expliquée, avec vidéos (Guitare Jazz Manouche)", "https://guitarejazzmanouche.com/en_wiki/index.php/The_pompe")],
+              plus=[("La pompe décomposée", "vR4NSvfe9k4"), ("La pompe swing", "LCKfvDWBYs8")],
               techniques=["Pompe : basse puis accord", "Accords sans corde à vide", "Swing"],
               interet="La porte d'entrée du jazz manouche. La pompe muscle ta main droite et tes accords fermés, et prépare Les Yeux noirs au palier 3."),
         piece("romance", "Classique, arpèges", "Romance anonyme (Jeux interdits), 1re partie", "Anonyme", "Arpèges en triolets, mélodie sur la corde aiguë, un barré case 7.",
-              "L'étude du palier, en fin de palier : arpèges du palier 1 et barrés du palier 2.", "vBgDq5N6lCs", des=7, niveau=3,
+              "L'étude du palier, en fin de palier : arpèges du palier 1 et barrés du palier 2.", "vBgDq5N6lCs", "diYzEvWQvPU", des=7, niveau=3,
+              tabs=[("Partition et tablature, PDF gratuit (This is Classical Guitar)", "https://www.thisisclassicalguitar.com/spanish-romance-tab-free-pdf/")],
               techniques=["Arpèges en triolets", "Mélodie sur la corde aiguë", "Barré case 7"],
               interet="La pièce classique que presque tous les guitaristes jouent un jour. Elle réunit tes arpèges du palier 1 et tes barrés du palier 2, avec une mélodie à faire chanter au-dessus."),
     ],
@@ -661,14 +672,17 @@ REPERTOIRE = {
               interet="Le grand classique espagnol, en version accessible. Il met en musique exactement la gamme et le rasgueado que tu apprends au palier 3."),
         piece("yeuxnoirs", "Gypsy", "Les Yeux noirs (thème)", "Django Reinhardt", "Mélodie en mineure harmonique, puis la pompe dessous.",
               "Ta gamme mineure du palier 3, dans le style que tu aimes.", "39k4pNjusq8", des=10, niveau=2,
+              tabs=[("Accords (Ultimate Guitar)", "https://pt.ultimate-guitar.com/tab/django-reinhardt/les-yeux-noir-chords-453966")],
               techniques=["Mineure harmonique", "Jouer une mélodie", "Pompe manouche"],
               interet="Un standard du jazz manouche. Tu joues ta gamme mineure comme une vraie mélodie, puis tu l'accompagnes avec la pompe du palier 2."),
         piece("romance2", "Classique, arpèges", "Romance anonyme, 2e partie (Mi majeur)", "Anonyme", "Même arpège qu'à la 1re partie, avec barrés et grands écarts de doigts.",
-              "L'étude du palier : exactement l'écartement travaillé à l'échauffement.", "vBgDq5N6lCs", des=10, niveau=3,
+              "L'étude du palier : exactement l'écartement travaillé à l'échauffement.", "vBgDq5N6lCs", "diYzEvWQvPU", des=10, niveau=3,
+              tabs=[("Partition et tablature, PDF gratuit (This is Classical Guitar)", "https://www.thisisclassicalguitar.com/spanish-romance-tab-free-pdf/")],
               techniques=["Grands écarts de doigts", "Barrés", "Arpèges en triolets"],
               interet="La suite de la Romance, plus dure : des écarts larges et des barrés en position. C'est exactement l'écartement que tu travailles à l'échauffement du palier 3."),
         piece("shape", "Pop", "Shape of My Heart", "Sting", "Arpèges plus riches, accords en position, sons tenus.",
               "La suite naturelle de Fragile, un cran plus dur, en fin de parcours.", "NlwIDxCjL-8", des=11, niveau=3,
+              tabs=[("Leçon et tablature (JustinGuitar, niveau avancé)", "https://www.justinguitar.com/songs/sting-shape-of-my-heart-chords-tabs-guitar-lesson-rf-015"), ("Tablature (Ultimate Guitar)", "https://pt.ultimate-guitar.com/tab/sting/shape-of-my-heart-tabs-956868")],
               techniques=["Arpèges riches", "Accords plus haut sur le manche", "Notes tenues"],
               interet="Un des morceaux de Sting les plus connus à la guitare, la suite naturelle de Fragile. Les accords montent sur le manche et les notes doivent tenir pendant l'arpège."),
     ],
@@ -676,11 +690,13 @@ REPERTOIRE = {
 # après le palier 3 : un palier 4 « Bossa » proposé (accords 7e, pouce régulier contre doigts décalés)
 BOSSA = [
     piece("ipanema", "Bossa nova", "Garota de Ipanema", "João Gilberto, Stan Getz", "Accords majeur 7 et mineur 7, rythme bossa.",
-          "Le standard pour commencer la bossa, en accompagnement.", "otGz6hz-AXo", des=13, niveau=2,
+          "Le standard pour commencer la bossa, en accompagnement.", "otGz6hz-AXo", "mhMoykUUgKA", des=13, niveau=2,
+          tabs=[("Accords, rythme et tablature (Jazz Guitar Online)", "https://www.jazzguitar.be/blog/the-girl-from-ipanema-chords/")],
           techniques=["Accords majeur 7 et mineur 7", "Rythme bossa", "Pouce indépendant des doigts"],
           interet="Le standard de la bossa nova. Le pouce garde une basse régulière pendant que les doigts jouent en décalé : le sommet de l'indépendance des deux mains."),
     piece("corcovado", "Bossa nova", "Corcovado", "João Gilberto, Stan Getz", "Accords enrichis, rythme bossa plus lent.",
           "Le deuxième standard, tout en douceur.", "kjilv-saThE", des=13, niveau=2,
+          tabs=[("Grille d'accords (Guitar Composer's Toolbox)", "https://www.guitarcomposerstoolbox.com/latin-standards/corcovado-in-c"), ("Accords (Ultimate Guitar)", "https://tabs.ultimate-guitar.com/tab/1528068")],
           techniques=["Accords enrichis", "Rythme bossa lent", "Toucher doux"],
           interet="Plus lent et plus doux qu'Ipanema : parfait pour soigner chaque accord enrichi et le toucher de la bossa."),
 ]

@@ -405,22 +405,195 @@
   const quandTxt = pz => (pz.des > 12 ? "Après le palier 3" : `Dès la semaine ${pz.des}`);
   const tri = (a, b) => (a.palier || 9) - (b.palier || 9) || (a.des || 0) - (b.des || 0) || (a.niveau || 0) - (b.niveau || 0);
 
+  // ---------- Vidéo dans l'app, tablatures, et tes propres ajouts ----------
+  const ytId = u => {
+    try {
+      const x = new URL(u), h = x.hostname;
+      if (/(^|\.)youtu\.be$/.test(h)) return x.pathname.slice(1).split("/")[0] || null;
+      if (/(^|\.)youtube(-nocookie)?\.com$/.test(h)) return x.searchParams.get("v") || (x.pathname.match(/^\/(?:embed|shorts|live)\/([\w-]{6,})/) || [])[1] || null;
+    } catch {}
+    return null;
+  };
+  const urlOk = u => /^https?:\/\/\S+$/i.test(u);
+  // Les fichiers que tu ajoutes (photo ou PDF de tablature) sont gardés sur l'appareil, dans IndexedDB.
+  const fichiers = (() => {
+    let p = null;
+    const open = () => (p ||= new Promise((ok, ko) => {
+      const r = indexedDB.open("maguitare-fichiers", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("f");
+      r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error);
+    }));
+    const tx = (mode, fn) => open().then(db => new Promise((ok, ko) => {
+      const t = db.transaction("f", mode), q = fn(t.objectStore("f"));
+      t.oncomplete = () => ok(q?.result); t.onerror = t.onabort = () => ko(t.error);
+    }));
+    return { put: (k, v) => tx("readwrite", s => s.put(v, k)), get: k => tx("readonly", s => s.get(k)), del: k => tx("readwrite", s => s.delete(k)) };
+  })();
+  // une photo de tablature : réduite à 1800 px pour rester légère, tout en restant lisible
+  async function reduireImage(file) {
+    try {
+      const bmp = await createImageBitmap(file), k = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+      return (await new Promise(ok => c.toBlob(ok, "image/jpeg", 0.85))) || file;
+    } catch { return file; }
+  }
+  let fichierView = null;
+  function openFichier(blob, titre) {
+    if (!fichierView) {
+      fichierView = el("dialog", { class: "fichier-view", "aria-label": "Tablature" });
+      fichierView.addEventListener("click", e => { if (e.target === fichierView || e.target.closest(".fv-close")) fichierView.close(); });
+      document.body.append(fichierView);
+    }
+    const url = URL.createObjectURL(blob);
+    fichierView.replaceChildren(el("div", { class: "fv-bar" }, el("strong", { text: titre }), el("button", { class: "icon-btn fv-close", type: "button", "aria-label": "Fermer", text: "✕" })),
+      el("div", { class: "fv-scroll" }, el("img", { src: url, alt: titre })));
+    fichierView.addEventListener("close", () => URL.revokeObjectURL(url), { once: true });
+    openSheet(fichierView);
+  }
+
+  const ajoutsDe = pz => ((state.ajouts ||= {})[pz.id] ||= { videos: [], tabs: [] });
+  const sansAjouts = pz => { const a = state.ajouts?.[pz.id]; if (a && !a.videos.length && !a.tabs.length) delete state.ajouts[pz.id]; };
+  // toutes les vidéos d'un morceau : celles du cours, puis les tiennes
+  const videosDe = pz => [
+    pz.ecouter ? { t: "Écouter", u: pz.ecouter } : null,
+    pz.tuto ? { t: "Tuto", u: pz.tuto } : null,
+    ...(pz.plus || []),
+    ...(state.ajouts?.[pz.id]?.videos || []).map(v => ({ ...v, a: true })),
+  ].filter(Boolean);
+
+  // Les boutons vidéo ; un touché lit la vidéo juste en dessous, un autre la ferme. Une vidéo qui ne se lit pas ici reste ouverte sur YouTube.
+  function lecteurVideos(pz, onChange) {
+    const wrap = el("div", { class: "lecteur" }), slot = el("div", { class: "lecteur-slot", hidden: true });
+    let ouverte = null;
+    const bar = el("div", { class: "row-tools" });
+    const vids = videosDe(pz);
+    vids.forEach(v => {
+      const id = ytId(v.u), nom = (v.t === "Écouter" ? "▶ Écouter" : v.t === "Tuto" ? "▶ Tuto" : "▶ " + v.t);
+      if (!id) { bar.append(el("a", { class: "btn small ghost", href: v.u, target: "_blank", rel: "noopener" }, nom + " ↗")); return; }
+      const b = el("button", { class: "btn small vid-btn" + (v.t === "Tuto" ? " tuto" : ""), type: "button", "aria-pressed": "false" }, nom);
+      b.addEventListener("click", () => {
+        const deja = ouverte === id;
+        bar.querySelectorAll(".vid-btn").forEach(x => x.setAttribute("aria-pressed", "false"));
+        Sons.tais();
+        if (deja) { ouverte = null; slot.hidden = true; slot.replaceChildren(); return; }
+        ouverte = id; b.setAttribute("aria-pressed", "true");
+        slot.replaceChildren(
+          el("div", { class: "yt" }, el("iframe", {
+            src: `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`, title: `${pz.titre} : ${v.t}`, loading: "lazy", allowfullscreen: true,
+            allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share", referrerpolicy: "strict-origin-when-cross-origin" })),
+          el("a", { class: "link-btn small", href: `https://www.youtube.com/watch?v=${id}`, target: "_blank", rel: "noopener" }, "Elle ne se lit pas ? Ouvrir sur YouTube ↗"));
+        slot.hidden = false;
+      });
+      bar.append(b);
+      if (v.a) bar.append(el("button", { class: "link-btn x", type: "button", "aria-label": `Retirer la vidéo ${v.t}`, text: "✕", onclick: () => {
+        const a = ajoutsDe(pz); a.videos = a.videos.filter(x => x !== a.videos.find(y => y.u === v.u && y.t === v.t)); sansAjouts(pz); save(); onChange();
+      } }));
+    });
+    if (!vids.length) bar.append(el("span", { class: "muted small", text: "Pas encore de vidéo : ajoute-en une ci-dessous." }));
+    wrap.append(bar, slot);
+    return wrap;
+  }
+
+  // Les tablatures : celles que j'ai trouvées (liens), puis les tiennes (liens, photos, PDF)
+  function listeTabs(pz, onChange) {
+    const box = el("div", { class: "tabs-list" });
+    const mine = state.ajouts?.[pz.id]?.tabs || [];
+    const ul = el("ul", { class: "tab-links" });
+    (pz.tabs || []).forEach(t => ul.append(el("li", {}, el("a", { href: t.u, target: "_blank", rel: "noopener" }, "🎼 " + t.t + " ↗"))));
+    mine.forEach(t => {
+      const li = el("li", { class: "mine" });
+      if (t.u) li.append(el("a", { href: t.u, target: "_blank", rel: "noopener" }, "🎼 " + t.t + " ↗"));
+      else {
+        const b = el("button", { class: "link-btn", type: "button", onclick: async () => {
+          try { const f = await fichiers.get(t.f); if (!f) throw 0; if (f.type === "application/pdf") window.open(URL.createObjectURL(f), "_blank"); else openFichier(f, t.t); }
+          catch { toast("Ce fichier n'est plus sur cet appareil : ajoute-le à nouveau."); }
+        } }, (t.type === "application/pdf" ? "📄 " : "🖼️ ") + t.t);
+        li.append(b);
+      }
+      li.append(el("button", { class: "link-btn x", type: "button", "aria-label": `Retirer ${t.t}`, text: "✕", onclick: async () => {
+        const a = ajoutsDe(pz); a.tabs = a.tabs.filter(x => x !== t); sansAjouts(pz); save();
+        if (t.f) fichiers.del(t.f).catch(() => {});
+        onChange();
+      } }));
+      ul.append(li);
+    });
+    if (ul.children.length) box.append(ul);
+    else box.append(el("p", { class: "muted small", text: "Pas encore de tablature : ajoute la tienne ci-dessous." }));
+    return box;
+  }
+
+  // Ajouter une vidéo ou une tablature à un morceau
+  function formAjout(pz, onChange) {
+    const d = el("details", { class: "ajout" }, el("summary", { text: "+ Ajouter ma tablature ou ma vidéo" }));
+    const nomT = el("input", { type: "text", placeholder: "Nom (ex. Intro, tab de mon prof)", "aria-label": "Nom de la tablature" });
+    const lienT = el("input", { type: "url", placeholder: "Lien vers une tablature", "aria-label": "Lien vers une tablature" });
+    const fic = el("input", { type: "file", accept: "image/*,application/pdf", hidden: true });
+    const msg = el("p", { class: "muted small", role: "status" });
+    const ajouterTab = t => { ajoutsDe(pz).tabs.push(t); save(); Sons.cling(); onChange(); };
+    d.append(el("p", { class: "eyebrow", text: "Tablature" }), nomT, lienT,
+      el("div", { class: "row-tools" },
+        el("button", { class: "btn small", type: "button", onclick: () => {
+          const u = lienT.value.trim(); if (!urlOk(u)) { msg.textContent = "Colle un lien complet, qui commence par https://."; return; }
+          ajouterTab({ t: nomT.value.trim() || "Ma tablature", u });
+        } }, "Ajouter le lien"),
+        el("button", { class: "btn small", type: "button", onclick: () => fic.click() }, "Photo ou PDF…")),
+      fic, msg);
+    fic.addEventListener("change", async () => {
+      const f = fic.files[0]; if (!f) return;
+      if (f.size > 15e6) { msg.textContent = "Ce fichier est trop gros (15 Mo au plus)."; return; }
+      msg.textContent = "J'enregistre…";
+      try {
+        const pdf = f.type === "application/pdf", blob = pdf ? f : await reduireImage(f), id = "f-" + Date.now().toString(36);
+        await fichiers.put(id, blob);
+        ajouterTab({ t: nomT.value.trim() || f.name.replace(/\.[^.]+$/, "") || "Ma tablature", f: id, type: pdf ? "application/pdf" : "image/jpeg" });
+      } catch { msg.textContent = "Je n'ai pas pu garder ce fichier sur l'appareil. Colle plutôt un lien."; }
+    });
+    const nomV = el("input", { type: "text", placeholder: "Nom (ex. Tuto de ma prof)", "aria-label": "Nom de la vidéo" });
+    const lienV = el("input", { type: "url", placeholder: "Lien YouTube", "aria-label": "Lien de la vidéo" });
+    d.append(el("p", { class: "eyebrow", text: "Vidéo" }), nomV, lienV,
+      el("button", { class: "btn small", type: "button", onclick: () => {
+        const u = lienV.value.trim(); if (!urlOk(u)) { msg.textContent = "Colle un lien complet, qui commence par https://."; return; }
+        ajoutsDe(pz).videos.push({ t: nomV.value.trim() || "Ma vidéo", u }); save(); Sons.cling(); onChange();
+      } }, "Ajouter la vidéo"),
+      el("p", { class: "muted small", text: "Les photos et PDF restent sur cet appareil : ils ne sont pas dans la sauvegarde. Les liens, eux, y sont." }));
+    return d;
+  }
+
+  // La fiche d'un morceau : sa vidéo à lire ici, ses tablatures, et ce que tu as ajouté
+  function ficheMorceau(pz, onChange) {
+    return el("div", { class: "fiche" },
+      el("span", { class: "eyebrow", text: "Vidéos" }), lecteurVideos(pz, onChange),
+      el("span", { class: "eyebrow", text: "Tablatures" }), listeTabs(pz, onChange),
+      formAjout(pz, onChange));
+  }
+
   function morceauCard(pz, sem, refresh) {
     const lock = verrou(pz, sem), st = statutDe(pz, sem);
     const li = el("li", { class: "piece" + (lock ? " locked" : "") + (st === "travail" ? " chosen" : "") + (st === "maitrise" ? " mastered" : "") });
     const nv = pz.niveau || 0;
-    li.append(el("div", { class: "piece-head" },
+    // toucher le morceau ouvre sa fiche ; les morceaux en cours sont ouverts, sauf si tu l'as refermée
+    const ouvKey = "morceau/" + pz.id;
+    const fiche = el("details", { class: "piece-fiche", open: state.open[ouvKey] ?? st === "travail" });
+    fiche.addEventListener("toggle", () => { if (state.open[ouvKey] !== fiche.open) { state.open[ouvKey] = fiche.open; save(); } });
+    const corps = el("div", { class: "piece-corps" });
+    const draw = () => {
+      corps.replaceChildren();
+      if (pz.interet) corps.append(el("p", { class: "small" }, el("strong", { text: "Pourquoi le travailler : " }), pz.interet));
+      if (pz.techniques?.length) corps.append(el("div", { class: "tech" }, el("span", { class: "muted small", text: "Ce qu'il te fait travailler :" }),
+        el("ul", {}, pz.techniques.map(t => el("li", { text: t })))));
+      if (!pz.perso) corps.append(el("p", { class: "muted small quand-pz", text: lock ? `${quandTxt(pz)} : tu peux l'écouter, et le travailler quand le cours t'aura donné sa technique.` : pz.mission && pz.id === "fragile" && sem > 4 ? "En entretien : une fois en entier à la séance A." : "Débloqué : tu as la technique." }));
+      corps.append(ficheMorceau(pz, () => { const o = corps.querySelector(".ajout")?.open; draw(); if (o) corps.querySelector(".ajout").open = true; }));
+    };
+    draw();
+    fiche.append(el("summary", { class: "piece-head" },
       pz.mission ? el("span", { class: "chip mission", text: "Mission du cours" }) : null,
       pz.perso ? el("span", { class: "chip", text: "Ton morceau" }) : el("span", { class: "chip", text: pz.style }),
       nv ? el("span", { class: "niveau n" + nv, title: "Difficulté dans son niveau", text: "●".repeat(nv) + "○".repeat(3 - nv) + " " + NIVEAU[nv] }) : null,
-      el("strong", { text: pz.titre }), pz.artiste ? el("span", { class: "muted small", text: pz.artiste }) : null));
-    if (pz.interet) li.append(el("p", { class: "small" }, el("strong", { text: "Pourquoi le travailler : " }), pz.interet));
-    if (pz.techniques?.length) li.append(el("div", { class: "tech" }, el("span", { class: "muted small", text: "Ce qu'il te fait travailler :" }),
-      el("ul", {}, pz.techniques.map(t => el("li", { text: t })))));
-    if (!pz.perso) li.append(el("p", { class: "muted small quand-pz", text: lock ? `${quandTxt(pz)} : tu peux l'écouter, et le travailler quand le cours t'aura donné sa technique.` : pz.mission && pz.id === "fragile" && sem > 4 ? "En entretien : une fois en entier à la séance A." : "Débloqué : tu as la technique." }));
+      el("strong", { text: pz.titre }), pz.artiste ? el("span", { class: "muted small", text: pz.artiste }) : null,
+      el("span", { class: "voir", "aria-hidden": "true", text: "Voir la fiche" })), corps);
+    li.append(fiche);
     const tools = el("div", { class: "row-tools" });
-    if (pz.ecouter) tools.append(el("a", { class: "btn small", href: pz.ecouter, target: "_blank", rel: "noopener" }, "▶ Écouter"));
-    if (pz.tuto) tools.append(el("a", { class: "btn small ghost", href: pz.tuto, target: "_blank", rel: "noopener" }, "Tuto"));
     const act = (text, fn, cls = "") => el("button", { class: "btn small pick-btn " + cls, type: "button", onclick: () => { fn(); refresh(); } }, text);
     if (lock) tools.append(el("button", { class: "btn small pick-btn", type: "button", disabled: true }, quandTxt(pz)));
     else if (st === "travail") {
@@ -430,6 +603,8 @@
     else tools.append(act("Je le travaille", () => { setStatut(pz, "travail"); Sons.cling(); }, "primary"));
     if (pz.perso) tools.append(el("button", { class: "link-btn", type: "button", text: "Supprimer", onclick: () => {
       if (!confirm(`Retirer « ${pz.titre} » de tes morceaux ?`)) return;
+      (state.ajouts?.[pz.id]?.tabs || []).forEach(t => t.f && fichiers.del(t.f).catch(() => {}));
+      delete state.ajouts?.[pz.id];
       state.mesPieces = (state.mesPieces || []).filter(x => x.id !== pz.id); delete state.morceaux?.[pz.id]; save(); refresh();
     } }));
     li.append(tools);
@@ -451,13 +626,17 @@
     section("Je les travaille", swap ? `Cette semaine, dans le cours : ${swap.titre}, à la place de ta mission.` : "Ta mission du moment, et les morceaux que tu as ajoutés.",
       el("ul", { class: "pieces" }, enCours.map(pz => morceauCard(pz, sem, refresh))));
     const groupes = el("div", { class: "niveaux" });
+    const palActuel = Math.min(3, DATA.cours.find(c => c.semaine === Math.min(sem, 12))?.palier || 1);
     for (const n of [1, 2, 3, 4]) {
       const list = possibles.filter(pz => pz.palier === n);
       if (!list.length) continue;
-      const pc = DATA.cours.filter(c => c.palier === n);
-      groupes.append(el("h3", { class: "lvl-head" }, `Niveau ${n} · ${NIVEAUX[n]}`,
-        el("span", { class: "muted small", text: pc.length ? ` · semaines ${pc[0].semaine} à ${pc.at(-1).semaine}` : " · après le palier 3" })),
+      const pc = DATA.cours.filter(c => c.palier === n), ouvKey = "niveau/" + n;
+      const det = el("details", { class: "lvl", open: state.open[ouvKey] ?? n === palActuel },
+        el("summary", { class: "lvl-head" }, el("strong", { text: `Niveau ${n} · ${NIVEAUX[n]}` }),
+          el("span", { class: "muted small", text: `${pc.length ? `semaines ${pc[0].semaine} à ${pc.at(-1).semaine}` : "après le palier 3"} · ${list.length} morceau${list.length > 1 ? "x" : ""}` })),
         el("ul", { class: "pieces" }, list.map(pz => morceauCard(pz, sem, refresh))));
+      det.addEventListener("toggle", () => { if (state.open[ouvKey] !== det.open) { state.open[ouvKey] = det.open; save(); } });
+      groupes.append(det);
     }
     if (possibles.length) section("Je pourrais les travailler", "Du plus abordable au plus costaud. Chacun se débloque quand le cours t'a donné sa technique.", groupes);
     if (faits.length) section("Je les maîtrise", null, el("ul", { class: "pieces" }, faits.map(pz => morceauCard(pz, sem, refresh))));
@@ -487,11 +666,8 @@
       const kids = [el("span", { class: "eyebrow", text: `Ton morceau de la semaine ${c.semaine}` })];
       if (pz) {
         kids.push(el("p", {}, el("strong", { text: pz.titre }), ` à la place de ${base.titre}. Fais les exercices ci-dessous avec ce morceau.`));
-        const t = el("div", { class: "row-tools" });
-        if (pz.ecouter) t.append(el("a", { class: "btn small", href: pz.ecouter, target: "_blank", rel: "noopener" }, "▶ Écouter"));
-        if (pz.tuto) t.append(el("a", { class: "btn small ghost", href: pz.tuto, target: "_blank", rel: "noopener" }, "Tuto"));
-        t.append(el("button", { class: "btn small", type: "button", onclick: () => { delete state.semaineMorceau[c.semaine]; save(); draw(); } }, `Revenir à ${base.titre}`));
-        kids.push(t);
+        kids.push(el("div", { class: "row-tools" },
+          el("button", { class: "btn small", type: "button", onclick: () => { delete state.semaineMorceau[c.semaine]; save(); draw(); } }, `Revenir à ${base.titre}`)));
       } else {
         kids.push(el("p", { class: "small" }, el("strong", { text: base.titre }), ", ta mission. Tu peux le changer pour cette semaine seulement."));
         // la liste est faite au moment du toucher : elle suit ce que tu as changé dans « Mes morceaux »
@@ -509,7 +685,12 @@
           el("button", { class: "btn small", type: "button", onclick: ouvrir }, "Changer pour cette semaine"),
           el("button", { class: "link-btn", type: "button", text: "Voir tous mes morceaux →", onclick: () => go("morceaux") })), list);
       }
-      card.replaceChildren(...kids);
+      // la vidéo et la tablature du morceau du moment, à portée de main pendant le bloc
+      const cur = pz || base, ouvKey = "cours-fiche/" + cur.id;
+      const det = el("details", { class: "piece-fiche", open: !!state.open[ouvKey] }, el("summary", { class: "piece-head" }, el("strong", { text: `Vidéo et tablature : ${cur.titre}` })),
+        el("div", { class: "piece-corps" }, ficheMorceau(cur, () => { const o = det.querySelector(".ajout")?.open; draw(); const n = card.querySelector(".ajout"); if (n && o) n.open = true; })));
+      det.addEventListener("toggle", () => { if (!!state.open[ouvKey] !== det.open) { state.open[ouvKey] = det.open; save(); } });
+      card.replaceChildren(...kids, det);
     };
     draw();
     return card;
