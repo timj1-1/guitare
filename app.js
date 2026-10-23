@@ -251,7 +251,18 @@
 
     const more = el("details", { class: "more" }, el("summary", { text: "Explication et vidéos" }));
     const mi = el("div", { class: "more-in" });
-    b.explication.forEach(t => mi.append(el("p", { text: t })));
+    b.explication.forEach(t => {
+      if (typeof t === "string") return mi.append(el("p", { text: t }));
+      if (t.titre) mi.append(el("h4", { class: "expl-titre", text: t.titre }));
+      if (t.liste) mi.append(el(t.ordonnee ? "ol" : "ul", { class: "expl-liste" }, t.liste.map(x => el("li", { text: x }))));
+      if (t.table) {
+        const [head, ...rows] = t.table;
+        mi.append(el("div", { class: "expl-table" }, el("table", {},
+          el("thead", {}, el("tr", {}, head.map(h => el("th", { text: h })))),
+          el("tbody", {}, rows.map(r => el("tr", {}, r.map((c, i) => el(i ? "td" : "th", { text: c }))))))));
+      }
+    });
+    if (b.explication.some(t => typeof t === "object")) more.open = true;
     if (b.videos?.length) {
       const vl = el("ul", { class: "videos" });
       b.videos.forEach(v => vl.append(el("li", {}, el("a", { href: v.u, target: "_blank", rel: "noopener" }, el("span", { class: "play", "aria-hidden": "true" }), v.t))));

@@ -1,5 +1,5 @@
 // Ma guitare : fonctionne hors ligne. Le cours et les retours du prof sont pris en ligne d'abord.
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL = ["./", "index.html", "style.css", "app.js", "jeux.js", "samples-nylon.js", "manche.html", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "data/cours.json", "data/retours.json"];
 
