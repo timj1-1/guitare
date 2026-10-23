@@ -37,6 +37,9 @@
   --mute: #a23a2c;
   --root: #b8372b;          /* fondamentale : rouge, lisible dans les deux thèmes */
   --root-ink: #ffffff;
+  --scale: #e9dcc0;          /* notes de la gamme : ivoire, distinctes des notes jouées (or) */
+  --scale-ink: #2a1d0e;
+  --scale-line: #8c5e16;
   --ok: #2f6b4a;
   --shadow: 0 1px 2px rgba(22, 30, 26, .05), 0 10px 30px -12px rgba(22, 30, 26, .18);
 
@@ -268,6 +271,32 @@ label.btn { cursor: pointer; }
 details.howto { font-size: .9rem; color: var(--muted); }
 details.howto summary { cursor: pointer; color: var(--ink); }
 details.howto ol { margin: 6px 0 0; padding-left: 1.3em; display: grid; gap: 4px; }
+
+/* Gammes */
+.tools select { height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 0 30px 0 10px; font-size: .9rem; max-width: 100%;
+  appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+#scaleSel { min-width: 13em; }
+#scalePlay[disabled] { opacity: .45; }
+.scale-info { flex-basis: 100%; margin: 0; font-size: .88rem; color: var(--muted); }
+.scale-info b { color: var(--ink); font-weight: 600; }
+.scale-info .deg { font-family: var(--f-mono); font-size: .8rem; }
+.sc {
+  position: relative; z-index: 3; min-width: 28px; height: 24px; padding: 0 5px; border-radius: 12px;
+  background: var(--scale); color: var(--scale-ink); font-size: .7rem; font-weight: 700; line-height: 1;
+  display: grid; place-items: center; pointer-events: none; box-shadow: 0 1px 4px rgba(0,0,0,.35);
+}
+.sc.root { background: var(--root); color: var(--root-ink); }
+.cell.open .sc { background: transparent; color: var(--ink); border: 2px solid var(--scale-line); box-shadow: none; }
+.cell.open .sc.root { border-color: var(--root); }
+.cell.out-zone .hintdot { display: none; }
+.legend .scale-only { display: none; }
+.legend.has-scale .scale-only { display: inline-flex; }
+@media (max-width: 640px) {
+  .tools select { width: 100%; min-height: 44px; font-size: 1rem; }
+  #scaleSel { min-width: 0; }
+  .sc { min-width: 24px; height: 22px; font-size: .66rem; padding: 0 3px; }
+}
 
 /* Capo et barré */
 .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); overflow: hidden; vertical-align: middle; }
@@ -568,6 +597,20 @@ pre.tab { background: var(--surface-2); border-radius: 12px; padding: 12px 14px;
   </div>
   </details>
 
+  <details class="tools" id="toolsScale" open>
+  <summary><span>Gammes</span><span class="sum-state" id="scaleState"></span></summary>
+  <div class="toolbar">
+    <div><span class="tool-label">Gamme</span><select id="scaleSel" aria-label="Gamme à afficher"></select></div>
+    <div><span class="tool-label">Tonique</span><select id="tonicSel" aria-label="Tonique de la gamme"></select></div>
+    <div><span class="tool-label">Zone</span><select id="zoneSel" aria-label="Zone du manche"></select></div>
+    <div><span class="tool-label">Afficher</span><span class="seg" id="scaleLblSeg">
+      <button type="button" data-v="nom" aria-pressed="true">Notes</button><button type="button" data-v="deg" aria-pressed="false">Degrés</button>
+    </span></div>
+    <div><button class="btn" id="scalePlay" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg><span>Écouter la gamme</span></button></div>
+    <p class="scale-info" id="scaleInfo" hidden></p>
+  </div>
+  </details>
+
   <div class="actions">
     <button class="btn primary" id="micBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Écouter ma guitare</span></button>
     <button class="btn" id="playBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg><span>Écouter l'accord</span></button>
@@ -585,6 +628,8 @@ pre.tab { background: var(--surface-2); border-radius: 12px; padding: 12px 14px;
     <span><i class="sw" style="border:2px solid var(--ok)"></i>corde à vide</span>
     <span class="only-h">Corde aiguë en haut, comme dans une tablature.</span><span class="only-v">Corde grave à gauche, comme dans une grille d'accord.</span>
     <span>Un numéro de case pose un barré.</span>
+    <span class="scale-only"><i class="sw" style="background:var(--scale)"></i>note de la gamme</span>
+    <span class="scale-only"><i class="sw" style="background:var(--root)"></i>tonique de la gamme</span>
   </p>
   </section>
 
@@ -858,6 +903,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     board.querySelectorAll("button.fnum").forEach(d => d.classList.toggle("on", !!barre && barre.fret === +d.dataset.f));
     const openLbl = board.querySelector("div.fnum[data-f='0']"); if (openLbl) openLbl.textContent = capo ? "capo" : mqPhone.matches ? "vide" : "à vide";
     const root = analysis.kind === "chord" || analysis.kind === "note" ? analysis.root : null;
+    const S = scaleNotes();
     board.querySelectorAll(".cell").forEach(c => {
       const s = +c.dataset.s, f = +c.dataset.f, pc = midiOf(s, f) % 12;
       const name = noteName(pc);
@@ -867,7 +913,11 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
       c.classList.toggle("behind", behind);
       c.setAttribute("aria-pressed", on ? "true" : "false");
       c.setAttribute("aria-label", behind ? `${STRINGS[s].fr}, case ${f} : derrière le capo` : `${STRINGS[s].fr}, ${f === 0 ? (capo ? "à vide (capo)" : "à vide") : "case " + f} : ${name}`);
-      let html = behind ? "" : on ? `<span class="mk${pc === root ? " root" : ""}">${name}</span>` : showHint ? `<span class="hint">${name}</span>` : `<span class="hintdot"></span>`;
+      const sn = S && !behind && inZone(f) ? S.map.get(pc) : null;
+      c.classList.toggle("out-zone", !!S && !sn);
+      let html = behind ? "" : on ? `<span class="mk${pc === root ? " root" : ""}">${sn ? sn.name : name}</span>`
+        : sn ? `<span class="sc${pc === S.tpc ? " root" : ""}">${scaleLbl === "deg" ? sn.deg : sn.name}</span>`
+        : showHint && !S ? `<span class="hint">${name}</span>` : `<span class="hintdot"></span>`;
       if (capo && f === capo) html += `<i class="capo-bar${s === 5 ? " top" : ""}${s === 0 ? " bottom" : ""}"></i>`;
       if (barre && f === barre.fret && s >= barre.from) html += `<i class="bar-barre${s === 5 ? " top" : ""}${s === barre.from ? " bottom" : ""}"></i>`;
       c.innerHTML = html;
@@ -913,6 +963,8 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     if (capo) lines.push("Capo : case " + capo + " (les cases sont comptées depuis le capo)");
     if (barre) lines.push("Barré : case " + (barre.fret - capo) + (capo ? " depuis le capo" : "") + ", sur " + (barre.from ? "5 cordes (depuis La)" : "6 cordes"));
     lines.push("Accord reconnu : " + chordLine(a, true));
+    const S = scaleNotes();
+    if (S) lines.push("Gamme affichée : " + S.tonic + " " + S.sc.court + " (" + S.list.map(e => e.name).join(" ") + ")" + (zone === "all" ? "" : ", cases " + zone + " à " + (+zone + 4)));
     if (a.kind === "chord" && a.alts.length) lines.push("Autres lectures possibles : " + a.alts.map(c => symOf(c, a.bass.pc, true)).join(", "));
     lines.push("");
     for (let s = 0; s < 6; s++) {
@@ -1060,6 +1112,108 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     render();
   });
 
+  // ---------- Gammes ----------
+  // degrés : le chiffre donne la lettre (1 = tonique, 2 = lettre suivante…), l'altération vient de l'écart en demi-tons
+  const DEG_PC = { "1": 0, "♭2": 1, "2": 2, "♯2": 3, "♭3": 3, "3": 4, "4": 5, "♯4": 6, "♭5": 6, "5": 7, "♯5": 8, "♭6": 8, "6": 9, "♭7": 10, "7": 11 };
+  const SCALES = [
+    ["Gammes de base", [
+      ["majeur", "Majeure", "1 2 3 4 5 6 7", "La gamme de base, celle de « Do Ré Mi Fa Sol La Si ». Tout le reste se compare à elle."],
+      ["mineur", "Mineure naturelle", "1 2 ♭3 4 5 ♭6 ♭7", "Le son mineur, plus sombre ou triste. Même notes que la majeure qui commence une tierce mineure plus haut (La mineur = Do majeur)."],
+      ["harmonique", "Mineure harmonique", "1 2 ♭3 4 5 ♭6 7", "La mineure avec une 7e majeure : le son classique, espagnol et oriental. Très présente en guitare classique et en gypsy."],
+      ["melodique", "Mineure mélodique", "1 2 ♭3 4 5 6 7", "Une mineure avec la 6e et la 7e majeures : plus douce en montant, très utilisée en jazz."],
+    ]],
+    ["Pentatoniques et blues", [
+      ["penta-mineure", "Pentatonique mineure", "1 ♭3 4 5 ♭7", "5 notes sans note qui « frotte » : la gamme la plus simple pour improviser (rock, blues, pop)."],
+      ["penta-majeure", "Pentatonique majeure", "1 2 3 5 6", "5 notes, un son clair et joyeux (country, pop, mélodies du monde entier)."],
+      ["blues", "Blues", "1 ♭3 4 ♭5 5 ♭7", "La pentatonique mineure avec une note en plus, la quinte bémol (la « blue note »)."],
+    ]],
+    ["Modes", [
+      ["dorien", "Dorien", "1 2 ♭3 4 5 6 ♭7", "Mineur avec une 6e majeure : moins triste, très utilisé en jazz, funk et chez Santana."],
+      ["phrygien", "Phrygien", "1 ♭2 ♭3 4 5 ♭6 ♭7", "Mineur avec une 2e bémol : le son flamenco. Mi phrygien, c'est la gamme de la cadence andalouse."],
+      ["lydien", "Lydien", "1 2 3 ♯4 5 6 7", "Majeur avec une quarte augmentée : un son lumineux, « qui flotte » (musiques de film)."],
+      ["mixolydien", "Mixolydien", "1 2 3 4 5 6 ♭7", "Majeur avec une 7e mineure : le son rock, blues et folk."],
+    ]],
+    ["Flamenco et gypsy", [
+      ["espagnole", "Phrygienne espagnole", "1 ♭2 3 4 5 ♭6 ♭7", "Le phrygien avec une tierce majeure : le son flamenco et oriental le plus typique (Mi Fa Sol♯ La Si Do Ré)."],
+      ["tzigane", "Mineure tzigane", "1 2 ♭3 ♯4 5 ♭6 7", "La gamme « hongroise » : deux secondes augmentées, un son tzigane très marqué."],
+    ]],
+  ];
+  // nom après la tonique : « Do majeur », « La pentatonique mineure »
+  const COURT = { majeur: "majeur", mineur: "mineur", harmonique: "mineur harmonique", melodique: "mineur mélodique", "penta-mineure": "pentatonique mineure",
+    "penta-majeure": "pentatonique majeure", blues: "blues", dorien: "dorien", phrygien: "phrygien", lydien: "lydien", mixolydien: "mixolydien",
+    espagnole: "phrygien espagnol", tzigane: "mineur tzigane" };
+  const SCALE_BY = {}; SCALES.forEach(([, l]) => l.forEach(([id, nm, deg, why]) => { SCALE_BY[id] = { id, nm, court: COURT[id], deg: deg.split(" "), why }; }));
+  const LETTERS = { fr: ["Do","Ré","Mi","Fa","Sol","La","Si"], en: ["C","D","E","F","G","A","B"] };
+  const LETTER_PC = [0, 2, 4, 5, 7, 9, 11];
+  const TONICS = [["do",0,0],["dod",0,1],["re",1,0],["mib",2,-1],["mi",2,0],["fa",3,0],["fad",3,1],["sol",4,0],["lab",5,-1],["la",5,0],["sib",6,-1],["si",6,0]];
+  const ACC = { "-2": "♭♭", "-1": "♭", "0": "", "1": "♯", "2": "♯♯" };
+  const spell = (l, acc) => LETTERS[naming === "fr" ? "fr" : "en"][((l % 7) + 7) % 7] + ACC[acc];
+  let scale = store.get("scale", null);
+  if (!scale || !SCALE_BY[scale.id] || !TONICS.some(t => t[0] === scale.t)) scale = null;
+  let scaleLbl = store.get("scaleLbl", "nom");
+  let zone = store.get("zone", "all");
+  // la gamme choisie : pour chaque hauteur (0-11), son nom bien écrit et son degré
+  function scaleNotes() {
+    if (!scale) return null;
+    const sc = SCALE_BY[scale.id], [, l0, a0] = TONICS.find(t => t[0] === scale.t);
+    const tpc = (LETTER_PC[l0] + a0 + 12) % 12;
+    const map = new Map(), list = [];
+    sc.deg.forEach(d => {
+      const n = +d.replace(/[♭♯]/g, ""), pc = (tpc + DEG_PC[d]) % 12, l = l0 + n - 1;
+      let acc = pc - LETTER_PC[((l % 7) + 7) % 7]; acc = ((acc + 18) % 12) - 6;
+      const e = { pc, deg: d, name: spell(l, acc) }; map.set(pc, e); list.push(e);
+    });
+    return { sc, tpc, map, list, tonic: spell(l0, a0) };
+  }
+  const inZone = f => zone === "all" || (f >= +zone && f <= +zone + 4) || (f === 0 && +zone <= 1);
+
+  const scaleSel = document.getElementById("scaleSel"), tonicSel = document.getElementById("tonicSel"), zoneSel = document.getElementById("zoneSel");
+  function fillScaleSelects() {
+    scaleSel.innerHTML = `<option value="">Aucune</option>` + SCALES.map(([g, l]) => `<optgroup label="${g}">` + l.map(([id, nm]) => `<option value="${id}">${nm}</option>`).join("") + `</optgroup>`).join("");
+    tonicSel.innerHTML = TONICS.map(([id, l, a]) => `<option value="${id}">${spell(l, a)}</option>`).join("");
+    let z = `<option value="all">Tout le manche</option>`;
+    for (let n = 0; n <= FRETS - 4; n++) z += `<option value="${n}">Cases ${n} à ${n + 4}</option>`;
+    zoneSel.innerHTML = z;
+  }
+  function renderScaleTools() {
+    if (tonicSel.options.length && tonicSel.options[0].textContent !== spell(0, 0)) {
+      const keep = tonicSel.value; fillScaleSelects(); tonicSel.value = keep;
+    }
+    scaleSel.value = scale ? scale.id : "";
+    tonicSel.value = scale ? scale.t : (store.get("scaleT", "do"));
+    zoneSel.value = String(zone);
+    tonicSel.disabled = zoneSel.disabled = !scale;
+    document.getElementById("scalePlay").disabled = !scale;
+    document.querySelectorAll("#scaleLblSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === scaleLbl ? "true" : "false"));
+    const info = document.getElementById("scaleInfo"), S = scaleNotes();
+    document.getElementById("scaleState").textContent = S ? S.tonic + " " + S.sc.court + (zone === "all" ? "" : " · cases " + zone + " à " + (+zone + 4)) : "aucune";
+    const lg = document.querySelector(".instrument .legend"); if (lg) lg.classList.toggle("has-scale", !!S);
+    info.hidden = !S;
+    if (S) info.innerHTML = `<b>${S.list.map(e => e.name).join(" ")}</b> <span class="deg">(${S.sc.deg.join(" ")})</span><br>${S.sc.why}`;
+  }
+  function setScale(next) {
+    scale = next; store.set("scale", scale); if (scale) store.set("scaleT", scale.t);
+    render();
+  }
+  scaleSel.addEventListener("change", () => setScale(scaleSel.value ? { id: scaleSel.value, t: tonicSel.value || "do" } : null));
+  tonicSel.addEventListener("change", () => scale && setScale({ ...scale, t: tonicSel.value }));
+  zoneSel.addEventListener("change", () => { zone = zoneSel.value; store.set("zone", zone); render(); });
+  document.getElementById("scaleLblSeg").addEventListener("click", e => {
+    const v = e.target.closest("button")?.dataset.v; if (!v) return;
+    scaleLbl = v; store.set("scaleLbl", v); render();
+  });
+  // Écouter : montée puis descente sur une octave, depuis la tonique la plus grave (ou la plus grave de la zone)
+  let scaleTimers = [];
+  document.getElementById("scalePlay").addEventListener("click", () => {
+    const S = scaleNotes(); if (!S) return;
+    scaleTimers.forEach(clearTimeout); scaleTimers = [];
+    let low = 40 + ((S.tpc - 40 % 12 + 12) % 12);
+    if (zone !== "all") { const zl = midiOf(0, +zone); while (low < zl) low += 12; }
+    const up = []; for (let m = low; m <= low + 12; m++) if (S.map.has(m % 12)) up.push(m);
+    const seq = [...up, ...up.slice(0, -1).reverse()];
+    seq.forEach((m, i) => scaleTimers.push(setTimeout(() => playNotes([m], 0), i * 340)));
+  });
+
   function renderTools() {
     document.getElementById("capoVal").textContent = capo ? "case " + capo : "aucun";
     barreSeg.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === (barre ? (barre.from ? "5" : "6") : "off") ? "true" : "false"));
@@ -1067,6 +1221,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     document.getElementById("barreStep").setAttribute("aria-disabled", barre ? "false" : "true");
     const TL = { classique: "Classique", flamenca: "Flamenca", folk: "Folk acier", manouche: "Manouche" };
     document.getElementById("viewState").textContent = TL[timbre] + " · " + (naming === "fr" ? "Do Ré Mi" : "C D E") + (hints !== "off" ? " · notes affichées" : "");
+    renderScaleTools();
     document.getElementById("capoState").textContent = [capo ? "capo case " + capo : "sans capo", barre ? "barré case " + (barre.fret - capo) : ""].filter(Boolean).join(" · ");
   }
   document.getElementById("playBtn").addEventListener("click", () => {
@@ -1635,16 +1790,26 @@ Règles de réponse :
   };
   const fromHash = () => { const m = location.hash.match(/^#pos-([x0-9-]+)$/i); const p = m && parsePosition(m[1]); if (p) { pos = toAbs(p); barre = barreOf(p); store.set("pos", pos); store.set("barre", barre); render(); } };
   window.addEventListener("hashchange", fromHash);
+  const scaleFromHash = () => {
+    const m = location.hash.match(/^#gamme-([a-z]+)-([a-z-]+?)(?:-z(\d+))?$/i);
+    if (!m || !SCALE_BY[m[2]] || !TONICS.some(t => t[0] === m[1])) return;
+    zone = m[3] != null && +m[3] <= FRETS - 4 ? m[3] : "all"; store.set("zone", zone);
+    setScale({ id: m[2], t: m[1] });
+    document.getElementById("toolsScale").open = true;
+  };
+  window.addEventListener("hashchange", scaleFromHash);
 
   // réglages dépliés sur ordi, repliés sur téléphone (leur titre résume ce qui est choisi)
-  function syncTools() { ["toolsView", "toolsCapo"].forEach(id => { document.getElementById(id).open = !mqPhone.matches; }); }
+  function syncTools() { ["toolsView", "toolsCapo", "toolsScale"].forEach(id => { document.getElementById(id).open = !mqPhone.matches; }); }
   const onMode = () => { layoutBoard(); syncTools(); render(); };
   if (mqPhone.addEventListener) mqPhone.addEventListener("change", onMode); else mqPhone.addListener(onMode);
 
   buildBoard();
+  fillScaleSelects();
   syncTools();
   render();
   fromHash();
+  scaleFromHash();
 })();
 </script>
 
