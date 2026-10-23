@@ -391,10 +391,13 @@
   // Révision : un exercice déjà vu dans un cours précédent, tiré au sort (le même pour un cours donné)
   // Morceaux au choix du palier : écouter, puis « Je le choisis » (gardé sur l'appareil, envoyé dans le bilan)
   const choixDe = pal => (state.repertoire ||= {})[pal] ||= [];
-  function pieceRow(pz, pal) {
+  const NIVEAU = ["", "Abordable", "Moyen", "Costaud"];
+  function pieceRow(pz, pal, c) {
     const pick = el("button", { class: "btn small pick-btn", type: "button" });
-    const li = el("li", { class: "piece" });
+    const lock = c.semaine < (pz.des || 1); // pas encore la technique : on peut écouter, pas encore choisir
+    const li = el("li", { class: "piece" + (lock ? " locked" : "") });
     const sync = () => {
+      if (lock) { pick.disabled = true; pick.textContent = pz.des > 12 ? "Après le palier 3" : `Dès la semaine ${pz.des}`; return; }
       const on = choixDe(pal).includes(pz.id);
       li.classList.toggle("chosen", on);
       pick.setAttribute("aria-pressed", String(on));
@@ -406,7 +409,9 @@
       save(); sync(); li.closest(".repertoire")?.dispatchEvent(new Event("choix"));
     });
     li.append(
-      el("div", { class: "piece-head" }, el("span", { class: "chip", text: pz.style }), el("strong", { text: pz.titre }), el("span", { class: "muted small", text: pz.artiste })),
+      el("div", { class: "piece-head" }, el("span", { class: "chip", text: pz.style }),
+        el("span", { class: "niveau n" + (pz.niveau || 1), title: "Difficulté pour ce palier", text: "●".repeat(pz.niveau || 1) + "○".repeat(3 - (pz.niveau || 1)) + " " + NIVEAU[pz.niveau || 1] }),
+        el("strong", { text: pz.titre }), el("span", { class: "muted small", text: pz.artiste })),
       el("p", { class: "small", text: pz.travaille + " " + pz.pourquoi }),
       el("div", { class: "row-tools" },
         el("a", { class: "btn small", href: pz.ecouter, target: "_blank", rel: "noopener" }, "▶ Écouter"),
@@ -427,11 +432,11 @@
     };
     card.addEventListener("choix", syncSum);
     syncSum();
-    const ul = el("ul", { class: "pieces" }, list.map(pz => pieceRow(pz, p.num)));
-    card.append(sum, el("p", { class: "muted small", text: "Fragile reste ta mission. Ces morceaux sont en plus, à choisir quand tu veux, 1 ou 2 par palier : tu peux aussi n'en choisir aucun. Ton choix part dans ton bilan." }), ul);
+    const ul = el("ul", { class: "pieces" }, [...list].sort((a, b) => (a.des - b.des) || (a.niveau - b.niveau)).map(pz => pieceRow(pz, p.num, c)));
+    card.append(sum, el("p", { class: "muted small", text: "Fragile reste ta mission. Ces morceaux sont en plus, à choisir quand tu veux, 1 ou 2 par palier : tu peux aussi n'en choisir aucun. Ils sont rangés du plus abordable au plus costaud, et chacun se débloque quand le cours t'a donné sa technique. Ton choix part dans ton bilan." }), ul);
     if (p.num === 3 && DATA.bossa?.length) {
       card.append(el("p", { class: "eyebrow", text: "Et après : la bossa nova (palier 4 proposé)" }),
-        el("ul", { class: "pieces" }, DATA.bossa.map(pz => pieceRow(pz, 4))));
+        el("ul", { class: "pieces" }, DATA.bossa.map(pz => pieceRow(pz, 4, c))));
     }
     return card;
   }

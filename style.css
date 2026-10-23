@@ -696,3 +696,7 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .piece .chip { font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
 .piece p { margin: 0; }
 .pick-btn[aria-pressed="true"] { background: var(--ok); color: #fff; border-color: var(--ok); }
+.piece.locked { opacity: .62; }
+.piece.locked .pick-btn { font-weight: 500; }
+.niveau { font-size: .72rem; color: var(--muted); white-space: nowrap; }
+.niveau.n3 { color: var(--accent); }

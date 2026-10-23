@@ -596,47 +596,48 @@ for p in PALIERS:
 # ---------- Répertoire : morceaux au choix par palier (il choisit dans l'app, bloc Morceau) ----------
 # vidéos choisies sur leur titre (YouTube n'est pas joignable d'ici pour les vérifier)
 YT = lambda v: "https://www.youtube.com/watch?v=" + v
-def piece(id, style, titre, artiste, travaille, pourquoi, ecouter, tuto=None):
+def piece(id, style, titre, artiste, travaille, pourquoi, ecouter, tuto=None, des=1, niveau=1):
+    # des : semaine à partir de laquelle il se débloque ; niveau : 1 abordable, 2 moyen, 3 costaud (pour ce palier)
     return {"id": id, "style": style, "titre": titre, "artiste": artiste, "travaille": travaille, "pourquoi": pourquoi,
-            "ecouter": YT(ecouter), **({"tuto": YT(tuto)} if tuto else {})}
+            "ecouter": YT(ecouter), **({"tuto": YT(tuto)} if tuto else {}), "des": des, "niveau": niveau}
 REPERTOIRE = {
     1: [
-        piece("sos", "Chanson française", "Tous les cris, les S.O.S.", "Daniel Balavoine", "Accords, enchaînements, accompagnement régulier.",
-              "Ton morceau : tu l'as déjà commencé, ce palier sert à le jouer vraiment propre.", "urWV2OjAmUQ"),
-        piece("tarrega-mim", "Classique, arpèges", "Étude en Mi mineur", "Francisco Tárrega", "Arpège p-i-m-a régulier, mélodie jouée par l'annulaire.",
-              "La même main droite que Fragile, sur des accords ouverts simples.", "5EdL4_J9Se0", "hUNcojDqvhI"),
-        piece("sevillanas", "Flamenco", "Sevillanas : le rythme de base", "Traditionnel", "Compter en 3 temps, premiers accents de la main droite.",
-              "Une entrée douce dans le flamenco, avant la rumba du palier 2.", "KGxuvqcVnEU"),
-        piece("fields", "Pop", "Fields of Gold", "Sting", "Arpèges sur une autre grille d'accords.",
-              "Si Fragile te plaît : le même style, un autre morceau.", "KLVq0IAzh1A"),
+        piece("sos", "Chanson française", "Tous les cris, les S.O.S.", "Daniel Balavoine", "Accords ouverts, enchaînements, accompagnement régulier.",
+              "Ton morceau : tu l'as déjà commencé, ce palier sert à le jouer vraiment propre.", "urWV2OjAmUQ", des=1, niveau=1),
+        piece("sevillanas", "Flamenco", "Sevillanas : le rythme de base", "Traditionnel", "Compter en 3 temps sur des accords simples, premiers accents de la main droite.",
+              "Une entrée douce dans le flamenco, avant la rumba du palier 2.", "KGxuvqcVnEU", des=1, niveau=1),
+        piece("fields", "Pop", "Fields of Gold", "Sting", "Arpèges sur une grille d'accords, avec un Fa barré.",
+              "Si Fragile te plaît : le même style, quand ton Fa barré tient.", "KLVq0IAzh1A", des=2, niveau=2),
+        piece("tarrega-mim", "Classique, arpèges", "Étude en Mi mineur", "Francisco Tárrega", "Arpège p-i-m-a régulier, formes d'accords qui se déplacent sur le manche.",
+              "Le plus exigeant du palier : quand ton arpège p-i-m-a est régulier.", "5EdL4_J9Se0", "hUNcojDqvhI", des=3, niveau=3),
     ],
     2: [
-        piece("romance", "Classique, arpèges", "Romance anonyme (Jeux interdits), 1re partie", "Anonyme", "Arpèges en triolets, mélodie sur la corde aiguë, un barré haut sur le manche.",
-              "L'étude idéale de ce palier : les arpèges du palier 1 et les barrés du palier 2.", "vBgDq5N6lCs"),
         piece("cestecrit", "Chanson française", "C'est écrit", "Francis Cabrel", "Accompagnement en arpèges, enchaînements d'accords avec barrés.",
-              "Ton morceau : il demande des barrés sûrs, c'est le bon moment.", "IkAhYtcDkc4", "XJX5Jjrzoy0"),
+              "Ton morceau : il demande des barrés sûrs, c'est le bon moment.", "IkAhYtcDkc4", "XJX5Jjrzoy0", des=5, niveau=2),
         piece("djobi", "Rumba", "Djobi Djoba", "Gipsy Kings", "Rumba avec golpe, barrés, cadence andalouse.",
-              "Le même rythme que Bamboleo, pour varier.", "znxb6KtOo_c"),
+              "Le même rythme que Bamboleo, pour varier.", "znxb6KtOo_c", des=6, niveau=2),
         piece("pompe", "Gypsy", "La pompe manouche sur Minor Swing", "Django Reinhardt", "Main droite alternée basse et accord, accords sans corde à vide.",
-              "La base du jazz manouche, avant un vrai thème au palier 3.", "VbBBpfOZ0z0"),
+              "La base du jazz manouche, quand tes barrés forme La sont en place.", "VbBBpfOZ0z0", des=6, niveau=2),
+        piece("romance", "Classique, arpèges", "Romance anonyme (Jeux interdits), 1re partie", "Anonyme", "Arpèges en triolets, mélodie sur la corde aiguë, un barré case 7.",
+              "L'étude du palier, en fin de palier : arpèges du palier 1 et barrés du palier 2.", "vBgDq5N6lCs", des=7, niveau=3),
     ],
     3: [
-        piece("malaguena", "Flamenco", "Malagueña (version flamenco)", "Traditionnel", "Mélodie au pouce, rasgueados, Mi phrygien.",
-              "Tout le palier dans un morceau : la gamme de la cadence andalouse et le rasgueado.", "I3jWsoQ8W8g", "FR2lh1-thI0"),
-        piece("lagrima", "Classique", "Lágrima", "Francisco Tárrega", "Changements de position, barrés, son chanté.",
-              "L'étude du palier : écartement et déplacements sur le manche.", "jRA9lolwg90", "pfbZ1UhR-t0"),
-        piece("yeuxnoirs", "Gypsy", "Les Yeux noirs (thème)", "Django Reinhardt", "Mineure harmonique, pompe manouche.",
-              "Ta gamme mineure du palier 3, dans le style que tu aimes.", "39k4pNjusq8"),
+        piece("malaguena", "Flamenco", "Malagueña (version facile)", "Traditionnel", "Mélodie au pouce sur les cordes graves, rasgueados, Mi phrygien.",
+              "Tout le palier dans un morceau : la gamme de la cadence andalouse et le rasgueado.", "I3jWsoQ8W8g", "FR2lh1-thI0", des=9, niveau=1),
+        piece("yeuxnoirs", "Gypsy", "Les Yeux noirs (thème)", "Django Reinhardt", "Mélodie en mineure harmonique, puis la pompe dessous.",
+              "Ta gamme mineure du palier 3, dans le style que tu aimes.", "39k4pNjusq8", des=10, niveau=2),
+        piece("romance2", "Classique, arpèges", "Romance anonyme, 2e partie (Mi majeur)", "Anonyme", "Même arpège qu'à la 1re partie, avec barrés et grands écarts de doigts.",
+              "L'étude du palier : exactement l'écartement travaillé à l'échauffement.", "vBgDq5N6lCs", des=10, niveau=3),
         piece("shape", "Pop", "Shape of My Heart", "Sting", "Arpèges plus riches, accords en position, sons tenus.",
-              "La suite naturelle de Fragile, un cran plus dur.", "NlwIDxCjL-8"),
+              "La suite naturelle de Fragile, un cran plus dur, en fin de parcours.", "NlwIDxCjL-8", des=11, niveau=3),
     ],
 }
 # après le palier 3 : un palier 4 « Bossa » proposé (accords 7e, pouce régulier contre doigts décalés)
 BOSSA = [
     piece("ipanema", "Bossa nova", "Garota de Ipanema", "João Gilberto, Stan Getz", "Accords majeur 7 et mineur 7, rythme bossa.",
-          "Le standard pour commencer la bossa, en accompagnement.", "otGz6hz-AXo"),
+          "Le standard pour commencer la bossa, en accompagnement.", "otGz6hz-AXo", des=13, niveau=2),
     piece("corcovado", "Bossa nova", "Corcovado", "João Gilberto, Stan Getz", "Accords enrichis, rythme bossa plus lent.",
-          "Le deuxième standard, tout en douceur.", "kjilv-saThE"),
+          "Le deuxième standard, tout en douceur.", "kjilv-saThE", des=13, niveau=2),
 ]
 
 # ---------- Le prof qui parle : intro au démarrage de la séance, bilan à « Terminer le cours » ----------
