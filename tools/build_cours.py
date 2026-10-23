@@ -339,7 +339,7 @@ PALIERS = [
   },
 ]
 
-FRAGILE_ENTRETIEN = {"id": "fragile", "label": "Fragile une fois en entier, pour l'entretenir"}
+FRAGILE_ENTRETIEN = {"id": "fragile", "label": "Fragile une fois en entier, pour l'entretenir", "theme": "morceaux"}
 
 
 # Jeux du manche, selon la corde travaillée à ce moment du parcours (cordes : 6 = Mi grave … 1 = Mi aigu).
@@ -350,6 +350,44 @@ JEUX_NOTES = {
     (2, 1): {"corde": 2, "vues": [6, 5, 4, 3, 2], "note": "Si", "octave": [6, 5, 4, 3]},
     (3, 0): {"corde": 1, "vues": [6, 5, 4, 3, 2, 1], "note": "Mi", "octave": [6, 5, 4, 3]},
 }
+
+
+# Schémas du cours (data/schemas.json, repris du Claude Doc), par palier puis par bloc.
+SCHEMAS = {
+    1: [["araignee", "main-droite"], ["do-majeur", "butee-pince"], ["penta-1", "penta-2"], ["notes-manche", "octaves"], ["forme-mi", "forme-la"], ["main-droite"]],
+    2: [["permutations", "lies"], ["sol-majeur"], ["penta-3", "penta-1"], ["notes-manche", "octaves"], ["sib-sim", "rumba", "cadence-andalouse"], ["cadence-andalouse"]],
+    3: [["ecartement", "lies"], ["la-mineur"], ["penta-4-5", "penta-5-positions"], ["notes-manche", "octaves"], ["rasgueado", "rumba"], ["cadence-andalouse", "penta-1"]],
+}
+
+# Thèmes des barres de progression de « Mon bilan ».
+THEMES = [
+    {"id": "technique", "label": "Technique main gauche"},
+    {"id": "arpeges", "label": "Arpèges et main droite"},
+    {"id": "gammes", "label": "Gammes"},
+    {"id": "penta", "label": "Pentatonique et impro"},
+    {"id": "manche", "label": "Notes du manche"},
+    {"id": "barres", "label": "Barrés"},
+    {"id": "accords", "label": "Accords et enchaînements"},
+    {"id": "rythme", "label": "Rythmes : rumba et rasgueado"},
+    {"id": "morceaux", "label": "Morceaux"},
+]
+THEME_OF = {
+    "etirements": "technique", "araignee": "technique", "permutations": "technique", "lies": "technique", "ecartement": "technique",
+    "arpeges": "arpeges", "alternance": "arpeges",
+    "gamme": "gammes", "gamme-pince": "gammes", "gamme-am": "gammes", "triolets": "gammes",
+    "impro": "penta", "corde": "manche", "octaves": "manche", "quiz": "manche",
+    "comprendre": "barres", "majeurs": "barres", "mineurs": "barres", "barres": "barres",
+    "enchainement": "accords", "alterne": "accords", "grille": "accords",
+    "rumba": "rythme", "rasgueado": "rythme",
+}
+
+
+def theme_of(e):
+    if e["id"] in THEME_OF:
+        return THEME_OF[e["id"]]
+    if e["id"].startswith("penta"):
+        return "penta"
+    return "morceaux"
 
 
 def jeux_for(palier, moitie, e):
@@ -373,6 +411,7 @@ def bloc_for(palier, b, bi, moitie, seance):
     for e in ex:
         j = jeux_for(palier, moitie, e)
         if j: e["jeux"] = j
+        e.setdefault("theme", theme_of(e))
     faire = m["faire"]
     titre = b["titre"]
     if b.get("morceau"):
@@ -389,6 +428,7 @@ def bloc_for(palier, b, bi, moitie, seance):
         "id": f"b{bi + 1}", "titre": f"{bi + 1}. {titre}", "duree": b["duree"],
         "sert": b["sert"], "faire": faire, "explication": b["explication"],
         "videos": b["videos"], "positions": m.get("positions", b.get("positions", [])),
+        "schemas": SCHEMAS[palier["num"]][bi],
         "exercices": ex,
     }
 
@@ -436,6 +476,7 @@ out = {
         {"bloc": "Pentatonique", "duree": 10}, {"bloc": "Notes du manche", "duree": 10},
         {"bloc": "Barrés et rythme", "duree": 15}, {"bloc": "Morceau", "duree": 15},
     ],
+    "themes": THEMES,
     "paliers": [{"num": p["num"], "titre": p["titre"], "but": p["but"], "mission": p["mission"]} for p in PALIERS],
     "cours": cours,
 }

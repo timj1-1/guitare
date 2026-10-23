@@ -1594,7 +1594,15 @@ Règles de réponse :
     const sync = () => { link.href = ARTIFACT_URL + "#pos-" + compactOf(toRel(pos)).replace(/^(.{6})$/, m => m.split("").join("-")); };
     sync(); link.addEventListener("click", sync); link.addEventListener("mouseenter", sync);
   });
-  const fromHash = () => { const m = location.hash.match(/^#pos-([x0-9-]+)$/i); const p = m && parsePosition(m[1]); if (p) { pos = toAbs(p); store.set("pos", pos); render(); } };
+  // Une position venue du cours : sans corde à vide, si l'index tient la plus basse case de la basse jusqu'au Mi aigu, c'est un barré
+  const barreOf = p => {
+    if (p.some(f => f === 0)) return null;
+    const from = p[0] == null ? 1 : 0, fr = p.filter(f => f != null);
+    if (fr.length < 5 || p.slice(from).some(f => f == null)) return null;
+    const m = Math.min(...fr);
+    return p[from] === m && p[5] === m ? { fret: Math.min(FRETS, m + capo), from } : null;
+  };
+  const fromHash = () => { const m = location.hash.match(/^#pos-([x0-9-]+)$/i); const p = m && parsePosition(m[1]); if (p) { pos = toAbs(p); barre = barreOf(p); store.set("pos", pos); store.set("barre", barre); render(); } };
   window.addEventListener("hashchange", fromHash);
 
   // réglages dépliés sur ordi, repliés sur téléphone (leur titre résume ce qui est choisi)

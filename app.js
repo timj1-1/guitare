@@ -36,7 +36,7 @@
   const exState = (cid, key) => (cs(cid).ex[key] ||= {});
 
   // ---------- Données du cours ----------
-  let DATA = null, RETOURS = [];
+  let DATA = null, RETOURS = [], SCHEMAS = {};
   const byId = id => DATA.cours.find(c => c.id === id);
   const palierOf = c => DATA.paliers.find(p => p.num === c.palier);
   const exKey = (b, e) => b.id + "/" + e.id;
@@ -56,16 +56,18 @@
 
   // ---------- Navigation entre sections ----------
   const VIEWS = ["cours", "manche", "bilan"];
+  // En revenant au cours (barre du bas, « ← Cours N », balayage), on retrouve l'endroit où on était.
   function go(view, opts = {}) {
     if (!VIEWS.includes(view)) view = "cours";
-    if (state.view === "cours" && view !== "cours") coursScroll = window.scrollY;
+    const from = state.view;
+    if (from === "cours" && view !== "cours") coursScroll = window.scrollY;
     state.view = view; save();
     for (const v of VIEWS) $("#view-" + v).hidden = v !== view;
     document.querySelectorAll(".tabbar button").forEach(b => { if (b.dataset.go === view) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
     if (view === "manche") openManche(opts.pos); else $("#backToCours").hidden = true;
     if (view === "bilan") renderBilan();
-    if (opts.keepScroll && view === "cours") window.scrollTo({ top: coursScroll });
-    else if (!opts.keepScroll) window.scrollTo({ top: 0 });
+    if (view !== "cours") window.scrollTo({ top: 0 });
+    else if (from !== "cours" || opts.restore) window.scrollTo({ top: coursScroll });
   }
   let coursScroll = 0;
   document.querySelectorAll(".tabbar button").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
@@ -108,7 +110,7 @@
     back.hidden = !pos;
     if (pos) back.textContent = "← Cours " + (byId(state.current)?.num ?? "");
   }
-  $("#backToCours").addEventListener("click", () => go("cours", { keepScroll: true }));
+  $("#backToCours").addEventListener("click", () => go("cours"));
 
   // ---------- Onglets des cours ----------
   function renderTabs() {
@@ -128,13 +130,17 @@
   }
   function selectCours(id) {
     state.current = id; save();
-    renderTabs(); renderCours();
+    renderTabs(); renderCours(); updateSeance();
     window.scrollTo({ top: 0 });
   }
 
   // ---------- Un cours ----------
   const ICON_POS = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2.5" width="8" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="9.8" r="1.6" fill="currentColor"/></svg>';
   const CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const ICON_TIMER = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 13.5V9.5M9.5 2.5h5M12 2.5V6M18.4 6.6l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  const ICON_SPEAK = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  const ICON_ZOOM = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const withIcon = (node, icon, text) => { node.insertAdjacentHTML("afterbegin", icon); if (text != null) node.append(text); return node; };
 
   function progressOf(c) {
     const list = allEx(c), s = state.cours[c.id];
@@ -149,6 +155,7 @@
     const p = palierOf(c);
     const body = $("#coursBody");
     body.replaceChildren();
+    seanceUI = {};
 
     const pr = progressOf(c);
     const bar = el("i", { style: `width:${pr.total ? (pr.done / pr.total) * 100 : 0}%` });
@@ -160,6 +167,7 @@
       el("div", { class: "progress", "aria-hidden": "true" }, bar),
       prLabel,
     ));
+    if (!s.finishedAt) body.append(renderSeance(c));
     const updateProgress = () => {
       const q = progressOf(c);
       bar.style.width = (q.total ? (q.done / q.total) * 100 : 0) + "%";
@@ -236,8 +244,17 @@
     inner.append(el("blockquote", { class: "sert", text: b.sert }));
     inner.append(el("p", { class: "faire" }, el("strong", { text: "À faire : " }), b.faire));
 
+    const sch = (b.schemas || []).map(k => SCHEMAS[k]).filter(Boolean);
+    if (sch.length) inner.append(el("div", { class: "schemas" }, sch.map(schemaFig)));
+
     const tools = el("div", { class: "row-tools" });
-    tools.append(el("button", { class: "btn small", type: "button", onclick: () => startTimer(b.duree, b.titre.replace(/^\d+\.\s*/, "")) }, `Minuteur ${b.duree} min`));
+    tools.append(withIcon(el("button", { class: "btn small", type: "button", onclick: () => startTimer(b.duree, b.titre.replace(/^\d+\.\s*/, "")) }), ICON_TIMER, `Minuteur ${b.duree} min`));
+    if (window.Sons?.voixDispo) {
+      tools.append(withIcon(el("button", { class: "btn small", type: "button", title: "Écouter la consigne", onclick: () => {
+        if (Sons.parle()) return Sons.tais();
+        Sons.dire(`${b.titre.replace(/^\d+\.\s*/, "")}. ${b.sert} À faire : ${b.faire}`, { force: true });
+      } }), ICON_SPEAK, "Écouter"));
+    }
     (b.positions || []).forEach(pz => {
       const btn = el("button", { class: "btn small pos-btn", type: "button", title: "Voir sur le manche", onclick: () => go("manche", { pos: pz.code }) });
       btn.innerHTML = ICON_POS; btn.append(pz.label);
@@ -246,7 +263,14 @@
     inner.append(tools);
 
     const ul = el("ul", { class: "exos" });
-    b.exercices.forEach(e => ul.append(renderExo(c, b, e, () => { card.classList.toggle("complete", complete()); updateProgress(); })));
+    let wasComplete = complete();
+    b.exercices.forEach(e => ul.append(renderExo(c, b, e, checked => {
+      const now = complete();
+      card.classList.toggle("complete", now);
+      if (now && !wasComplete) { Sons.bloc(); toast(`Bloc ${bi + 1} terminé, bravo !`); }
+      else if (checked) Sons.cling();
+      wasComplete = now; updateProgress();
+    })));
     inner.append(ul);
 
     const more = el("details", { class: "more" }, el("summary", { text: "Explication et vidéos" }));
@@ -273,13 +297,44 @@
     return card;
   }
 
+  // ---------- Schémas (les mêmes que dans le cours du Claude Doc) ----------
+  function schemaFig(s) {
+    const fig = el("figure", { class: "schema", role: "button", tabindex: "0", "aria-label": "Agrandir le schéma : " + s.titre });
+    const hint = withIcon(el("span", { class: "zoom-hint", "aria-hidden": "true" }), ICON_ZOOM);
+    fig.append(el("figcaption", {}, el("div", {}, el("strong", { text: s.titre }), s.sous ? el("span", { text: s.sous }) : null), hint));
+    const art = el("div", { class: "schema-art" });
+    if (s.svg) art.innerHTML = s.svg;
+    else art.append(el("img", { src: s.img, alt: s.titre, loading: "lazy", width: s.w, height: s.h }));
+    fig.append(art);
+    fig.addEventListener("click", () => openSchema(s));
+    fig.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSchema(s); } });
+    return fig;
+  }
+  let schemaView = null;
+  function openSchema(s) {
+    if (!schemaView) {
+      schemaView = el("dialog", { class: "schema-view", "aria-label": "Schéma agrandi" });
+      schemaView.addEventListener("click", () => schemaView.close());
+      document.body.append(schemaView);
+    }
+    const fig = el("figure", { class: "sv-fig", style: `--ar:${(s.w / s.h).toFixed(3)}` },
+      el("figcaption", {}, el("strong", { text: s.titre }), s.sous ? el("span", { text: s.sous }) : null));
+    if (s.svg) fig.insertAdjacentHTML("beforeend", s.svg); else fig.append(el("img", { src: s.img, alt: s.titre }));
+    const portrait = matchMedia("(orientation: portrait) and (max-width: 700px)").matches;
+    schemaView.replaceChildren(
+      el("div", { class: "sv-stage" }, fig),
+      el("button", { class: "icon-btn sv-close", type: "button", "aria-label": "Fermer", text: "✕" }),
+      el("p", { class: "sv-tip", text: portrait ? "Tourne ton téléphone pour lire le schéma en grand. Touche l'écran pour fermer." : "Touche l'écran pour fermer." }));
+    openSheet(schemaView);
+  }
+
   function renderExo(c, b, e, onChange) {
     const key = exKey(b, e);
     const x = exState(c.id, key);
     const id = "x-" + c.id + "-" + key.replace(/\W/g, "-");
     const li = el("li", { class: "exo" + (x.done ? " is-done" : "") });
     const box = el("input", { type: "checkbox", class: "check", id, checked: !!x.done, "aria-label": e.label });
-    box.addEventListener("change", () => { x.done = box.checked; li.classList.toggle("is-done", x.done); touch(c); save(); onChange(); });
+    box.addEventListener("change", () => { x.done = box.checked; li.classList.toggle("is-done", x.done); touch(c); save(); onChange(x.done); });
     const label = el("label", { class: "exo-label", for: id }, e.label, e.aide ? el("span", { class: "aide", text: e.aide }) : null);
     const main = el("div", { class: "exo-main" }, box, label);
     if (e.tempo) main.append(el("button", { class: "tempo-chip", type: "button", title: "Régler le métronome", onclick: () => openMetro(x.tempo || e.tempo) }, `${e.tempo} bpm`));
@@ -322,8 +377,9 @@
         class: "btn small jeu-btn", type: "button",
         onclick: () => Jeux.open(j, res => {
           x.jeux ||= {}; x.jeux[j.label] = res;
-          if (!x.done && res.score / res.total >= 0.8) { x.done = true; box.checked = true; li.classList.add("is-done"); }
-          touch(c); save(); showLast(); onChange();
+          let checked = false;
+          if (!x.done && res.score / res.total >= 0.8) { x.done = checked = true; box.checked = true; li.classList.add("is-done"); }
+          touch(c); save(); showLast(); onChange(checked);
         }),
       }, "▶ " + j.label)));
       showLast();
@@ -366,7 +422,7 @@
       const d = new Date(s.finishedAt);
       return el("section", { class: "card done-card" },
         el("span", { class: "eyebrow", text: "Cours terminé" }),
-        el("p", { text: `Terminé le ${d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}.` }),
+        el("p", { text: `Terminé le ${d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}` + (s.duree ? `, en ${s.duree} min.` : ".") }),
         el("button", { class: "btn primary", type: "button", onclick: () => showRecap(c) }, "Revoir et renvoyer mon bilan"),
         el("button", { class: "btn ghost", type: "button", onclick: () => { delete s.finishedAt; save(); renderTabs(); renderCours(); } }, "Rouvrir ce cours"));
     }
@@ -376,8 +432,9 @@
       ta.addEventListener("input", () => { s[k] = ta.value.trim() ? ta.value : undefined; save(); });
       return el("label", {}, label, ta);
     };
-    const duree = el("input", { type: "number", inputmode: "numeric", min: "0", max: "300", placeholder: "70", value: s.duree ?? "", "aria-label": "Durée en minutes" });
+    const duree = el("input", { type: "number", inputmode: "numeric", min: "0", max: "300", placeholder: s.seance ? String(Math.max(1, Math.round(seanceMs(s) / 60000))) : "70", value: s.duree ?? "", "aria-label": "Durée en minutes" });
     duree.addEventListener("input", () => { const v = parseInt(duree.value, 10); s.duree = Number.isFinite(v) ? v : undefined; save(); });
+    seanceUI.duree = duree;
     return el("section", { class: "card fin" },
       el("span", { class: "eyebrow", text: "Fin du cours" }),
       el("h2", { text: "Comment ça s'est passé ?" }),
@@ -385,17 +442,91 @@
       field("bien", "Ce qui a bien marché", "Ce qui est devenu plus facile, une petite victoire…"),
       field("autre", "Pour mon prof", "Une envie, une question, du temps en plus ou en moins…"),
       el("label", { class: "tempo-in", style: "flex-direction:row;font-weight:600;color:var(--ink)" }, "Durée de la séance", duree, "min"),
+      s.seance ? el("p", { class: "muted small", text: "Laisse vide : le minuteur de séance la remplit tout seul." }) : null,
       el("button", { class: "btn ok big", type: "button", onclick: () => finish(c) }, "Terminer le cours"),
     );
   }
 
   function finish(c) {
     const s = cs(c.id);
+    seancePause(c.id);
+    const ms = seanceMs(s);
+    if (s.duree == null && ms >= 60000) s.duree = Math.round(ms / 60000);
     s.finishedAt = new Date().toISOString();
     flush();
-    renderTabs(); renderCours();
+    renderTabs(); renderCours(); updateSeance();
+    Sons.fanfare();
     showRecap(c);
   }
+
+  // ---------- Minuteur de séance : de « Démarrer » à « Terminer le cours » ----------
+  const seanceMs = s => (s?.seance ? s.seance.acc + (s.seance.start ? Date.now() - s.seance.start : 0) : 0);
+  const fmt = ms => {
+    const t = Math.floor(ms / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+    return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(sec).padStart(2, "0");
+  };
+  let seanceUI = {}, seanceTick = null;
+  const seanceChip = $("#seanceChip");
+  function seancePause(id) {
+    const s = state.cours[id];
+    if (s?.seance?.start) { s.seance.acc += Date.now() - s.seance.start; s.seance.start = null; }
+  }
+  function seanceStart(c) {
+    Object.keys(state.cours).forEach(id => { if (id !== c.id) seancePause(id); });
+    const s = cs(c.id);
+    s.seance ||= { acc: 0, start: null };
+    s.seance.start ||= Date.now();
+    touch(c); flush(); updateSeance();
+    Sons.unlock(); Sons.cling();
+  }
+  function seanceToggle(c) {
+    const s = cs(c.id);
+    if (s.seance?.start) { seancePause(c.id); flush(); updateSeance(); toast("Séance en pause."); }
+    else { const again = !!s.seance?.acc; seanceStart(c); toast(again ? "C'est reparti !" : "Séance lancée. Bonne pratique !"); }
+  }
+  // La séance affichée en haut : celle qui tourne, sinon celle en pause du cours ouvert.
+  function seanceShown() {
+    if (!DATA) return null;
+    const run = DATA.cours.find(c => state.cours[c.id]?.seance?.start);
+    if (run) return run;
+    const cur = byId(state.current);
+    return cur && !isDone(cur.id) && state.cours[cur.id]?.seance?.acc ? cur : null;
+  }
+  function updateSeance() {
+    const c = seanceShown(), s = c && state.cours[c.id], running = !!s?.seance?.start;
+    seanceChip.hidden = !c;
+    if (c) {
+      seanceChip.querySelector("b").textContent = fmt(seanceMs(s));
+      seanceChip.classList.toggle("paused", !running);
+      seanceChip.title = `Séance du cours ${c.num} : touche pour ${running ? "mettre en pause" : "reprendre"}`;
+    }
+    const u = seanceUI;
+    if (u.card && u.c) {
+      const us = state.cours[u.c.id], on = !!us?.seance?.start, has = !!us?.seance;
+      u.card.dataset.state = on ? "on" : has ? "pause" : "off";
+      u.time.textContent = has ? fmt(seanceMs(us)) : "0:00";
+      u.label.textContent = on ? "Séance en cours" : has ? "Séance en pause" : "Minuteur de séance";
+      u.btn.textContent = on ? "Pause" : has ? "Reprendre" : "▶ Démarrer la séance";
+      u.btn.className = "btn " + (on ? "" : "primary");
+      if (u.duree && has) u.duree.placeholder = String(Math.max(1, Math.round(seanceMs(us) / 60000)));
+    }
+    const any = DATA?.cours.some(x => state.cours[x.id]?.seance?.start);
+    if (any && !seanceTick) seanceTick = setInterval(updateSeance, 1000);
+    if (!any && seanceTick) { clearInterval(seanceTick); seanceTick = null; }
+  }
+  seanceChip.addEventListener("click", () => { const c = seanceShown(); if (c) seanceToggle(c); });
+  function renderSeance(c) {
+    const time = el("b", { class: "seance-time" }), label = el("span", { class: "eyebrow" });
+    const btn = el("button", { type: "button", onclick: () => seanceToggle(c) });
+    const card = el("section", { class: "card seance-card" },
+      withIcon(el("div", { class: "seance-ic" }), ICON_TIMER),
+      el("div", { class: "seance-txt" }, label, time, el("span", { class: "muted small", text: "Il s'arrête quand tu touches « Terminer le cours »." })),
+      btn);
+    seanceUI = { c, card, time, label, btn, duree: null };
+    requestAnimationFrame(updateSeance);
+    return card;
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) updateSeance(); });
 
   // ---------- Bilan envoyé au prof ----------
   const FEEL = { facile: "facile", correct: "correct", galere: "GALÈRE" };
@@ -486,6 +617,7 @@
       el("div", { class: "stat" }, el("b", { text: String(Math.floor(totalMin / 60)) + " h" + (totalMin % 60 ? " " + String(totalMin % 60).padStart(2, "0") : "") }), el("span", { text: "de pratique" })),
       el("div", { class: "stat" }, el("b", { text: "Palier " + nxt.palier }), el("span", { text: palierOf(nxt).titre })),
     ));
+    body.append(renderProgression());
 
     // Les retours du prof
     if (RETOURS.length) {
@@ -550,6 +682,21 @@
           el("button", { class: "btn jeu-btn", type: "button", onclick: () => Jeux.open({ mode: "quiz", label: "Quiz du manche" }) }, "▶ Quiz 6 cordes"))));
     }
 
+    // Sons et voix
+    const toggle = (label, hint, get, set) => {
+      const b = el("button", { class: "switch", type: "button", role: "switch", "aria-checked": String(get()) });
+      b.addEventListener("click", () => { set(!get()); b.setAttribute("aria-checked", String(get())); });
+      return el("div", { class: "setting" }, el("div", {}, el("strong", { text: label }), el("span", { class: "muted small", text: hint })), b);
+    };
+    const reglages = el("section", { class: "card", style: "display:flex;flex-direction:column;gap:12px" },
+      el("h2", { text: "Sons et voix" }),
+      toggle("Petits sons", "Un « cling » quand tu coches un exercice, une mélodie quand un bloc ou un cours est fini.", () => Sons.sfx, v => { Sons.sfx = v; if (v) Sons.cling(); }));
+    if (Sons.voixDispo) {
+      reglages.append(toggle("Voix dans les jeux", "Elle lit les questions et les réponses. C'est la voix de ton iPhone ou de ton Mac : gratuite, sans Internet.", () => Sons.voix, v => { Sons.voix = v; if (v) Sons.dire("D'accord, je lis les consignes des jeux."); }));
+      reglages.append(el("p", { class: "muted small", text: "Dans chaque bloc, le bouton « Écouter » lit la consigne à voix haute. Sur iPhone, une voix plus naturelle se télécharge dans Réglages, Accessibilité, Contenu énoncé, Voix, Français." }));
+    }
+    body.append(reglages);
+
     // Sauvegarde
     const fileIn = el("input", { type: "file", accept: "application/json,.json", hidden: true });
     fileIn.addEventListener("change", async () => {
@@ -573,6 +720,38 @@
     ));
   }
 
+  // Barres de progression : tout le parcours, puis chaque thème (exercices cochés sur les 36 cours).
+  const BLOC_THEME = ["technique", "gammes", "penta", "manche", "barres", "morceaux"];
+  function renderProgression() {
+    const all = DATA.cours.flatMap(c => c.blocs.flatMap((b, bi) => b.exercices.map(e => ({ c, e, theme: e.theme || BLOC_THEME[bi] || "morceaux", x: state.cours[c.id]?.ex[exKey(b, e)] }))));
+    const pct = (n, t) => (t ? Math.round((n / t) * 100) : 0);
+    const bar = (n, t, cls = "") => el("div", { class: "progress " + cls, "aria-hidden": "true" }, el("i", { style: `width:${t ? (n / t) * 100 : 0}%` }));
+    const nbDone = DATA.cours.filter(c => isDone(c.id)).length;
+    const exDone = all.filter(a => a.x?.done).length;
+    const card = el("section", { class: "card progression" },
+      el("h2", { text: "Ma progression" }),
+      el("div", { class: "prog-main" },
+        el("div", { class: "prog-top" }, el("strong", { text: "Le parcours" }), el("span", { class: "prog-pct", text: pct(nbDone, DATA.cours.length) + " %" })),
+        bar(nbDone, DATA.cours.length, "big"),
+        el("span", { class: "muted small", text: `${nbDone} cours terminé${nbDone > 1 ? "s" : ""} sur ${DATA.cours.length} · ${exDone} exercices faits sur ${all.length}` })));
+    const list = el("div", { class: "prog-list" });
+    for (const t of DATA.themes || []) {
+      const mine = all.filter(a => a.theme === t.id);
+      if (!mine.length) continue;
+      const d = mine.filter(a => a.x?.done).length;
+      const fac = mine.filter(a => a.x?.feel === "facile").length, gal = mine.filter(a => a.x?.feel === "galere").length;
+      const bits = [`${d} / ${mine.length} exercices`];
+      if (fac) bits.push(`${fac} facile${fac > 1 ? "s" : ""}`);
+      if (gal) bits.push(`${gal} galère${gal > 1 ? "s" : ""}`);
+      list.append(el("div", { class: "prog-row" },
+        el("div", { class: "prog-top" }, el("span", { text: t.label }), el("span", { class: "prog-pct", text: pct(d, mine.length) + " %" })),
+        bar(d, mine.length, "theme"),
+        el("span", { class: "muted small", text: bits.join(" · ") })));
+    }
+    card.append(list);
+    return card;
+  }
+
   async function exportData() {
     flush();
     const json = JSON.stringify(state, null, 1);
@@ -593,6 +772,7 @@
       const retours = await loadJSON("data/retours.json").catch(() => ({ retours: [] }));
       const changed = fresh.maj !== DATA.maj || (retours.retours || []).length !== RETOURS.length;
       DATA = fresh; RETOURS = retours.retours || [];
+      SCHEMAS = await loadJSON("data/schemas.json").catch(() => SCHEMAS);
       renderTabs(); renderCours(); renderBilan();
       toast(changed ? "Cours mis à jour." : "Ton cours est déjà à jour.");
     } catch { toast("Pas de connexion : réessaie plus tard."); }
@@ -607,7 +787,7 @@
     const tick = () => {
       const left = Math.max(0, end - Date.now());
       const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
-      mini.textContent = `${m}:${String(sec).padStart(2, "0")}`;
+      mini.querySelector("b").textContent = `${m}:${String(sec).padStart(2, "0")}`;
       if (left <= 0) { stopTimer(); ding(); toast(`Fin du bloc « ${label} ». Pause d'une minute !`); navigator.vibrate?.([200, 100, 200]); }
     };
     mini.hidden = false; mini.title = label + " (touche pour arrêter)";
@@ -619,13 +799,8 @@
   mini.addEventListener("click", () => { stopTimer(); toast("Minuteur arrêté."); });
 
   // ---------- Métronome ----------
-  let actx = null;
-  const getCtx = () => (actx ||= new (window.AudioContext || window.webkitAudioContext)());
-  function unlockAudio() {
-    const ctx = getCtx();
-    if (ctx.state === "suspended") ctx.resume();
-    const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0);
-  }
+  const getCtx = () => Sons.ctx();
+  const unlockAudio = () => Sons.unlock();
   function click(time, accent) {
     const ctx = getCtx(), o = ctx.createOscillator(), g = ctx.createGain();
     o.frequency.value = accent ? 1760 : 1100;
@@ -707,9 +882,10 @@
       return;
     }
     try { RETOURS = (await loadJSON("data/retours.json")).retours || []; } catch { RETOURS = []; }
+    try { SCHEMAS = await loadJSON("data/schemas.json"); } catch { SCHEMAS = {}; }
     if (!state.current || !byId(state.current)) state.current = nextCours().id;
-    renderTabs(); renderCours();
-    go(state.view === "bilan" ? "bilan" : "cours", { keepScroll: true });
+    renderTabs(); renderCours(); updateSeance();
+    go(state.view === "bilan" ? "bilan" : "cours");
   }
   boot();
 

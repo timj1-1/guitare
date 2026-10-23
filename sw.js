@@ -1,7 +1,7 @@
 // Ma guitare : fonctionne hors ligne. Le cours et les retours du prof sont pris en ligne d'abord.
-const VERSION = "v3";
-const SHELL = ["./", "index.html", "style.css", "app.js", "jeux.js", "samples-nylon.js", "manche.html", "manifest.webmanifest",
-  "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "data/cours.json", "data/retours.json"];
+const VERSION = "v4";
+const SHELL = ["./", "index.html", "style.css", "app.js", "sons.js", "jeux.js", "samples-nylon.js", "manche.html", "manifest.webmanifest",
+  "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "data/cours.json", "data/retours.json", "data/schemas.json", "schemas/notes-manche.webp"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
