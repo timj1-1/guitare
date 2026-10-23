@@ -802,11 +802,6 @@ out = {
     "version": 1,
     "prof": PROF,
     "maj": __import__("datetime").datetime.now().strftime("%Y-%m-%dT%H:%M"),
-    "seance_type": [
-        {"bloc": "Échauffement et technique", "duree": 10}, {"bloc": "Gamme", "duree": 10},
-        {"bloc": "Pentatonique", "duree": 10}, {"bloc": "Notes du manche", "duree": 10},
-        {"bloc": "Barrés et rythme", "duree": 15}, {"bloc": "Morceau", "duree": 15},
-    ],
     "themes": THEMES,
     "paliers": [{"num": p["num"], "nom": NOMS[p["num"]], "titre": p["titre"], "but": p["but"], "mission": p["mission"]} for p in PALIERS],
     "morceaux": MORCEAUX,
