@@ -428,7 +428,7 @@
     card.addEventListener("choix", syncSum);
     syncSum();
     const ul = el("ul", { class: "pieces" }, list.map(pz => pieceRow(pz, p.num)));
-    card.append(sum, el("p", { class: "muted small", text: "En plus de ta mission, choisis 1 ou 2 morceaux qui te plaisent. Tu peux changer d'avis quand tu veux : ton choix part dans ton bilan, et j'ajoute la tablature et les passages difficiles au cours." }), ul);
+    card.append(sum, el("p", { class: "muted small", text: "Fragile reste ta mission. Ces morceaux sont en plus, à choisir quand tu veux, 1 ou 2 par palier : tu peux aussi n'en choisir aucun. Ton choix part dans ton bilan." }), ul);
     if (p.num === 3 && DATA.bossa?.length) {
       card.append(el("p", { class: "eyebrow", text: "Et après : la bossa nova (palier 4 proposé)" }),
         el("ul", { class: "pieces" }, DATA.bossa.map(pz => pieceRow(pz, 4))));
