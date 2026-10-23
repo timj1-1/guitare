@@ -33,7 +33,7 @@ PALIERS = [
         ],
       },
       {
-        "titre": "Gamme de Do majeur et main droite", "duree": 10,
+        "titre": "Gamme de Do majeur et main droite", "duree": 20,
         "sert": "La gamme majeure est la base des mélodies, des accords et de l'impro. La butée te donne un son plein et régulier.",
         "explication": [
           "Une gamme majeure suit toujours les mêmes écarts : ton, ton, demi-ton, ton, ton, ton, demi-ton (1 ton = 2 cases). Do majeur n'a aucun dièse : Do Ré Mi Fa Sol La Si Do. Un dièse (#) monte une note d'une case (Fa# est une case au-dessus de Fa), un bémol (b) la descend d'une case (Sib est une case sous Si).",
@@ -48,7 +48,7 @@ PALIERS = [
         ],
       },
       {
-        "titre": "Pentatonique de La mineur", "duree": 10,
+        "titre": "Pentatonique de La mineur", "duree": 5,
         "sert": "C'est la gamme de l'impro. Chaque position apprise agrandit la zone du manche où tu pourras improviser.",
         "explication": [
           "La pentatonique de La mineur n'a que 5 notes : La Do Ré Mi Sol. Elle existe en 5 formes qui se chevauchent : la note la plus aiguë d'une forme est la plus grave de la suivante. Une position, c'est un morceau de la gamme jouable sans bouger la main, sur 4 ou 5 cases.",
@@ -63,7 +63,7 @@ PALIERS = [
         ],
       },
       {
-        "titre": "Notes du manche", "duree": 10,
+        "titre": "Notes du manche", "duree": 5,
         "sert": "Savoir où tu es sur le manche. La corde de La te donnera le nom de tous tes barrés forme La au palier 2.",
         "explication": [
           "Il y a 7 notes naturelles : Do Ré Mi Fa Sol La Si. Entre deux notes il y a 2 cases, sauf entre Mi-Fa et Si-Do où il n'y en a qu'une. La case 12 redonne la note à vide, une octave plus haut.",
@@ -71,10 +71,10 @@ PALIERS = [
         ],
         "videos": [V("Comment mémoriser toutes les notes sur le manche", "https://www.youtube.com/watch?v=YaM7PLMop5o"), V("Toutes les notes du manche grâce au schéma d'octave", "https://www.youtube.com/watch?v=PJ8_orOw4ss")],
         "moities": [
-          {"faire": "Corde de La : 5 min à dire chaque note de la case 0 à 12 puis au hasard, et 5 min à retrouver tous les La par les octaves.",
-           "ex": [{"id": "corde", "label": "Corde de La : notes de 0 à 12, puis au hasard (5 min)"}, {"id": "octaves", "label": "Octaves : tous les La du manche (5 min)"}]},
-          {"faire": "Corde de Ré : 5 min à dire chaque note de la case 0 à 12 puis au hasard, et 5 min à retrouver tous les Ré par les octaves.",
-           "ex": [{"id": "corde", "label": "Corde de Ré : notes de 0 à 12, puis au hasard (5 min)"}, {"id": "octaves", "label": "Octaves : tous les Ré du manche (5 min)"}]},
+          {"faire": "Corde de La : 2 min à dire chaque note de la case 0 à 12 puis au hasard, et 3 min à retrouver tous les La par les octaves.",
+           "ex": [{"id": "corde", "label": "Corde de La : notes de 0 à 12, puis au hasard (2 min)"}, {"id": "octaves", "label": "Octaves : tous les La du manche (3 min)"}]},
+          {"faire": "Corde de Ré : 2 min à dire chaque note de la case 0 à 12 puis au hasard, et 3 min à retrouver tous les Ré par les octaves.",
+           "ex": [{"id": "corde", "label": "Corde de Ré : notes de 0 à 12, puis au hasard (2 min)"}, {"id": "octaves", "label": "Octaves : tous les Ré du manche (3 min)"}]},
         ],
       },
       {
@@ -151,7 +151,7 @@ PALIERS = [
         ],
       },
       {
-        "titre": "Gamme majeure en position fixe", "duree": 10,
+        "titre": "Gamme majeure en position fixe", "duree": 20,
         "sert": "Une forme sans corde à vide se déplace partout. En la décalant, tu as toutes les gammes majeures avec un seul dessin.",
         "explication": [
           "En position fixe, la main ne bouge pas : un doigt par case sur 4 cases, comme l'araignée. La gamme commence sur le Sol de la 6e corde, case 3. Décale toute la forme et la gamme prend le nom de cette première note.",
@@ -161,11 +161,11 @@ PALIERS = [
           {"faire": "Sol majeur : index case 2, auriculaire case 5, montée et descente à 60 bpm en butée, en disant les notes.",
            "ex": [{"id": "gamme", "label": "Sol majeur en position fixe, en butée", "tempo": 60}]},
           {"faire": "La même forme 2 cases plus haut (c'est La majeur), à 70 bpm.",
-           "ex": [{"id": "gamme", "label": "La majeur en position fixe, en butée", "tempo": 70}]},
+           "ex": [{"id": "gamme", "label": "La majeur en position fixe, en butée", "tempo": 70}, {"id": "segovia", "label": "Do majeur sur 2 octaves, avec un changement de position à la case 5", "tempo": 60}]},
         ],
       },
       {
-        "titre": "Pentatonique : position 3 et mini-impro", "duree": 10,
+        "titre": "Pentatonique : position 3 et mini-impro", "duree": 5,
         "sert": "Avec 3 positions reliées, tu couvres le manche de la case 5 à la case 12. La mini-impro t'apprend à t'en servir pour de vrai.",
         "explication": [
           "Pour la mini-impro : des phrases de 3 à 5 notes, des silences entre elles, et finis tes phrases sur un La.",
@@ -175,21 +175,21 @@ PALIERS = [
           {"faire": "La position 3 (cases 9 à 12), reliée à la 2.",
            "ex": [{"id": "penta3", "label": "Position 3 (cases 9 à 12)", "tempo": 70}, {"id": "penta23", "label": "Relier les positions 2 et 3", "tempo": 70}]},
           {"faire": "7 min sur les positions 1, 2 et 3 à la suite, puis 3 min d'impro sur la position 1, sur la grille de Bamboleo (la suite d'accords qui tourne en boucle dans le morceau), enregistrée sur ton téléphone.",
-           "ex": [{"id": "penta123", "label": "Positions 1, 2 et 3 à la suite (7 min)", "tempo": 70}, {"id": "impro", "label": "Mini-impro sur la grille de Bamboleo (3 min)"}]},
+           "ex": [{"id": "penta123", "label": "Positions 1, 2 et 3 à la suite (3 min)", "tempo": 70}, {"id": "impro", "label": "Mini-impro sur la grille de Bamboleo (2 min)"}]},
         ],
       },
       {
-        "titre": "Notes du manche", "duree": 10,
+        "titre": "Notes du manche", "duree": 5,
         "sert": "Connaître les cordes du milieu, celles où passent la plupart des mélodies et des solos.",
         "explication": [
           "Sur la corde de Si, l'octave se décale de 3 cases au lieu de 2 : c'est la seule corde accordée différemment des autres.",
         ],
         "videos": [V("Le manche de la guitare maîtrisé en 17 minutes", "https://www.youtube.com/watch?v=HDZx0XgrHgI"), V("Placer les notes sur le manche facilement", "https://www.youtube.com/watch?v=_m8qu8ogAug")],
         "moities": [
-          {"faire": "Corde de Sol : 5 min à dire chaque note de la case 0 à 12 puis au hasard, et 5 min à retrouver tous les Sol par les octaves.",
-           "ex": [{"id": "corde", "label": "Corde de Sol : notes de 0 à 12, puis au hasard (5 min)"}, {"id": "octaves", "label": "Octaves : tous les Sol du manche (5 min)"}]},
-          {"faire": "Corde de Si : 5 min à dire chaque note de la case 0 à 12 puis au hasard, et 5 min à retrouver tous les Si par les octaves.",
-           "ex": [{"id": "corde", "label": "Corde de Si : notes de 0 à 12, puis au hasard (5 min)"}, {"id": "octaves", "label": "Octaves : tous les Si du manche (5 min)"}]},
+          {"faire": "Corde de Sol : 2 min à dire chaque note de la case 0 à 12 puis au hasard, et 3 min à retrouver tous les Sol par les octaves.",
+           "ex": [{"id": "corde", "label": "Corde de Sol : notes de 0 à 12, puis au hasard (2 min)"}, {"id": "octaves", "label": "Octaves : tous les Sol du manche (3 min)"}]},
+          {"faire": "Corde de Si : 2 min à dire chaque note de la case 0 à 12 puis au hasard, et 3 min à retrouver tous les Si par les octaves.",
+           "ex": [{"id": "corde", "label": "Corde de Si : notes de 0 à 12, puis au hasard (2 min)"}, {"id": "octaves", "label": "Octaves : tous les Si du manche (3 min)"}]},
         ],
       },
       {
@@ -249,13 +249,13 @@ PALIERS = [
         "videos": [V("Exercices d'étirements de la main du manche", "https://www.youtube.com/watch?v=mlLPc915RLs"), V("Fixer un doigt ?! Exercices pour la main gauche", "https://www.youtube.com/watch?v=7F-AG0J6eV8"), V("Comment travailler les hammers et les pull-offs", "https://www.youtube.com/watch?v=ODR6WoI_WC4")],
         "moities": [
           {"faire": "Étirements (2 min), écartement : l'araignée descend d'une case à chaque passage (5-8, 4-7, 3-6, 2-5, 1-4) à 60 bpm (4 min), liés 1-3-1 et 1-4-1 (4 min).",
-           "ex": [ETIREMENTS, {"id": "ecartement", "label": "Écartement : araignée de 5-8 jusqu'à 1-4", "tempo": 60}, {"id": "lies", "label": "Liés combinés 1-3-1 et 1-4-1"}]},
+           "ex": [ETIREMENTS, {"id": "facile", "label": "Jeu facile : arpèges lents en pincé, sans forcer (3 min)"}, {"id": "ecartement", "label": "Écartement : araignée de 5-8 jusqu'à 1-4", "tempo": 60}, {"id": "lies", "label": "Liés combinés 1-3-1 et 1-4-1"}]},
           {"faire": "Étirements (2 min), écartement à 60 bpm (4 min), liés avec l'auriculaire fixe (4 min).",
-           "ex": [ETIREMENTS, {"id": "ecartement", "label": "Écartement : araignée de 5-8 jusqu'à 1-4", "tempo": 60}, {"id": "lies", "label": "Liés avec l'auriculaire fixe (Carlevaro)"}]},
+           "ex": [ETIREMENTS, {"id": "facile", "label": "Jeu facile : arpèges lents en pincé, sans forcer (3 min)"}, {"id": "ecartement", "label": "Écartement : araignée de 5-8 jusqu'à 1-4", "tempo": 60}, {"id": "lies", "label": "Liés avec l'auriculaire fixe (Carlevaro)"}]},
         ],
       },
       {
-        "titre": "Gamme de La mineur naturelle", "duree": 10,
+        "titre": "Gamme de La mineur naturelle", "duree": 20,
         "sert": "C'est la gamme de Bamboleo. Elle ajoute 2 notes (Si et Fa) à ta pentatonique, pour une impro plus espagnole.",
         "explication": [
           "La mineur utilise exactement les mêmes notes que Do majeur, mais en partant de La : La Si Do Ré Mi Fa Sol La. C'est la « relative » de Do majeur. L'alternance a-m muscle l'annulaire, et les triolets montrent si ton alternance est vraiment régulière. Pour les triolets, dis « tri-o-let » à chaque clic et joue une note par syllabe. Comme 3 est impair, chaque clic tombe sur un doigt différent : impossible de tricher.",
@@ -263,35 +263,35 @@ PALIERS = [
         "videos": [V("La gamme mineure naturelle", "https://www.youtube.com/watch?v=s39Lt7wEpEU"), V("La gamme de Lam, une petite impro", "https://www.youtube.com/watch?v=JIs7PRgDrBo")],
         "moities": [
           {"faire": "Position fixe, cases 4 à 8, 70 bpm, montée et descente en butée i-m (le coup en butée du palier 1, en alternant index et majeur).",
-           "ex": [{"id": "gamme", "label": "La mineur en butée i-m", "tempo": 70}]},
+           "ex": [{"id": "gamme", "label": "La mineur en butée i-m", "tempo": 70}, {"id": "phrygien", "label": "Mi phrygien en butée : Mi Fa Sol La Si Do Ré, la gamme de la cadence andalouse", "tempo": 60}]},
           {"faire": "Position fixe, cases 4 à 8, 70 bpm, en a-m (annulaire-majeur), puis en triolets (3 notes égales par clic du métronome).",
-           "ex": [{"id": "gamme-am", "label": "La mineur en a-m", "tempo": 70}, {"id": "triolets", "label": "La mineur en triolets", "tempo": 70}]},
+           "ex": [{"id": "gamme-am", "label": "La mineur en a-m", "tempo": 70}, {"id": "triolets", "label": "La mineur en triolets", "tempo": 70}, {"id": "phrygien-tierces", "label": "Mi phrygien en tierces, sur 2 octaves", "tempo": 60}]},
         ],
       },
       {
-        "titre": "Pentatonique : positions 4 et 5, puis l'impro", "duree": 10,
+        "titre": "Pentatonique : positions 4 et 5, puis l'impro", "duree": 5,
         "sert": "Avec les 5 positions, tu peux improviser n'importe où sur le manche, à partir de n'importe quel La.",
         "explication": [
           "Pour l'impro : des phrases courtes de 3 à 5 notes, des silences entre elles, et finis tes phrases sur La ou sur Mi. Glisse des liés dans tes phrases. Quand l'accord de Mi arrive, essaie Sol# (Sol dièse, une case au-dessus de Sol) à la place de Sol : c'est une note de l'accord de Mi, celle qui sonne « espagnol ».",
         ],
         "videos": [V("Maîtriser les 5 positions (Simon Ghnassia)", "https://www.youtube.com/watch?v=H-knhchvGWc"), V("Apprendre la pentatonique, 5e position", "https://www.youtube.com/watch?v=fA-GVxcoemw"), V("3 exercices d'improvisation", "https://www.youtube.com/watch?v=mqwvMdhBYEM")],
         "moities": [
-          {"faire": "Positions 4 (cases 12 à 15) et 5 (cases 14 à 17) pendant 6 min, puis 4 min d'impro sur la position de ton choix.",
-           "ex": [{"id": "penta45", "label": "Positions 4 et 5 (6 min)", "tempo": 70}, {"id": "impro", "label": "Impro sur la position de ton choix (4 min)"}]},
-          {"faire": "Les 5 positions à la suite (5 min), puis 5 min d'impro sur la grille de Bamboleo.",
-           "ex": [{"id": "penta-tout", "label": "Les 5 positions à la suite (5 min)", "tempo": 70}, {"id": "impro", "label": "Impro sur la grille de Bamboleo (5 min)"}]},
+          {"faire": "Positions 4 (cases 0 à 3) et 5 (cases 2 à 5), une octave plus bas que sur le manche : elles sonnent mieux sur une guitare classique. 3 min, puis 2 min d'impro sur la position de ton choix.",
+           "ex": [{"id": "penta45", "label": "Positions 4 et 5, une octave plus bas (cases 0 à 5) (3 min)", "tempo": 70}, {"id": "impro", "label": "Impro sur la position de ton choix (2 min)"}]},
+          {"faire": "Les 5 positions à la suite (3 min), puis 2 min d'impro sur la grille de Bamboleo.",
+           "ex": [{"id": "penta-tout", "label": "Les 5 positions à la suite (3 min)", "tempo": 70}, {"id": "impro", "label": "Impro sur la grille de Bamboleo (2 min)"}]},
         ],
       },
       {
-        "titre": "Notes du manche : Mi aigu et quiz", "duree": 10,
+        "titre": "Notes du manche : quiz", "duree": 5,
         "sert": "Connaître tout le manche, pour trouver n'importe quelle note ou n'importe quel accord sans chercher.",
         "explication": [
           "La corde de Mi aigu porte les mêmes notes que le Mi grave, que tu connais déjà.",
         ],
         "videos": [V("Apprenez TOUTES les notes sur le manche en 10 minutes", "https://www.youtube.com/watch?v=oV6d2degxdw"), V("Apprendre les notes de son manche avec efficacité", "https://www.youtube.com/watch?v=jHH9N-l-Jb0")],
         "moities": [
-          {"faire": "La corde de Mi aigu, puis tous les Mi par les octaves.",
-           "ex": [{"id": "corde", "label": "Corde de Mi aigu (5 min)"}, {"id": "octaves", "label": "Octaves : tous les Mi du manche (5 min)"}]},
+          {"faire": "Quiz sur les 6 cordes, 2 min : une note au hasard, trouve-la sur chaque corde. Puis 3 min sur les cordes vues avant, en revenant sur les notes ratées.",
+           "ex": [{"id": "quiz", "label": "Quiz : une note au hasard sur les 6 cordes (2 min)"}, {"id": "revoir", "label": "Revoir les notes ratées, cordes vues avant (3 min)"}]},
           {"faire": "Quiz sur les 6 cordes : une note au hasard, trouve-la sur chaque corde en moins de 3 secondes.",
            "ex": [{"id": "quiz", "label": "Quiz : une note au hasard sur les 6 cordes, moins de 3 s"}]},
         ],
@@ -585,7 +585,8 @@ for p in PALIERS:
                 "blocs": [bloc_for(p, b, i, moitie, seance) for i, b in enumerate(p["blocs"])],
             }
             if wk == 3 and seance == "C":
-                c["bilan"] = {"titre": f"Bilan du palier {p['num']}", "regle": "5 tests réussis : tu passes au palier suivant. Sinon, une semaine de plus sur ce qui manque.",
+                n = len(p["bilan"]); ok = n - 1
+                c["bilan"] = {"titre": f"Bilan du palier {p['num']}", "regle": f"{ok} tests sur {n} réussis : tu passes au palier suivant. Sinon, une semaine de plus sur ce qui manque. Un test compte comme réussi quand tu l'as fait à l'objectif, deux fois de suite.",
                               "tests": [{"id": f"t{i + 1}", "label": t, "objectif": o} for i, (t, o) in enumerate(p["bilan"])]}
             cours.append(c)
 

@@ -275,6 +275,7 @@
     });
     inner.append(tools);
 
+    if (c.num > 1 && [1, 3, 4].includes(bi)) { const rv = revisionCard(c, bi); if (rv) inner.append(rv); }
     const ul = el("ul", { class: "exos" });
     let wasComplete = complete();
     b.exercices.forEach(e => ul.append(renderExo(c, b, e, checked => {
@@ -356,6 +357,30 @@
     openSheet(schemaView);
   }
 
+  // Révision : un exercice déjà vu dans un cours précédent, tiré au sort (le même pour un cours donné)
+  function revisionCard(c, bi) {
+    const seen = new Set(), pool = [];
+    for (const x of DATA.cours) {
+      if (x.num >= c.num) break;
+      for (const e of x.blocs[bi]?.exercices || []) if (!/^Lire\b|^Étirements|^Jeu facile|Quiz/.test(e.label) && !seen.has(e.label)) { seen.add(e.label); pool.push({ e, num: x.num }); }
+    }
+    if (!pool.length) return null;
+    const key = c.id + "/" + bi;
+    const card = el("div", { class: "revision" });
+    const draw = () => {
+      const off = state.revOff?.[key] || 0;
+      const p = pool[(c.num * 7 + bi * 13 + off) % pool.length];
+      card.replaceChildren(
+        el("span", { class: "eyebrow", text: "Révision tirée au sort · 2 min" }),
+        el("p", { text: p.e.label }),
+        el("div", { class: "row-tools" },
+          el("span", { class: "muted small", text: `Vu au cours ${p.num}` }),
+          el("button", { class: "link-btn", type: "button", text: "Une autre", onclick: () => { state.revOff ||= {}; state.revOff[key] = off + 1; save(); draw(); } })));
+    };
+    draw();
+    return card;
+  }
+
   function renderExo(c, b, e, onChange) {
     const key = exKey(b, e);
     const x = exState(c.id, key);
@@ -365,10 +390,34 @@
     box.addEventListener("change", () => { x.done = box.checked; li.classList.toggle("is-done", x.done); touch(c); save(); onChange(x.done); });
     const label = el("label", { class: "exo-label", for: id }, e.label, e.aide ? el("span", { class: "aide", text: e.aide }) : null);
     const main = el("div", { class: "exo-main" }, box, label);
-    if (e.tempo) main.append(el("button", { class: "tempo-chip", type: "button", title: "Régler le métronome", onclick: () => openMetro(x.tempo || e.tempo) }, `${e.tempo} bpm`));
+    // Tempo qui progresse : on part un peu sous la cible, +4 bpm après 3 passages propres d'affilée, jusqu'à la cible
+    const depart = e.tempo ? Math.max(40, e.tempo - 10) : 0;
+    const bpmNow = () => x.bpm ?? depart;
+    const chip = e.tempo ? el("button", { class: "tempo-chip", type: "button", title: "Régler le métronome", onclick: () => openMetro(bpmNow()) }, `${bpmNow()} bpm`) : null;
+    if (chip) main.append(chip);
     li.append(main);
 
+    const progRow = e.tempo ? el("div", { class: "tempo-prog" }) : null;
+    const drawProg = () => {
+      if (!progRow) return;
+      const passes = x.passes || 0;
+      if (chip) chip.textContent = `${bpmNow()} bpm`;
+      progRow.replaceChildren(
+        el("span", {}, `Tu joues à ${bpmNow()} bpm, cible ${e.tempo}. `),
+        el("span", { class: "muted small" }, `${passes}/3 passages propres`),
+        el("button", { class: "link-btn", type: "button", text: "Propre", onclick: () => {
+          x.passes = passes + 1;
+          if (x.passes >= 3) {
+            x.bpm = Math.min(e.tempo, bpmNow() + 4); x.passes = 0;
+            toast(x.bpm >= e.tempo ? `Cible atteinte : ${e.tempo} bpm !` : `Monte à ${x.bpm} bpm.`);
+          }
+          touch(c); save(); drawProg(); onChange();
+        } }),
+        el("button", { class: "link-btn", type: "button", text: "Pas propre", onclick: () => { x.passes = 0; save(); drawProg(); } }),
+      );
+    };
     const moreRow = el("div", { class: "exo-more" });
+    if (progRow) drawProg();
     const feel = el("div", { class: "feel", role: "group", "aria-label": "Ressenti" });
     [["facile", "Facile"], ["correct", "Correct"], ["galere", "Galère"]].forEach(([k, t]) => {
       const fb = el("button", { type: "button", "data-feel": k, "aria-pressed": String(x.feel === k), text: t });
@@ -393,7 +442,7 @@
     const nb = el("button", { class: "link-btn", type: "button", text: x.note ? "Commentaire" : "+ Commentaire" });
     nb.addEventListener("click", () => { noteWrap.hidden = !noteWrap.hidden; if (!noteWrap.hidden) ta.focus(); });
     moreRow.append(nb);
-    li.append(moreRow, noteWrap);
+    li.append(...[progRow, moreRow, noteWrap].filter(Boolean));
     if (e.jeux?.length && window.Jeux) {
       const row = el("div", { class: "exo-jeux" });
       const last = el("p", { class: "jeu-last" });
@@ -532,6 +581,10 @@
       seanceChip.querySelector("b").textContent = fmt(seanceMs(s));
       seanceChip.classList.toggle("paused", !running);
       seanceChip.title = `Séance du cours ${c.num} : touche pour la mettre en pause, la reprendre ou la remettre à zéro`;
+    }
+    for (const id in state.cours) {
+      const sc = state.cours[id];
+      if (sc?.seance?.start && !sc.seance.pausa && seanceMs(sc) >= 35 * 60000) { sc.seance.pausa = true; save(); toast("35 minutes : fais une pause de 2 minutes, lâche tes mains."); }
     }
     const u = seanceUI;
     if (u.card && u.c) {
