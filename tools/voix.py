@@ -12,7 +12,8 @@ Puis, après chaque build_cours.py :
 Options : --verifier (montre la prononciation sans rien enregistrer), --dire "texte" (une seule phrase, dans /tmp).
 
 Voix Microsoft (Azure, service Speech, offre gratuite F0) : une voix par dossier voix/<id>/, listées dans VOIX ci-dessous.
-Il faut les variables AZURE_SPEECH_KEY et AZURE_SPEECH_REGION, et l'accès réseau à <région>.tts.speech.microsoft.com.
+La clé vient du secret réseau de l'environnement (en-tête Ocp-Apim-Subscription-Key, hôte francecentral.tts.speech.microsoft.com),
+ou de la variable AZURE_SPEECH_KEY. La région : AZURE_SPEECH_REGION (francecentral par défaut).
     python3 tools/voix.py --azure remy            # une voix
     python3 tools/voix.py --azure toutes          # toutes les voix Microsoft
 Chaque fin de voix met à jour voix/voix.json (la liste lue par l'app : une voix « prete » est proposée dans les réglages).
@@ -165,8 +166,10 @@ def manifeste(pretes):
 def azure(ids, textes):
     import time, urllib.request, urllib.error
     from xml.sax.saxutils import escape
-    key, region = os.environ.get("AZURE_SPEECH_KEY"), os.environ.get("AZURE_SPEECH_REGION")
-    if not key or not region: sys.exit("Il manque AZURE_SPEECH_KEY ou AZURE_SPEECH_REGION.")
+    # la clé est ajoutée par le secret réseau de l'environnement (en-tête Ocp-Apim-Subscription-Key) ;
+    # sans secret, on peut la donner dans AZURE_SPEECH_KEY
+    key = os.environ.get("AZURE_SPEECH_KEY", "")
+    region = os.environ.get("AZURE_SPEECH_REGION", "francecentral")
     url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1"
     for vid in ids:
         nom = next(v[4] for v in VOIX if v[0] == vid)
@@ -181,8 +184,9 @@ def azure(ids, textes):
             ssml = (f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="fr-FR">'
                     f'<voice name="{nom}"><lang xml:lang="fr-FR">{escape(pron(t, respell=False))}</lang></voice></speak>')
             for essai in range(8):
+                entetes = {"Ocp-Apim-Subscription-Key": key} if key else {}
                 req = urllib.request.Request(url, data=ssml.encode("utf-8"), headers={
-                    "Ocp-Apim-Subscription-Key": key, "Content-Type": "application/ssml+xml",
+                    **entetes, "Content-Type": "application/ssml+xml",
                     "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3", "User-Agent": "ma-guitare"})
                 try:
                     with urllib.request.urlopen(req, timeout=60) as r: dest.write_bytes(r.read())
