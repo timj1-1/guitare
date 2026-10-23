@@ -479,5 +479,5 @@
   const resume = r => `${r.label}${r.ecoute ? " (à l'écoute)" : ""} : ${r.ask || (r.mode === "nomme" && !r.ecoute) ? `${r.score}/${r.total} justes` : `${r.score}/${r.total} tours sans faute, ${r.errors} erreur${r.errors > 1 ? "s" : ""}`}`
     + (r.hints ? `, ${r.hints} indice${r.hints > 1 ? "s" : ""}` : "") + (r.solved ? `, ${r.solved} résolu${r.solved > 1 ? "s" : ""}` : "")
     + `${r.ms ? `, ${(r.ms / 1000).toFixed(1).replace(".", ",")} s par note` : ""}`;
-  window.Jeux = { open, resume, MODES, NOM_CORDE };
+  window.Jeux = { open, resume, MODES, NOM_CORDE, ecouteEnCours: () => !!mic };
 })();

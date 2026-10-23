@@ -9,11 +9,23 @@
   let voixOn = read("maguitare:voix", true);
 
   // ---------- Contexte audio partagé (métronome, jeux, petits sons, voix) ----------
-  let actx = null;
-  const ctx = () => (actx ||= new (window.AudioContext || window.webkitAudioContext)());
+  let actx = null, triedAt = 0;
+  const ctx = () => (actx && actx.state !== "closed" ? actx : (actx = new (window.AudioContext || window.webkitAudioContext)()));
+  // Le son qui ne revient pas (appel, mise en veille, casque Bluetooth…) : au toucher suivant, un contexte neuf.
+  function heal() {
+    if (!actx || actx.state === "running") { triedAt = 0; return; }
+    if (actx.state === "interrupted" || (triedAt && Date.now() - triedAt > 800)) {
+      if (window.Jeux?.ecouteEnCours?.()) return; // ne pas couper le micro d'un jeu
+      try { actx.close(); } catch {}
+      actx = null; triedAt = 0;
+    } else if (!triedAt) triedAt = Date.now();
+  }
+  ["pointerdown", "touchend"].forEach(ev => document.addEventListener(ev, () => { heal(); if (actx && actx.state !== "running") actx.resume()?.catch?.(() => {}); }, { capture: true, passive: true }));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && actx && actx.state !== "running") actx.resume()?.catch?.(() => {}); });
   function unlock() {
+    heal();
     const c = ctx();
-    if (c.state === "suspended") c.resume();
+    if (c.state !== "running") c.resume()?.catch?.(() => {});
     const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0);
     // sur iPhone : jouer même quand le bouton silencieux est activé
     try { if (navigator.audioSession && navigator.audioSession.type !== "play-and-record") navigator.audioSession.type = "playback"; } catch {}

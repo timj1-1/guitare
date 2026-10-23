@@ -981,6 +981,7 @@
   }
   function schedule() {
     const ctx = getCtx();
+    if (metro.ctx !== ctx) { metro.ctx = ctx; metro.next = ctx.currentTime + 0.06; } // contexte audio recréé
     while (metro.next < ctx.currentTime + 0.12) {
       const accent = metro.beats > 1 && metro.beat % metro.beats === 0;
       click(metro.next, accent);
@@ -993,7 +994,7 @@
   }
   function startMetro() {
     unlockAudio();
-    metro.on = true; metro.beat = 0; metro.next = getCtx().currentTime + 0.06;
+    metro.on = true; metro.beat = 0; metro.ctx = getCtx(); metro.next = metro.ctx.currentTime + 0.06;
     metro.id = setInterval(schedule, 25); schedule();
     $("#metroToggle").textContent = "Arrêter"; badge.hidden = false;
   }

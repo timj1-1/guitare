@@ -200,7 +200,8 @@ table.strings td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
 table.strings tr:last-child td { border-bottom: 0; }
 td.muted-row { color: var(--muted); }
 .role { font-family: var(--f-mono); font-size: .8rem; padding: 1px 6px; border-radius: 4px; background: var(--accent-soft); }
-.role.R { background: var(--marker); color: var(--marker-ink); font-weight: 600; }
+.role.R { background: var(--root); color: var(--root-ink); font-weight: 600; }
+td.root-note { color: var(--root); font-weight: 700; }
 pre.tab {
   font-family: var(--f-mono); font-size: .92rem; line-height: 1.35; margin: 0;
   background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto;
@@ -795,7 +796,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
         if ([3,5,7,9,15].includes(f) && s === 3) c.classList.add("inlay");
         if (f === 12 && (s === 4 || s === 2)) c.classList.add("inlay2");
         c.dataset.s = s; c.dataset.f = f;
-        c.addEventListener("click", () => { if (f > 0 && f <= capo) return; setString(s, pos[s] === f ? null : f); });
+        c.addEventListener("click", () => { if (f > 0 && f <= capo) return; setString(s, pos[s] !== f ? f : f === 0 ? null : 0); });
         board.appendChild(c);
       }
     }
@@ -949,7 +950,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
       } else {
         const pc = midiOf(s, f) % 12;
         const r = roleOf(a, pc);
-        tr.innerHTML = `<td>${STRINGS[s].fr}</td><td>${f === 0 ? "à vide" : f - capo}</td><td>${noteName(pc)}</td>` +
+        tr.innerHTML = `<td>${STRINGS[s].fr}</td><td>${f === 0 ? "à vide" : f - capo}</td><td${r === "F" ? ' class="root-note"' : ""}>${noteName(pc)}</td>` +
           `<td>${r ? `<span class="role ${r === "F" ? "R" : ""}" title="${ROLE_FR[r]}">${r}</span> <span class="note" style="display:inline">${ROLE_FR[r]}</span>` : ""}</td>`;
       }
       body.appendChild(tr);
@@ -965,7 +966,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   // nom de la forme jouée, comme si le capo était le sillet
   function analyseShape() { const c = capo; capo = 0; const a = analyse(toRelWith(pos, c)); capo = c; return a; }
   const toRelWith = (p, c) => p.map(f => (f == null ? null : f === 0 ? 0 : f - c));
-  function render() { analysis = analyse(pos); renderBoard(); renderInfo(); renderTools(); syncDock(); }
+  function render() { analysis = analyse(pos); renderBoard(); renderInfo(); renderTools(); syncDock(); if (typeof syncClear === "function") syncClear(); }
   function syncDock() {
     document.getElementById("dockSym").textContent = document.getElementById("chordSym").textContent;
     document.getElementById("dockFr").textContent = document.getElementById("tunerLine").textContent || document.getElementById("chordFr").textContent;
@@ -984,7 +985,21 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   const soundChk = document.getElementById("soundChk");
   soundChk.checked = !!sound;
   soundChk.addEventListener("change", () => { sound = soundChk.checked; store.set("sound", sound); });
-  document.getElementById("clearBtn").addEventListener("click", () => { pos = [null,null,null,null,null,null]; barre = null; store.set("barre", barre); store.set("pos", pos); render(); });
+  const allMuted = () => !barre && pos.every(f => f == null);
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    const open = allMuted();
+    pos = open ? [0,0,0,0,0,0] : [null,null,null,null,null,null]; barre = null;
+    store.set("barre", barre); store.set("pos", pos);
+    document.getElementById("tunerLine").textContent = "";
+    if (open && sound) playNotes(pos.map((f, s) => midiOf(s, 0)), 0.035);
+    render();
+  });
+  function syncClear() {
+    const open = allMuted(), t = open ? "Tout à vide" : "Tout étouffer";
+    document.querySelector("#clearBtn span").textContent = t;
+    document.getElementById("dockClear").setAttribute("aria-label", t);
+    document.getElementById("dockClear").title = t;
+  }
 
   // Capo : il garde la forme jouée et la déplace avec lui
   function setCapo(c) {
@@ -1121,16 +1136,29 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     if (actx.state !== "running") { try { actx.resume(); } catch {} }
     return actx;
   }
+  let triedAt = 0;
+  function heal() {
+    if (!actx || actx.state === "running") { triedAt = 0; return; }
+    const now = Date.now();
+    // « interrupted » (iPhone) ou un réveil qui n'a pas marché au toucher d'avant : contexte neuf, pendant ce toucher
+    if (actx.state === "interrupted" || actx.state === "closed" || (triedAt && now - triedAt > 800)) {
+      try { actx.close(); } catch {}
+      actx = null; master = null; triedAt = 0; getCtx();
+    } else if (!triedAt) triedAt = now;
+  }
   // iPhone : le son doit être débloqué par un toucher, et le bouton silencieux coupe le Web Audio.
   // On passe la page en « lecture » (comme une app de musique) et on joue un silence pour ouvrir le son.
-  let unlocked = false;
+  let unlocked = false, silentEl = null;
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && actx && actx.state !== "running") { try { actx.resume(); } catch {} } });
   const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
   function unlockAudio() {
     try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch {}
+    heal();
     const ctx = getCtx(); if (!ctx) return;
+    if (silentEl && silentEl.paused) { try { const pr = silentEl.play(); if (pr && pr.catch) pr.catch(() => {}); } catch {} }
     if (!unlocked) {
       try { const b = ctx.createBuffer(1, 1, ctx.sampleRate), s0 = ctx.createBufferSource(); s0.buffer = b; s0.connect(ctx.destination); s0.start(0); } catch {}
-      try { const el = new Audio(SILENT_WAV); el.setAttribute("playsinline", ""); el.loop = true; el.volume = 0.01; const pr = el.play(); if (pr && pr.catch) pr.catch(() => {}); } catch {}
+      try { const el = new Audio(SILENT_WAV); el.setAttribute("playsinline", ""); el.loop = true; el.volume = 0.01; silentEl = el; const pr = el.play(); if (pr && pr.catch) pr.catch(() => {}); } catch {}
       unlocked = true;
     }
     loadSet(SAMPLED[timbre].set);
@@ -1195,7 +1223,10 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     const ctx = getCtx(); if (!ctx || !midis.length) return;
     if (ctx.state !== "running" && !retried) {
       // le son se réveille : on joue dès qu'il est prêt
-      ctx.resume().then(() => playNotes(midis, gap, true), () => {});
+      let done = false;
+      const go = () => { if (!done) { done = true; playNotes(midis, gap, true); } };
+      ctx.resume().then(go, () => {});
+      setTimeout(go, 350); // si le réveil tarde, on joue quand même (le contexte a pu être recréé)
       return;
     }
     const cfg = SAMPLED[timbre], set = decoded[cfg.set];
