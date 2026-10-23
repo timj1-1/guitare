@@ -1,5 +1,5 @@
 /* Sons et voix de l'app : un seul contexte audio, petits sons en notes de guitare,
-   et une voix française naturelle enregistrée d'avance (dossier voix/, voix neuronale Kokoro). */
+   et une voix française naturelle enregistrée d'avance (dossier voix/ : Kokoro, et voix/<id>/ : voix Microsoft). */
 (() => {
   "use strict";
 
@@ -97,7 +97,6 @@
   // Cours terminé : accord de Mi gratté, puis l'arpège qui monte
   const fanfare = () => joue([[40, 0, 0.6, 2.4], [47, 0.025, 0.55, 2.4], [52, 0.05, 0.55, 2.4], [56, 0.075, 0.55, 2.4], [59, 0.1, 0.55, 2.4], [64, 0.125, 0.6, 2.4],
     [68, 0.75, 0.7], [71, 0.87, 0.7], [76, 0.99, 0.75], [80, 1.11, 0.8, 2.2]]);
-  const oups = () => joue([[50, 0, 0.45, 0.4]]);
   // Fin d'un minuteur : La, Do dièse, Mi, deux fois (même quand les petits sons sont coupés)
   const alarme = () => joue([[69, 0, 0.8], [73, 0.14, 0.8], [76, 0.28, 0.85, 1.4], [69, 0.95, 0.8], [73, 1.09, 0.8], [76, 1.23, 0.9, 2]], true);
 
@@ -137,7 +136,7 @@
           const data = await r.arrayBuffer();
           return await new Promise((ok, ko) => { const p = ctx().decodeAudioData(data, ok, ko); if (p?.then) p.then(ok, ko); });
         } catch { return null; }
-      })());
+      })().then(buf => { if (!buf) cache.delete(k); return buf; })); // raté (hors ligne…) : on réessaiera la prochaine fois
       if (cache.size > 80) cache.delete(cache.keys().next().value);
     }
     return cache.get(k);
@@ -179,6 +178,8 @@
         await new Promise(res => {
           const c = ctx(), s = c.createBufferSource();
           s.buffer = buf; s.connect(c.destination); s.onended = res; source = s; s.start();
+          // si le son reste bloqué (contexte audio suspendu), on n'attend pas indéfiniment : le micro des jeux resterait sourd
+          setTimeout(res, buf.duration * 1000 + 1500);
         });
       } else {
         manque.add(segs[i]);
@@ -191,10 +192,9 @@
   const parle = () => performance.now() < parleJusqua || !!synth?.speaking;
 
   window.Sons = {
-    ctx, unlock, cling, bloc, fanfare, oups, alarme, dire, tais, parle, guitare, manque,
+    ctx, unlock, cling, bloc, fanfare, alarme, dire, tais, parle, guitare, manque,
     get sfx() { return sfxOn; }, set sfx(v) { sfxOn = !!v; write("maguitare:sfx", sfxOn); },
     get voix() { return voixOn; }, set voix(v) { voixOn = !!v; write("maguitare:voix", voixOn); if (!voixOn) tais(); },
-    voixDispo: true,
     get voixNom() { return voixNom; }, set voixNom(v) { voixNom = String(v || "siwis"); try { localStorage.setItem("maguitare:voixNom", voixNom); } catch {} tais(); },
   };
 })();

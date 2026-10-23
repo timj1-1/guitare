@@ -77,7 +77,7 @@
     let x0 = 0, y0 = 0, t0 = 0, ok = false;
     target.addEventListener("touchstart", e => {
       const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
-      const tag = e.target.closest?.("input, textarea, select, .cours-tabs, .recap, [data-noswipe]");
+      const tag = e.target.closest?.("input, textarea, select, .cours-tabs, .recap, .expl-table, [data-noswipe]");
       ok = e.touches.length === 1 && !tag && (!edgeOnly || x0 < 28);
     }, { passive: true });
     target.addEventListener("touchend", e => {
@@ -388,13 +388,13 @@
     openSheet(schemaView);
   }
 
-  // Révision : un exercice déjà vu dans un cours précédent, tiré au sort (le même pour un cours donné)
   // Morceaux au choix du palier : écouter, puis « Je le choisis » (gardé sur l'appareil, envoyé dans le bilan)
   const choixDe = pal => (state.repertoire ||= {})[pal] ||= [];
   const NIVEAU = ["", "Abordable", "Moyen", "Costaud"];
   function pieceRow(pz, pal, c) {
     const pick = el("button", { class: "btn small pick-btn", type: "button" });
-    const lock = c.semaine < (pz.des || 1); // pas encore la technique : on peut écouter, pas encore choisir
+    // pas encore la technique : on peut écouter, pas encore choisir (la semaine atteinte compte, même en revenant à un cours plus ancien)
+    const lock = Math.max(c.semaine, nextCours().semaine) < (pz.des || 1);
     const li = el("li", { class: "piece" + (lock ? " locked" : "") });
     const sync = () => {
       if (lock) { pick.disabled = true; pick.textContent = pz.des > 12 ? "Après le palier 3" : `Dès la semaine ${pz.des}`; return; }
@@ -441,6 +441,7 @@
     return card;
   }
 
+  // Révision : un exercice déjà vu dans un cours précédent, tiré au sort (le même pour un cours donné)
   function revisionCard(c, bi) {
     const seen = new Set(), pool = [];
     for (const x of DATA.cours) {
@@ -924,12 +925,10 @@
     const reglages = el("section", { class: "card", style: "display:flex;flex-direction:column;gap:12px" },
       el("h2", { text: "Sons et voix" }),
       toggle("Petits sons", "Un « cling » quand tu coches un exercice, une mélodie quand un bloc ou un cours est fini.", () => Sons.sfx, v => { Sons.sfx = v; if (v) Sons.cling(); }));
-    if (Sons.voixDispo) {
-      reglages.append(toggle("Voix dans les jeux", "Une voix naturelle lit les questions et les réponses des jeux.", () => Sons.voix, v => { Sons.voix = v; if (v) Sons.dire("D'accord, je lis les consignes des jeux."); }));
-      reglages.append(toggle("Le prof te parle", "Il présente le cours quand tu lances la séance, et fait le bilan quand tu le termines.", profOn, v => { try { localStorage.setItem("maguitare:prof", v ? "1" : "0"); } catch {} if (!v) Sons.tais(); }));
-      reglages.append(choixVoix());
-      reglages.append(el("p", { class: "muted small", text: "Dans chaque bloc, les boutons « Écouter » lisent la consigne, le « pourquoi » et l'explication. Les phrases sont enregistrées d'avance : une phrase toute neuve (après une adaptation du cours) est lue par la voix de ton appareil, le temps que je l'enregistre." }));
-    }
+    reglages.append(toggle("Voix dans les jeux", "Une voix naturelle lit les questions et les réponses des jeux.", () => Sons.voix, v => { Sons.voix = v; if (v) Sons.dire("D'accord, je lis les consignes des jeux."); }));
+    reglages.append(toggle("Le prof te parle", "Il présente le cours quand tu lances la séance, et fait le bilan quand tu le termines.", profOn, v => { try { localStorage.setItem("maguitare:prof", v ? "1" : "0"); } catch {} if (!v) Sons.tais(); }));
+    reglages.append(choixVoix());
+    reglages.append(el("p", { class: "muted small", text: "Dans chaque bloc, les boutons « Écouter » lisent la consigne, le « pourquoi » et l'explication. Les phrases sont enregistrées d'avance : une phrase toute neuve (après une adaptation du cours) est lue par la voix de ton appareil, le temps que je l'enregistre." }));
     body.append(reglages);
 
     // Sauvegarde
@@ -940,7 +939,8 @@
         const data = JSON.parse(await f.text());
         if (!data || typeof data.cours !== "object") throw new Error();
         state = Object.assign(blank(), data); flush();
-        toast("Sauvegarde restaurée."); renderTabs(); renderCours(); renderBilan();
+        setBpm(state.bpm || 60); setBeats(state.beats || 4);
+        toast("Sauvegarde restaurée."); renderTabs(); renderCours(); updateSeance(); renderBilan();
       } catch { toast("Ce fichier n'est pas une sauvegarde de Ma guitare."); }
     });
     body.append(el("section", { class: "card", style: "display:flex;flex-direction:column;gap:10px" },
@@ -1035,7 +1035,7 @@
     const P = t => card.append(el("p", { text: t }));
     P(`${DATA.cours.length} cours : 12 semaines de 3 séances (A, B et C), en 3 paliers de 4 semaines. Chaque séance dure environ 1 h 10 et suit toujours les mêmes 6 blocs, dans le même ordre : échauffement, gamme, pentatonique, notes du manche, barrés et rythme, morceau.`);
     P("Le contenu change toutes les 2 semaines : chaque bloc apporte une nouveauté en semaine 1 et en semaine 3 de chaque palier. Pendant ces 2 semaines, tes 6 séances reprennent les mêmes exercices, et seul le bloc Morceau change un peu selon la séance. C'est voulu : un geste s'installe quand on le répète plusieurs jours de suite.");
-    P("Les cours 12, 24 et 36 finissent chaque palier par un bilan de tests. Avec 5 tests réussis, tu passes au palier suivant. Sinon, on ajoute une semaine sur ce qui manque. Et chaque bilan que tu m'envoies me sert à adapter les cours suivants.");
+    P(`Les cours ${DATA.cours.filter(c => c.bilan).map(c => c.num).join(", ").replace(/, (\d+)$/, " et $1")} finissent chaque palier par un bilan de tests. Avec tous les tests réussis sauf un au plus, tu passes au palier suivant. Sinon, on ajoute une semaine sur ce qui manque. Et chaque bilan que tu m'envoies me sert à adapter les cours suivants.`);
     for (const p of DATA.paliers) {
       const pc = DATA.cours.filter(c => c.palier === p.num);
       const d = el("details", { class: "constr-pal" }, el("summary", {},
@@ -1222,14 +1222,17 @@
 
   // ---------- Démarrage ----------
   async function boot() {
-    try {
-      DATA = await loadJSON("data/cours.json");
-    } catch {
+    // les trois fichiers en même temps : l'app s'ouvre plus vite
+    const [cours, retours, schemas] = await Promise.all([
+      loadJSON("data/cours.json").catch(() => null),
+      loadJSON("data/retours.json").catch(() => ({})),
+      loadJSON("data/schemas.json").catch(() => ({})),
+    ]);
+    if (!cours) {
       $("#coursBody").replaceChildren(el("p", { class: "empty", text: "Impossible de charger le cours. Vérifie ta connexion puis rouvre l'app." }));
       return;
     }
-    try { RETOURS = (await loadJSON("data/retours.json")).retours || []; } catch { RETOURS = []; }
-    try { SCHEMAS = await loadJSON("data/schemas.json"); } catch { SCHEMAS = {}; }
+    DATA = cours; RETOURS = retours.retours || []; SCHEMAS = schemas;
     if (!state.current || !byId(state.current)) state.current = nextCours().id;
     renderTabs(); renderCours(); updateSeance();
     go(state.view === "bilan" ? "bilan" : "cours");

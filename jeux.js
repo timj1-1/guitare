@@ -182,7 +182,7 @@
     trouve: { titre: "Trouve les notes", regle: "Touche toutes les cases de la note demandée, sur la corde indiquée (cases 0 à 12).", ecoute: "Joue sur ta guitare chaque case de la note demandée, sur la corde indiquée (cases 0 à 12). Le micro les place sur le manche." },
     nomme: { titre: "Quelle note ?", regle: "Une case s'allume : choisis son nom. Objectif : moins de 3 secondes.", ecoute: "Joue sur ta guitare la note demandée, sur la bonne corde. Objectif : moins de 3 secondes." },
     partout: { titre: "Partout sur le manche", regle: "Touche toutes les cases de la note demandée, sur les 6 cordes (cases 0 à 12).", ecoute: "Joue la note demandée sur chaque corde, de la plus grave à la plus aiguë (cases 0 à 12)." },
-    octave: { titre: "Octaves", regle: "Une note est posée : touche son octave, deux cordes plus loin vers l'aigu. +2 cases depuis le Mi grave, le La ou le Ré. +3 cases depuis la corde de Sol (on passe la corde de Si).", ecoute: "Joue la note posée, puis son octave : deux cordes plus loin vers l'aigu, +2 cases (+3 depuis la corde de Sol)." },
+    octave: { titre: "Octaves", regle: "Une note est posée : touche son octave, deux cordes plus loin vers l'aigu. +2 cases depuis le Mi grave ou le La. +3 cases depuis le Ré ou le Sol (on passe la corde de Si).", ecoute: "Joue la note posée, puis son octave : deux cordes plus loin vers l'aigu, +2 cases (+3 depuis le Ré ou le Sol)." },
     quiz: { titre: "Quiz du manche", regle: "Une note au hasard : trouve-la sur chaque corde, le plus vite possible.", ecoute: "Une note au hasard : joue-la sur chaque corde, de la plus grave à la plus aiguë, le plus vite possible." },
   };
 
@@ -219,7 +219,8 @@
       for (let i = 0; i < 8; i++) {
         let s, f; do { s = pick(from.length ? from : [6, 5]); f = Math.floor(Math.random() * 10); } while (!isNatural(s, f) || s + ":" + f === lastKey);
         lastKey = s + ":" + f;
-        const t = s - 2, tf = f + (s === 3 ? 3 : 2);
+        // +3 cases quand on arrive sur la corde de Si ou au-delà (depuis le Ré ou le Sol), sinon +2
+        const t = s - 2, tf = f + (s <= 4 ? 3 : 2);
         R.push({ q: `${listen ? "Joue" : "Trouve"} l'octave de ce ${nameOf(s, f)}`, src: [s, f], note: nameOf(s, f), targets: [[t, tf]] });
       }
     }
@@ -253,7 +254,7 @@
     const close = el("button", { class: "icon-btn", type: "button", "aria-label": "Fermer", text: "✕", onclick: () => d.close() });
     const sound = el("button", { class: "icon-btn", type: "button", "aria-pressed": String(soundOn), title: "Son de la guitare", text: soundOn ? "🔊" : "🔈" });
     sound.addEventListener("click", () => { soundOn = !soundOn; sound.textContent = soundOn ? "🔊" : "🔈"; sound.setAttribute("aria-pressed", String(soundOn)); try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} });
-    const voixBtn = window.Sons?.voixDispo ? el("button", { class: "icon-btn", type: "button", "aria-pressed": String(Sons.voix), title: "Voix : lit les questions", text: Sons.voix ? "🗣️" : "🤐" }) : null;
+    const voixBtn = window.Sons ? el("button", { class: "icon-btn", type: "button", "aria-pressed": String(Sons.voix), title: "Voix : lit les questions", text: Sons.voix ? "🗣️" : "🤐" }) : null;
     voixBtn?.addEventListener("click", () => { Sons.voix = !Sons.voix; voixBtn.textContent = Sons.voix ? "🗣️" : "🤐"; voixBtn.setAttribute("aria-pressed", String(Sons.voix)); if (Sons.voix) say(q.textContent); });
     const prog = el("span", { class: "jeu-prog" });
     const q = el("p", { class: "jeu-q" });
