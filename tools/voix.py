@@ -135,6 +135,7 @@ RESPELL = [  # mots que la voix française lirait mal (ou en anglais)
     (r"\bGiuliani\b", "Djouliani"), (r"\bSting\b", "Stinng"), (r"\bgolpe\b", "golpé"), (r"\bgolpes\b", "golpés"),
     (r"\b([Rr])asgueado", r"\1asguéado"), (r"\b([Rr])ythm", r"\1itm"), (r"\bblues\b", "blouze"),
     (r"\bBeatles\b", "Bitteulz"), (r"\bEagles\b", "Iguelze"), (r"\bBamboleo\b", "Bambolé-o"), (r"\btri-o-let\b", "tri, o, lè"),
+    (r"\bslide\b", "slaïde"), (r"\bgypsy\b", "djipsi"),
     (r"\bbpm\b", "BPM"), (r"\bDo\b", "Dau"), (r"\bdo\b", "dau"), (r"\bSol7\b", "Sol sept"), (r"\bMi7\b", "Mi sept"), (r"\bLa7\b", "La sept"),
 ]
 

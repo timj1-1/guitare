@@ -7,6 +7,8 @@ ETIREMENTS = {
     "id": "etirements", "label": "Étirements (2 min)",
     "aide": "Ouvre et ferme les mains, étire doucement chaque doigt et les poignets, 10 secondes chacun, sans jamais forcer.",
 }
+# Séance de 1 h 30 : chaque échauffement commence par 4 minutes de jeu facile, les mains chauffent avant l'effort
+FACILE = {"id": "facile", "label": "Jeu facile : arpèges lents ou gamme lente, sans forcer (4 min)"}
 
 # Chaque palier : 6 blocs, chacun avec deux moitiés (semaines 1-2 / 3-4 du palier).
 # noms courts des paliers (navigation de l'app) : une progression vers l'autonomie
@@ -19,9 +21,10 @@ PALIERS = [
     "mission": "Jouer Fragile en entier, proprement, et t'enregistrer.",
     "blocs": [
       {
-        "titre": "Échauffement : étirements, araignée et arpèges", "duree": 10,
+        "titre": "Échauffement : étirements, araignée et arpèges", "duree": 20,
         "sert": "Rendre chaque doigt précis dans la position « un doigt par case », et préparer la main droite de Fragile.",
         "explication": [
+          "Commence toujours par 4 minutes de jeu facile : des arpèges lents ou une gamme lente, sans forcer. Les tendons chauffent avant l'effort, c'est la meilleure protection contre les douleurs.",
           "L'araignée : index case 5, majeur case 6, annulaire case 7, auriculaire case 8, de la 6e corde à la 1re puis retour. Le doigt reste posé tant que le suivant n'a pas joué, et les doigts levés restent à 1 cm des cordes. Appuie juste derrière la frette (la barrette de métal entre deux cases), main détendue.",
           "Sol7 = Sol avec un Fa en plus : le Mi aigu se joue case 1 au lieu de case 3.",
           "Les arpèges : le pouce (p) joue la basse, l'index (i) la corde de Sol, le majeur (m) la corde de Si et l'annulaire (a) le Mi aigu. Chaque doigt garde sa corde. Joue-les en pincé, lentement, avec le même volume sur chaque note (120 arpèges de Giuliani).",
@@ -29,14 +32,14 @@ PALIERS = [
         "videos": [V("Exercices d'étirements de la main du manche", "https://www.youtube.com/watch?v=mlLPc915RLs"), V("L'araignée, un exercice pour l'indépendance des doigts", "https://www.youtube.com/watch?v=L7ZORKLDHVc"), V("Arpèges main droite PIMA", "https://www.youtube.com/watch?v=YReUxlS_4sY"), V("Giuliani's 120 Right-Hand Exercises (en anglais)", "https://www.youtube.com/watch?v=L1OscPf4NiA")],
         "positions": [{"label": "Do", "code": "x32010"}, {"label": "Sol7", "code": "320001"}],
         "moities": [
-          {"faire": "Étirements (2 min), araignée cases 5 à 8 à 60 bpm (4 min), arpèges p-i-m-a et p-a-m-i sur Do puis Sol7 (4 min).",
-           "ex": [ETIREMENTS, {"id": "araignee", "label": "Araignée cases 5 à 8", "tempo": 60}, {"id": "arpeges", "label": "Arpèges p-i-m-a et p-a-m-i sur Do puis Sol7", "tempo": 60}]},
-          {"faire": "Étirements (2 min), araignée cases 5 à 8 à 60 bpm (4 min), arpège p-i-m-a-m-i sur Do puis Sol7 (4 min).",
-           "ex": [ETIREMENTS, {"id": "araignee", "label": "Araignée cases 5 à 8", "tempo": 60}, {"id": "arpeges", "label": "Arpège p-i-m-a-m-i sur Do puis Sol7", "tempo": 60}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), araignée cases 5 à 8 à 60 bpm (7 min), arpèges p-i-m-a et p-a-m-i sur Do puis Sol7 (7 min).",
+           "ex": [FACILE, ETIREMENTS, {"id": "araignee", "label": "Araignée cases 5 à 8", "tempo": 60}, {"id": "arpeges", "label": "Arpèges p-i-m-a et p-a-m-i sur Do puis Sol7", "tempo": 60}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), araignée cases 5 à 8 à 60 bpm (7 min), arpège p-i-m-a-m-i sur Do puis Sol7 (7 min).",
+           "ex": [FACILE, ETIREMENTS, {"id": "araignee", "label": "Araignée cases 5 à 8", "tempo": 60}, {"id": "arpeges", "label": "Arpège p-i-m-a-m-i sur Do puis Sol7", "tempo": 60}]},
         ],
       },
       {
-        "titre": "Gamme de Do majeur et main droite", "duree": 20,
+        "titre": "Gamme de Do majeur et main droite", "duree": 15,
         "sert": "La gamme majeure est la base des mélodies, des accords et de l'impro. La butée te donne un son plein et régulier.",
         "explication": [
           "Une gamme majeure suit toujours les mêmes écarts : ton, ton, demi-ton, ton, ton, ton, demi-ton (1 ton = 2 cases). Do majeur n'a aucun dièse : Do Ré Mi Fa Sol La Si Do. Un dièse (#) monte une note d'une case (Fa# est une case au-dessus de Fa), un bémol (b) la descend d'une case (Sib est une case sous Si).",
@@ -51,7 +54,7 @@ PALIERS = [
         ],
       },
       {
-        "titre": "Pentatonique de La mineur", "duree": 5,
+        "titre": "Pentatonique de La mineur", "duree": 15,
         "sert": "C'est la gamme de l'impro. Chaque position apprise agrandit la zone du manche où tu pourras improviser.",
         "explication": [
           "La pentatonique de La mineur n'a que 5 notes : La Do Ré Mi Sol. Elle existe en 5 formes qui se chevauchent : la note la plus aiguë d'une forme est la plus grave de la suivante. Une position, c'est un morceau de la gamme jouable sans bouger la main, sur 4 ou 5 cases.",
@@ -59,14 +62,14 @@ PALIERS = [
         ],
         "videos": [V("Pentatonique : les 5 positions expliquées facilement", "https://www.youtube.com/watch?v=OfyoYXtti04"), V("Apprendre vos 5 positions en 10 min", "https://www.youtube.com/watch?v=YH6KGcpHUOg")],
         "moities": [
-          {"faire": "La position 1 (case 5), que tu connais déjà, au métronome à 70 bpm, en alternant i-m.",
-           "ex": [{"id": "penta1", "label": "Position 1 (case 5), alternance i-m", "tempo": 70}]},
-          {"faire": "La position 2 (cases 7 à 10), puis relier 1 et 2 : monte dans la position 1, glisse dans la 2 sans t'arrêter, et redescends.",
+          {"faire": "La position 1 (case 5), que tu connais déjà, au métronome à 70 bpm, en alternant i-m (8 min). Puis en disant le nom de chaque note (3 min), et le jeu Pentatonique du bloc (4 min).",
+           "ex": [{"id": "penta1", "label": "Position 1 (case 5), alternance i-m", "tempo": 70}, {"id": "penta1-noms", "label": "Position 1 en disant le nom des notes (3 min)"}]},
+          {"faire": "La position 2, cases 7 à 10 (5 min). Puis relier 1 et 2 : monte dans la position 1, glisse dans la 2 sans t'arrêter, et redescends (6 min). Enfin le jeu du bloc (4 min).",
            "ex": [{"id": "penta2", "label": "Position 2 (cases 7 à 10)", "tempo": 70}, {"id": "penta12", "label": "Relier les positions 1 et 2", "tempo": 70}]},
         ],
       },
       {
-        "titre": "Notes du manche", "duree": 5,
+        "titre": "Notes du manche", "duree": 10,
         "sert": "Savoir où tu es sur le manche. La corde de La te donnera le nom de tous tes barrés forme La au palier 2.",
         "explication": [
           "Il y a 7 notes naturelles : Do Ré Mi Fa Sol La Si. Entre deux notes il y a 2 cases, sauf entre Mi-Fa et Si-Do où il n'y en a qu'une. La case 12 redonne la note à vide, une octave plus haut.",
@@ -74,10 +77,10 @@ PALIERS = [
         ],
         "videos": [V("Comment mémoriser toutes les notes sur le manche", "https://www.youtube.com/watch?v=YaM7PLMop5o"), V("Toutes les notes du manche grâce au schéma d'octave", "https://www.youtube.com/watch?v=PJ8_orOw4ss")],
         "moities": [
-          {"faire": "Corde de La : 2 min à dire chaque note de la case 0 à 12 puis au hasard, et 3 min à retrouver tous les La par les octaves.",
-           "ex": [{"id": "corde", "label": "Corde de La : notes de 0 à 12, puis au hasard (2 min)"}, {"id": "octaves", "label": "Octaves : tous les La du manche (3 min)"}]},
-          {"faire": "Corde de Ré : 2 min à dire chaque note de la case 0 à 12 puis au hasard, et 3 min à retrouver tous les Ré par les octaves.",
-           "ex": [{"id": "corde", "label": "Corde de Ré : notes de 0 à 12, puis au hasard (2 min)"}, {"id": "octaves", "label": "Octaves : tous les Ré du manche (3 min)"}]},
+          {"faire": "Corde de La : 4 min à dire chaque note de la case 0 à 12 puis au hasard, 3 min à retrouver tous les La par les octaves, puis le jeu du bloc (3 min).",
+           "ex": [{"id": "corde", "label": "Corde de La : notes de 0 à 12, puis au hasard (4 min)"}, {"id": "octaves", "label": "Octaves : tous les La du manche (3 min)"}]},
+          {"faire": "Corde de Ré : 4 min à dire chaque note de la case 0 à 12 puis au hasard, 3 min à retrouver tous les Ré par les octaves, puis le jeu du bloc (3 min).",
+           "ex": [{"id": "corde", "label": "Corde de Ré : notes de 0 à 12, puis au hasard (4 min)"}, {"id": "octaves", "label": "Octaves : tous les Ré du manche (3 min)"}]},
         ],
       },
       {
@@ -139,7 +142,7 @@ PALIERS = [
     "mission": "Jouer Bamboleo en rumba, 8 tours sans arrêt, avec le golpe.",
     "blocs": [
       {
-        "titre": "Échauffement : étirements, permutations et liés", "duree": 10,
+        "titre": "Échauffement : étirements, permutations et liés", "duree": 20,
         "sert": "Obliger l'annulaire et l'auriculaire, les doigts les plus faibles, à bouger seuls. Les liés rendront ton impro fluide au palier 3.",
         "explication": [
           "Les permutations : c'est l'araignée du palier 1, mais en changeant l'ordre des doigts. Les doigts qui ne jouent pas restent près des cordes, jamais crispés en l'air.",
@@ -147,14 +150,14 @@ PALIERS = [
         ],
         "videos": [V("Indépendance des doigts de la main gauche", "https://www.youtube.com/watch?v=Lzm87u2y2VY"), V("Apprendre à jouer les hammer / pull-off", "https://www.youtube.com/watch?v=COzP3U5OG1A"), V("Comment travailler les hammers et les pull-offs", "https://www.youtube.com/watch?v=ODR6WoI_WC4")],
         "moities": [
-          {"faire": "Étirements (2 min), permutations 1-3-2-4 puis 1-4-2-3 cases 5 à 8 à 60 bpm (4 min), liés ascendants (4 min).",
-           "ex": [ETIREMENTS, {"id": "permutations", "label": "Permutations 1-3-2-4 puis 1-4-2-3", "tempo": 60}, {"id": "lies", "label": "Liés ascendants"}]},
-          {"faire": "Étirements (2 min), permutations 1-3-2-4 puis 1-4-2-3 cases 5 à 8 à 60 bpm (4 min), liés descendants (4 min).",
-           "ex": [ETIREMENTS, {"id": "permutations", "label": "Permutations 1-3-2-4 puis 1-4-2-3", "tempo": 60}, {"id": "lies", "label": "Liés descendants"}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), permutations 1-3-2-4 puis 1-4-2-3 cases 5 à 8 à 60 bpm (7 min), liés ascendants (7 min).",
+           "ex": [FACILE, ETIREMENTS, {"id": "permutations", "label": "Permutations 1-3-2-4 puis 1-4-2-3", "tempo": 60}, {"id": "lies", "label": "Liés ascendants"}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), permutations 1-3-2-4 puis 1-4-2-3 cases 5 à 8 à 60 bpm (7 min), liés descendants (7 min).",
+           "ex": [FACILE, ETIREMENTS, {"id": "permutations", "label": "Permutations 1-3-2-4 puis 1-4-2-3", "tempo": 60}, {"id": "lies", "label": "Liés descendants"}]},
         ],
       },
       {
-        "titre": "Gamme majeure en position fixe", "duree": 20,
+        "titre": "Gamme majeure en position fixe", "duree": 15,
         "sert": "Une forme sans corde à vide se déplace partout. En la décalant, tu as toutes les gammes majeures avec un seul dessin.",
         "explication": [
           "En position fixe, la main ne bouge pas : un doigt par case sur 4 cases, comme l'araignée. La gamme commence sur le Sol de la 6e corde, case 3. Décale toute la forme et la gamme prend le nom de cette première note.",
@@ -168,31 +171,45 @@ PALIERS = [
         ],
       },
       {
-        "titre": "Pentatonique : position 3 et mini-impro", "duree": 5,
+        "titre": "Pentatonique : position 3 et mini-impro", "duree": 15,
         "sert": "Avec 3 positions reliées, tu couvres le manche de la case 5 à la case 12. La mini-impro t'apprend à t'en servir pour de vrai.",
         "explication": [
           "Pour la mini-impro : des phrases de 3 à 5 notes, des silences entre elles, et finis tes phrases sur un La.",
         ],
         "videos": [V("Pentatonique : les 5 positions expliquées facilement", "https://www.youtube.com/watch?v=OfyoYXtti04"), V("Improviser n°1 : la pentatonique mineure", "https://www.youtube.com/watch?v=L6MArHsN2Mw")],
         "moities": [
-          {"faire": "La position 3 (cases 9 à 12), reliée à la 2.",
+          {"faire": "La position 3, cases 9 à 12 (6 min), puis reliée à la 2 (5 min). Enfin le jeu Pentatonique du bloc (4 min).",
            "ex": [{"id": "penta3", "label": "Position 3 (cases 9 à 12)", "tempo": 70}, {"id": "penta23", "label": "Relier les positions 2 et 3", "tempo": 70}]},
-          {"faire": "7 min sur les positions 1, 2 et 3 à la suite, puis 3 min d'impro sur la position 1, sur la grille de Bamboleo (la suite d'accords qui tourne en boucle dans le morceau), enregistrée sur ton téléphone.",
-           "ex": [{"id": "penta123", "label": "Positions 1, 2 et 3 à la suite (3 min)", "tempo": 70}, {"id": "impro", "label": "Mini-impro sur la grille de Bamboleo (2 min)"}]},
+          {"faire": "Les positions 1, 2 et 3 à la suite (6 min). Puis le glissando (4 min) : sur la corde de Sol, case 5 → 7 et retour avec l'index, puis avec le majeur et l'annulaire ; ensuite les 2 glissandos qui relient les positions 1 et 2 (5 → 7 sur le Sol, 8 → 10 sur le Si). Enfin 5 min de mini-impro sur la position 1, sur la grille de Bamboleo (la suite d'accords qui tourne en boucle dans le morceau), avec un glissando par phrase, enregistrée sur ton téléphone.",
+           "ex": [{"id": "penta123", "label": "Positions 1, 2 et 3 à la suite (6 min)", "tempo": 70},
+                  {"id": "glissando", "label": "Glissando : 5 → 7 sur le Sol, puis entre les positions 1 et 2 (4 min)", "tempo": 60},
+                  {"id": "impro", "label": "Mini-impro sur la grille de Bamboleo, un glissando par phrase (5 min)"}],
+           "plus": {
+             "explication": [{"titre": "Semaines 7-8 : le glissando", "liste": [
+               "Le mot : glissando (on dit aussi « slide »), c'est glisser le doigt sur la corde d'une case à une autre sans le relever. La main droite ne joue que la 1re note : la 2e sonne grâce au glissé.",
+               "À quoi ça sert : relier deux notes avec un son qui chante, et changer de position sans coupure.",
+               "Comment : index case 5 sur la corde de Sol, joue, puis glisse jusqu'à la case 7 en gardant le doigt appuyé, et reviens. Même chose avec le majeur, puis l'annulaire. Ensuite les deux glissandos qui font passer de la position 1 à la 2 : 5 → 7 sur le Sol, 8 → 10 sur le Si. Commence à 60 bpm, monte jusqu'à 80.",
+               "Astuces : garde la même pression pendant tout le glissé (trop léger, la note meurt ; trop fort, ça freine). Le pouce glisse avec la main, et tes yeux visent la case d'arrivée. Le doigt qui glisse est un « doigt guide » : il emmène toute la main dans la nouvelle position, exactement comme dans les changements de position des gammes.",
+               "Erreur fréquente : relever le doigt avant d'arriver. La 2e note ne sonne plus.",
+             ]}],
+             "videos": [V("Le glissando à la guitare", "https://www.youtube.com/watch?v=jR52RF9jY6k"), V("How to play portamento on classical guitar (en anglais)", "https://www.youtube.com/watch?v=kGkTRQMnwKg")],
+             "schemas": ["glissando"],
+             "quand": ["Le glissando relie deux positions de la pentatonique sans couper le son. En impro, il donne un côté chanté à tes phrases, comme une voix qui glisse d'une note à l'autre."],
+           }},
         ],
       },
       {
-        "titre": "Notes du manche", "duree": 5,
+        "titre": "Notes du manche", "duree": 10,
         "sert": "Connaître les cordes du milieu, celles où passent la plupart des mélodies et des solos.",
         "explication": [
           "Sur la corde de Si, l'octave se décale de 3 cases au lieu de 2 : c'est la seule corde accordée différemment des autres.",
         ],
         "videos": [V("Le manche de la guitare maîtrisé en 17 minutes", "https://www.youtube.com/watch?v=HDZx0XgrHgI"), V("Placer les notes sur le manche facilement", "https://www.youtube.com/watch?v=_m8qu8ogAug")],
         "moities": [
-          {"faire": "Corde de Sol : 2 min à dire chaque note de la case 0 à 12 puis au hasard, et 3 min à retrouver tous les Sol par les octaves.",
-           "ex": [{"id": "corde", "label": "Corde de Sol : notes de 0 à 12, puis au hasard (2 min)"}, {"id": "octaves", "label": "Octaves : tous les Sol du manche (3 min)"}]},
-          {"faire": "Corde de Si : 2 min à dire chaque note de la case 0 à 12 puis au hasard, et 3 min à retrouver tous les Si par les octaves.",
-           "ex": [{"id": "corde", "label": "Corde de Si : notes de 0 à 12, puis au hasard (2 min)"}, {"id": "octaves", "label": "Octaves : tous les Si du manche (3 min)"}]},
+          {"faire": "Corde de Sol : 4 min à dire chaque note de la case 0 à 12 puis au hasard, 3 min à retrouver tous les Sol par les octaves, puis le jeu du bloc (3 min).",
+           "ex": [{"id": "corde", "label": "Corde de Sol : notes de 0 à 12, puis au hasard (4 min)"}, {"id": "octaves", "label": "Octaves : tous les Sol du manche (3 min)"}]},
+          {"faire": "Corde de Si : 4 min à dire chaque note de la case 0 à 12 puis au hasard, 3 min à retrouver tous les Si par les octaves, puis le jeu du bloc (3 min).",
+           "ex": [{"id": "corde", "label": "Corde de Si : notes de 0 à 12, puis au hasard (4 min)"}, {"id": "octaves", "label": "Octaves : tous les Si du manche (3 min)"}]},
         ],
       },
       {
@@ -232,7 +249,7 @@ PALIERS = [
       ("Permutations 1-3-2-4 et 1-4-2-3", "70 bpm, propres"),
       ("Liés ascendants et descendants", "nets sur les 6 cordes, même volume"),
       ("Sol majeur puis La majeur en position fixe", "70 bpm en butée"),
-      ("Pentatonique positions 1, 2 et 3 reliées", "sans arrêt"),
+      ("Pentatonique positions 1, 2 et 3 reliées", "sans arrêt, avec un glissando au passage d'une position à l'autre"),
       ("Notes de 5 cordes (Mi grave, La, Ré, Sol, Si)", "moins de 3 s par note"),
       ("Mission : Bamboleo en rumba avec golpe", "8 tours à 80 bpm sans arrêt"),
     ],
@@ -243,22 +260,22 @@ PALIERS = [
     "mission": "Bamboleo avec des rasgueados, puis 1 minute d'impro sur la grille.",
     "blocs": [
       {
-        "titre": "Échauffement : étirements, écartement et liés combinés", "duree": 10,
+        "titre": "Échauffement : étirements, écartement et liés combinés", "duree": 20,
         "sert": "Atteindre des notes éloignées sans bouger la main, et faire travailler un doigt pendant que les autres restent immobiles.",
         "explication": [
-          "Vers la case 1, les cases sont plus larges : l'écart entre tes doigts grandit petit à petit. Ne force jamais : si ça tire dans la main, arrête et reprends le lendemain.",
+          "L'écartement vient après le jeu facile, jamais à froid. Commence par les cases hautes (5 à 8), plus étroites : vers la case 1, les cases sont plus larges et l'écart entre tes doigts grandit petit à petit. Stop à la moindre douleur : si ça tire dans la main, arrête et reprends le lendemain.",
           "1-3-1 en un seul coup de main droite : un lié ascendant puis un descendant. En semaines 11-12, la version d'Abel Carlevaro : pose l'auriculaire sur la corde voisine (case 8) et laisse-le posé pendant tes liés avec les autres doigts.",
         ],
         "videos": [V("Exercices d'étirements de la main du manche", "https://www.youtube.com/watch?v=mlLPc915RLs"), V("Fixer un doigt ?! Exercices pour la main gauche", "https://www.youtube.com/watch?v=7F-AG0J6eV8"), V("Comment travailler les hammers et les pull-offs", "https://www.youtube.com/watch?v=ODR6WoI_WC4")],
         "moities": [
-          {"faire": "Étirements (2 min), écartement : l'araignée descend d'une case à chaque passage (5-8, 4-7, 3-6, 2-5, 1-4) à 60 bpm (4 min), liés 1-3-1 et 1-4-1 (4 min).",
-           "ex": [ETIREMENTS, {"id": "facile", "label": "Jeu facile : arpèges lents en pincé, sans forcer (3 min)"}, {"id": "ecartement", "label": "Écartement : araignée de 5-8 jusqu'à 1-4", "tempo": 60}, {"id": "lies", "label": "Liés combinés 1-3-1 et 1-4-1"}]},
-          {"faire": "Étirements (2 min), écartement à 60 bpm (4 min), liés avec l'auriculaire fixe (4 min).",
-           "ex": [ETIREMENTS, {"id": "facile", "label": "Jeu facile : arpèges lents en pincé, sans forcer (3 min)"}, {"id": "ecartement", "label": "Écartement : araignée de 5-8 jusqu'à 1-4", "tempo": 60}, {"id": "lies", "label": "Liés avec l'auriculaire fixe (Carlevaro)"}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), puis l'écartement : l'araignée descend d'une case à chaque passage, en partant des cases hautes (5-8, 4-7, 3-6, 2-5, 1-4), à 60 bpm, stop à la moindre douleur (7 min). Enfin les liés 1-3-1 et 1-4-1 (7 min).",
+           "ex": [FACILE, ETIREMENTS, {"id": "ecartement", "label": "Écartement : araignée de 5-8 jusqu'à 1-4", "tempo": 60}, {"id": "lies", "label": "Liés combinés 1-3-1 et 1-4-1"}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), écartement en partant des cases hautes, à 60 bpm (7 min), liés avec l'auriculaire fixe (7 min).",
+           "ex": [FACILE, ETIREMENTS, {"id": "ecartement", "label": "Écartement : araignée de 5-8 jusqu'à 1-4", "tempo": 60}, {"id": "lies", "label": "Liés avec l'auriculaire fixe (Carlevaro)"}]},
         ],
       },
       {
-        "titre": "Gamme de La mineur naturelle", "duree": 20,
+        "titre": "Gamme de La mineur naturelle", "duree": 15,
         "sert": "C'est la gamme de Bamboleo. Elle ajoute 2 notes (Si et Fa) à ta pentatonique, pour une impro plus espagnole.",
         "explication": [
           "La mineur utilise exactement les mêmes notes que Do majeur, mais en partant de La : La Si Do Ré Mi Fa Sol La. C'est la « relative » de Do majeur. L'alternance a-m muscle l'annulaire, et les triolets montrent si ton alternance est vraiment régulière. Pour les triolets, dis « tri-o-let » à chaque clic et joue une note par syllabe. Comme 3 est impair, chaque clic tombe sur un doigt différent : impossible de tricher.",
@@ -267,36 +284,78 @@ PALIERS = [
         "moities": [
           {"faire": "Position fixe, cases 4 à 8, 70 bpm, montée et descente en butée i-m (le coup en butée du palier 1, en alternant index et majeur).",
            "ex": [{"id": "gamme", "label": "La mineur en butée i-m", "tempo": 70}, {"id": "phrygien", "label": "Mi phrygien en butée : Mi Fa Sol La Si Do Ré, la gamme de la cadence andalouse", "tempo": 60}]},
-          {"faire": "Position fixe, cases 4 à 8, 70 bpm, en a-m (annulaire-majeur), puis en triolets (3 notes égales par clic du métronome).",
-           "ex": [{"id": "gamme-am", "label": "La mineur en a-m", "tempo": 70}, {"id": "triolets", "label": "La mineur en triolets", "tempo": 70}, {"id": "phrygien-tierces", "label": "Mi phrygien en tierces, sur 2 octaves", "tempo": 60}]},
+          {"faire": "Position fixe, cases 4 à 8, 70 bpm : La mineur en a-m (annulaire-majeur), puis en triolets, 3 notes égales par clic du métronome (8 min). Puis le picado (7 min) : i-m en butée sur le Mi aigu à vide, 2 notes par clic, puis en passant du Si au Mi, puis sur La mineur et sur Mi phrygien.",
+           "ex": [{"id": "gamme-am", "label": "La mineur en a-m", "tempo": 70}, {"id": "triolets", "label": "La mineur en triolets", "tempo": 70},
+                  {"id": "picado", "label": "Picado : i-m en butée, 2 notes par clic (corde à vide, puis La mineur et Mi phrygien)", "tempo": 60}],
+           "plus": {
+             "explication": [{"titre": "Semaines 11-12 : le picado", "liste": [
+               "Le mot : le picado (« piqué » en espagnol), c'est une gamme en butée, index et majeur alternés, nette et puissante. C'est la technique des passages rapides du flamenco.",
+               "À quoi ça sert : jouer des lignes de notes rapides avec un son plein. C'est ta gamme en butée du palier 1, qui devient un outil flamenco.",
+               "Comment : d'abord sur le Mi aigu à vide, 2 notes par clic (i puis m), le doigt traverse la corde et se pose sur la corde de Si. Puis en passant du Si au Mi, puis sur La mineur, puis sur Mi phrygien, la gamme de la cadence andalouse. Commence à 60 bpm et monte jusqu'à 80.",
+               "Astuces : de petits mouvements qui partent de la phalange du milieu, la main ne bouge pas. Alterne toujours, même quand tu changes de corde. La régularité d'abord, la vitesse ensuite.",
+               "Erreur fréquente : jouer deux fois de suite avec le même doigt au changement de corde. Ça casse la régularité.",
+             ]}],
+             "videos": [V("Tuto flamenco : rasgueado, arpèges, picado, trémolo, alzapúa (Fly Guitars)", "https://www.youtube.com/watch?v=MSM35pXTRPA"), V("Developing the picado technique, for beginner flamenco guitarists (en anglais)", "https://www.youtube.com/watch?v=4SjU9pfQbjo")],
+             "schemas": ["picado"],
+             "quand": ["Le picado, c'est ce qui fait sonner tes gammes comme du flamenco : dans les traits rapides des falsetas (les petites mélodies entre deux couplets) et dans les fins de phrase d'une impro."],
+           }},
         ],
       },
       {
-        "titre": "Pentatonique : positions 4 et 5, puis l'impro", "duree": 5,
+        "titre": "Pentatonique : positions 4 et 5, puis l'impro", "duree": 15,
         "sert": "Avec les 5 positions, tu peux improviser n'importe où sur le manche, à partir de n'importe quel La.",
         "explication": [
           "Pour l'impro : des phrases courtes de 3 à 5 notes, des silences entre elles, et finis tes phrases sur La ou sur Mi. Glisse des liés dans tes phrases. Quand l'accord de Mi arrive, essaie Sol# (Sol dièse, une case au-dessus de Sol) à la place de Sol : c'est une note de l'accord de Mi, celle qui sonne « espagnol ».",
         ],
         "videos": [V("Maîtriser les 5 positions (Simon Ghnassia)", "https://www.youtube.com/watch?v=H-knhchvGWc"), V("Apprendre la pentatonique, 5e position", "https://www.youtube.com/watch?v=fA-GVxcoemw"), V("3 exercices d'improvisation", "https://www.youtube.com/watch?v=mqwvMdhBYEM")],
         "moities": [
-          {"faire": "Positions 4 (cases 0 à 3) et 5 (cases 2 à 5), une octave plus bas que sur le manche : elles sonnent mieux sur une guitare classique. 3 min, puis 2 min d'impro sur la position de ton choix.",
-           "ex": [{"id": "penta45", "label": "Positions 4 et 5, une octave plus bas (cases 0 à 5) (3 min)", "tempo": 70}, {"id": "impro", "label": "Impro sur la position de ton choix (2 min)"}]},
-          {"faire": "Les 5 positions à la suite (3 min), puis 2 min d'impro sur la grille de Bamboleo.",
-           "ex": [{"id": "penta-tout", "label": "Les 5 positions à la suite (3 min)", "tempo": 70}, {"id": "impro", "label": "Impro sur la grille de Bamboleo (2 min)"}]},
+          {"faire": "Positions 4 (cases 0 à 3) et 5 (cases 2 à 5), une octave plus bas que sur le manche : elles sonnent mieux sur une guitare classique (6 min). Puis le vibrato (4 min) : une note tenue au majeur, case 7 de la corde de Sol, 4 temps sans vibrato puis 4 temps avec, lent (2 oscillations par clic à 60 bpm), puis avec chaque doigt. Enfin 5 min d'impro sur la position de ton choix, avec un vibrato sur la dernière note de chaque phrase.",
+           "ex": [{"id": "penta45", "label": "Positions 4 et 5, une octave plus bas (cases 0 à 5) (6 min)", "tempo": 70},
+                  {"id": "vibrato", "label": "Vibrato : 4 temps sans, 4 temps avec, avec chaque doigt (4 min)", "tempo": 60},
+                  {"id": "impro", "label": "Impro sur la position de ton choix, vibrato en fin de phrase (5 min)"}],
+           "plus": {
+             "explication": [{"titre": "Semaines 9-10 : le vibrato", "liste": [
+               "Le mot : le vibrato, c'est faire onduler légèrement la hauteur d'une note tenue.",
+               "À quoi ça sert : donner de la vie à une note longue, comme une voix ou un violon. Une note avec vibrato chante, une note sans vibrato reste plate.",
+               "Le geste à la guitare classique : le doigt reste posé et roule dans l'axe de la corde, vers la tête du manche puis vers la rosace (le trou de la guitare). Le bras accompagne, le pouce reste léger derrière le manche. C'est différent du vibrato de guitare électrique, qui pousse la corde sur le côté et marche mal sur du nylon.",
+               "Comment : majeur case 7 sur la corde de Sol. 4 temps sans vibrato, puis 4 temps avec, lent : 2 oscillations par clic à 60 bpm. Puis plus rapide, puis avec chaque doigt.",
+               "Astuces : peu de tension dans la main, le doigt près de la frette. Commence lent et régulier, la vitesse viendra.",
+             ]}],
+             "videos": [V("Le vibrato", "https://www.youtube.com/watch?v=qoYY3pf6nvA"), V("Classical guitar lesson : vibrato (en anglais)", "https://www.youtube.com/watch?v=oh-IUxWzfQk"), V("Leçon de vibrato, avec la vidéo (ThisIsClassicalGuitar, en anglais)", "https://www.thisisclassicalguitar.com/vibrato-lesson-classical-guitar/")],
+             "schemas": ["vibrato"],
+             "quand": ["Le vibrato se met sur les notes longues : la dernière note d'une phrase d'impro, une note tenue dans une mélodie. Il rend ton jeu expressif sans jouer plus de notes."],
+           }},
+          {"faire": "Les 5 positions à la suite (5 min), puis 10 min d'impro sur la grille de Bamboleo : un lié, un glissando, et un vibrato sur la dernière note de chaque phrase.",
+           "ex": [{"id": "penta-tout", "label": "Les 5 positions à la suite (5 min)", "tempo": 70}, {"id": "impro", "label": "Impro sur la grille de Bamboleo, avec liés, glissandos et vibrato (10 min)"}]},
         ],
       },
       {
-        "titre": "Notes du manche : quiz", "duree": 5,
+        "titre": "Notes du manche : quiz et harmoniques", "duree": 10,
         "sert": "Connaître tout le manche, pour trouver n'importe quelle note ou n'importe quel accord sans chercher.",
         "explication": [
           "La corde de Mi aigu porte les mêmes notes que le Mi grave, que tu connais déjà.",
         ],
         "videos": [V("Apprenez TOUTES les notes sur le manche en 10 minutes", "https://www.youtube.com/watch?v=oV6d2degxdw"), V("Apprendre les notes de son manche avec efficacité", "https://www.youtube.com/watch?v=jHH9N-l-Jb0")],
         "moities": [
-          {"faire": "Quiz sur les 6 cordes, 2 min : une note au hasard, trouve-la sur chaque corde. Puis 3 min sur les cordes vues avant, en revenant sur les notes ratées.",
-           "ex": [{"id": "quiz", "label": "Quiz : une note au hasard sur les 6 cordes (2 min)"}, {"id": "revoir", "label": "Revoir les notes ratées, cordes vues avant (3 min)"}]},
-          {"faire": "Quiz sur les 6 cordes : une note au hasard, trouve-la sur chaque corde en moins de 3 secondes.",
-           "ex": [{"id": "quiz", "label": "Quiz : une note au hasard sur les 6 cordes, moins de 3 s"}]},
+          {"faire": "Quiz sur les 6 cordes (3 min) : une note au hasard, trouve-la sur chaque corde. Puis les harmoniques (4 min) : case 12 sur les 6 cordes en disant le nom de la note, puis case 7, puis case 5. Enfin 3 min sur les notes ratées.",
+           "ex": [{"id": "quiz", "label": "Quiz : une note au hasard sur les 6 cordes (3 min)"},
+                  {"id": "harmoniques", "label": "Harmoniques cases 12, 7 et 5, en disant le nom de la note (4 min)"},
+                  {"id": "revoir", "label": "Revoir les notes ratées (3 min)"}],
+           "plus": {
+             "explication": [{"titre": "Semaines 9-10 : les harmoniques naturelles", "liste": [
+               "Le mot : une harmonique, c'est un son cristallin, comme une cloche, obtenu en effleurant la corde à certains points précis, sans appuyer.",
+               "À quoi ça sert : finir un morceau ou colorer une ambiance (flamenco, gypsy, Sting en met souvent), et accorder ta guitare à l'oreille.",
+               "Le geste : pose le doigt gauche à plat, très légèrement, pile au-dessus de la frette (le fil de métal), pas entre deux frettes. La main droite pince près du chevalet, puis le doigt gauche se lève tout de suite pour laisser sonner.",
+               "Quelle note sonne : case 12, la corde à vide une octave plus haut (même nom). Case 7, la note de la case 7 une octave plus haut : un Si sur la corde de Mi. Case 5, la corde à vide deux octaves plus haut, avec un son plus faible.",
+               "Comment : case 12 sur les 6 cordes en disant le nom, puis case 7, puis case 5. En semaines 11-12, un petit arpège en harmoniques.",
+               "Astuce : si ça ne sonne pas, ton doigt est à côté du fil de la frette, ou il appuie trop.",
+             ]}],
+             "videos": [V("Comment jouer les harmoniques", "https://www.youtube.com/watch?v=R5_rrrYcvFQ"), V("Créer une mélodie avec des harmoniques naturelles", "https://www.youtube.com/watch?v=BwPUH8ogJGY")],
+             "schemas": ["harmoniques"],
+             "quand": ["Les harmoniques font travailler les noms des notes autrement : à la case 12 et à la case 5, c'est la corde à vide ; à la case 7, une quinte au-dessus. Tu les entendras en fin de morceau, et elles servent à accorder la guitare."],
+           }},
+          {"faire": "Quiz sur les 6 cordes : une note au hasard, trouve-la sur chaque corde en moins de 3 secondes (7 min). Puis un petit arpège en harmoniques, case 12 sur les cordes 4, 3, 2 et 1 (3 min).",
+           "ex": [{"id": "quiz", "label": "Quiz : une note au hasard sur les 6 cordes, moins de 3 s (7 min)"}, {"id": "harmoniques", "label": "Arpège en harmoniques, case 12 sur les cordes 4-3-2-1 (3 min)"}]},
         ],
       },
       {
@@ -310,8 +369,21 @@ PALIERS = [
         "moities": [
           {"faire": "Rasgueado en 3 doigts (a, m, i) sur La mineur, lentement (7 min), puis la rumba sur la grille (8 min).",
            "ex": [{"id": "rasgueado", "label": "Rasgueado a-m-i sur La mineur (7 min)"}, {"id": "rumba", "label": "Rumba sur la grille (8 min)", "tempo": 80}]},
-          {"faire": "Rasgueado en 4 doigts (c, a, m, i), puis placé à la fin de chaque tour de grille dans la rumba.",
-           "ex": [{"id": "rasgueado", "label": "Rasgueado c-a-m-i"}, {"id": "rumba", "label": "Rumba avec un rasgueado à chaque fin de tour", "tempo": 80}]},
+          {"faire": "Rasgueado en 4 doigts, c-a-m-i (7 min). Puis l'apagado : La mineur à 70 bpm, un coup puis l'arrêt net sur les temps 2 et 4 (2 min). Enfin la rumba, avec un rasgueado et un apagado à la fin de chaque tour de grille (6 min).",
+           "ex": [{"id": "rasgueado", "label": "Rasgueado c-a-m-i (7 min)"}, {"id": "apagado", "label": "Apagado : La mineur, un coup puis l'arrêt net sur 2 et 4", "tempo": 70},
+                  {"id": "rumba", "label": "Rumba avec un rasgueado et un apagado à chaque fin de tour", "tempo": 80}],
+           "plus": {
+             "explication": [{"titre": "Semaines 11-12 : l'apagado", "liste": [
+               "Le mot : apagado veut dire « éteint » en espagnol. C'est arrêter net le son juste après un accord, pour un accent sec.",
+               "À quoi ça sert : les coupures franches du flamenco et de la rumba, le « tchak » qui donne le groove.",
+               "Main droite : juste après le coup, la tranche de la main (côté petit doigt) retombe sur les cordes. C'est la version la plus forte.",
+               "Main gauche : relâche la pression de l'accord sans lever les doigts, ou pose l'auriculaire à plat en travers des cordes sans appuyer. C'est la version la plus rapide.",
+               "Comment : La mineur à 70 bpm, un coup puis l'arrêt net sur les temps 2 et 4. Puis dans la rumba : un rasgueado et un apagado à la fin de chaque tour de grille.",
+             ]}],
+             "videos": [V("L'apagado, main droite et main gauche (article en anglais, Online Guitar Academy)", "https://onlineguitaracademy.net/articles/flamenco-guitar-technique/apagado-a-pizzicato-technique-for-flamenco-guitar.html"), V("Toutes les techniques de la guitare flamenca, par Toniflamadeus (en espagnol)", "https://www.youtube.com/watch?v=fvqPdAHo3qA")],
+             "schemas": ["apagado"],
+             "quand": ["L'apagado donne les coupures nettes de la rumba et du flamenco : à la fin d'un tour de grille, sur un accent, ou pour finir un morceau d'un coup sec."],
+           }},
         ],
       },
       {
@@ -333,11 +405,11 @@ PALIERS = [
     "bilan": [
       ("Araignée jusqu'aux cases 1-4", "70 bpm, sans douleur"),
       ("Liés combinés, auriculaire fixe", "l'auriculaire ne bouge pas"),
-      ("La mineur en a-m", "70 bpm, en triolets"),
+      ("La mineur en a-m", "70 bpm en triolets, puis en picado à 80 bpm (2 notes par clic)"),
       ("Pentatonique : les 5 positions à la suite", "sans arrêt"),
-      ("Notes sur les 6 cordes", "moins de 3 s par note"),
-      ("Rasgueado en 4 doigts", "régulier, 4 temps à 70 bpm"),
-      ("Mission : Bamboleo + 1 min d'impro", "sans arrêt, enregistré"),
+      ("Notes sur les 6 cordes", "moins de 3 s par note, et les harmoniques 12, 7 et 5 sonnent et sont nommées"),
+      ("Rasgueado en 4 doigts", "régulier à 70 bpm, terminé par un apagado net"),
+      ("Mission : Bamboleo + 1 min d'impro", "sans arrêt, enregistré, l'impro avec au moins un lié, un glissando et un vibrato"),
     ],
   },
 ]
@@ -480,16 +552,18 @@ THEMES = [
     {"id": "barres", "label": "Barrés"},
     {"id": "accords", "label": "Accords et enchaînements"},
     {"id": "rythme", "label": "Rythmes : rumba et rasgueado"},
+    {"id": "effets", "label": "Effets et sonorités"},
     {"id": "morceaux", "label": "Morceaux"},
 ]
 THEME_OF = {
-    "etirements": "technique", "araignee": "technique", "permutations": "technique", "lies": "technique", "ecartement": "technique",
+    "etirements": "technique", "facile": "technique", "araignee": "technique", "permutations": "technique", "lies": "technique", "ecartement": "technique",
     "arpeges": "arpeges", "alternance": "arpeges",
     "gamme": "gammes", "gamme-pince": "gammes", "gamme-am": "gammes", "triolets": "gammes",
     "impro": "penta", "corde": "manche", "octaves": "manche", "quiz": "manche",
     "comprendre": "barres", "majeurs": "barres", "mineurs": "barres", "barres": "barres",
     "enchainement": "accords", "alterne": "accords", "grille": "accords",
-    "rumba": "rythme", "rasgueado": "rythme",
+    "rumba": "rythme", "rasgueado": "rythme", "apagado": "rythme", "picado": "gammes",
+    "glissando": "effets", "vibrato": "effets", "harmoniques": "effets",
 }
 
 
@@ -542,6 +616,9 @@ def voix_explication(b):
 
 def bloc_for(palier, b, bi, moitie, seance):
     m = b["moities"][moitie]
+    # « plus » : la nouveauté de ces 2 semaines (explication, vidéos, schéma, pourquoi), montrée seulement quand elle arrive
+    plus = m.get("plus", {})
+    b = {**b, "explication": b["explication"] + plus.get("explication", []), "videos": b["videos"] + plus.get("videos", [])}
     ex = [dict(e) for e in m["ex"]]
     for e in ex:
         j = jeux_for(palier, moitie, e)
@@ -559,12 +636,12 @@ def bloc_for(palier, b, bi, moitie, seance):
                 ex = [FRAGILE_ENTRETIEN] + ex
             elif seance == "C":
                 faire = "Au choix : Bamboleo, Fragile ou un morceau que tu aimes. " + faire
-    quand = QUAND[palier["num"]][bi]
+    quand = QUAND[palier["num"]][bi] + plus.get("quand", [])
     return {
         "id": f"b{bi + 1}", "titre": f"{bi + 1}. {titre}", "duree": b["duree"],
         "sert": b["sert"], "quand": quand, "faire": faire, "explication": b["explication"],
         "videos": b["videos"], "positions": m.get("positions", b.get("positions", [])),
-        "schemas": SCHEMAS[palier["num"]][bi],
+        "schemas": SCHEMAS[palier["num"]][bi] + plus.get("schemas", []),
         "exercices": ex,
         "voix": {
             "consigne": [titre + ".", b["sert"], "À faire : " + faire],

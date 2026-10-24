@@ -939,7 +939,7 @@
       ta.addEventListener("input", () => { s[k] = ta.value.trim() ? ta.value : undefined; save(); });
       return el("label", {}, label, ta);
     };
-    const duree = el("input", { type: "number", inputmode: "numeric", min: "0", max: "300", placeholder: s.seance ? String(Math.max(1, Math.round(seanceMs(s) / 60000))) : "70", value: s.duree ?? "", "aria-label": "Durée en minutes" });
+    const duree = el("input", { type: "number", inputmode: "numeric", min: "0", max: "300", placeholder: s.seance ? String(Math.max(1, Math.round(seanceMs(s) / 60000))) : "90", value: s.duree ?? "", "aria-label": "Durée en minutes" });
     duree.addEventListener("input", () => { const v = parseInt(duree.value, 10); s.duree = Number.isFinite(v) ? v : undefined; save(); });
     seanceUI.duree = duree;
     return el("section", { class: "card fin" },
@@ -1050,7 +1050,7 @@
     }
     for (const id in state.cours) {
       const sc = state.cours[id];
-      if (sc?.seance?.start && !sc.seance.pausa && seanceMs(sc) >= 35 * 60000) { sc.seance.pausa = true; save(); toast("35 minutes : fais une pause de 2 minutes, lâche tes mains."); }
+      if (sc?.seance?.start && !sc.seance.pausa && seanceMs(sc) >= 50 * 60000) { sc.seance.pausa = true; save(); toast("Mi-séance, après le bloc 3 : fais une pause de 2 minutes, lâche tes mains."); }
     }
     const u = seanceUI;
     if (u.card && u.c) {
@@ -1529,7 +1529,7 @@
   const BLOCS_NOMS = ["Échauffement", "Gamme", "Pentatonique", "Notes du manche", "Barrés et rythme", "Morceau"];
   function renderConstruction() {
     const nbSem = new Set(DATA.cours.map(c => c.semaine)).size;
-    const resume = el("span", { class: "muted small", text: `${nbSem} semaines · ${DATA.paliers.length} paliers · 3 séances d'1 h 10 par semaine` });
+    const resume = el("span", { class: "muted small", text: `${nbSem} semaines · ${DATA.paliers.length} paliers · 3 séances d'1 h 30 par semaine` });
     return pli("construction", "Comment est construit ton cours", resume, () => {
       const out = [];
       out.push(el("div", { class: "constr-seance" }, el("span", { class: "eyebrow", text: "Chaque séance : 6 blocs, toujours dans cet ordre" }),

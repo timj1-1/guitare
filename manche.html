@@ -627,7 +627,7 @@ pre.tab { background: var(--surface-2); border-radius: 12px; padding: 12px 14px;
     <span><i class="sw" style="background:var(--root);box-shadow:0 0 0 2px var(--marker)"></i>fondamentale de l'accord</span>
     <span><i class="sw" style="border:2px solid var(--ok)"></i>corde à vide</span>
     <span class="only-h">Corde aiguë en haut, comme dans une tablature.</span><span class="only-v">Corde grave à gauche, comme dans une grille d'accord.</span>
-    <span>Un numéro de case pose un barré.</span>
+    <span>Un numéro de case pose un barré ; touche-le de nouveau pour l'enlever.</span>
     <span class="scale-only"><i class="sw" style="background:var(--scale)"></i>note de la gamme</span>
     <span class="scale-only"><i class="sw" style="background:var(--root)"></i>tonique de la gamme</span>
   </p>
@@ -743,6 +743,8 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   // barré : { fret, from } avec from = 0 (6 cordes) ou 1 (5 cordes, depuis La)
   let barre = store.get("barre", null);
   if (!barre || !(barre.fret >= 1 && barre.fret <= FRETS)) barre = null;
+  // ce qu'il y avait sous le barré quand on l'a posé, pour le retirer proprement en retouchant au même endroit
+  let avantBarre = barre ? store.get("avantBarre", null) : null;
   let timbre = store.get("timbre", "classique");
   if (!["classique", "flamenca", "folk", "manouche"].includes(timbre)) timbre = "classique";
   let analysis = null;
@@ -1021,7 +1023,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   const allMuted = () => !barre && pos.every(f => f == null);
   document.getElementById("clearBtn").addEventListener("click", () => {
     const open = allMuted();
-    pos = open ? [0,0,0,0,0,0] : [null,null,null,null,null,null]; barre = null;
+    pos = open ? [0,0,0,0,0,0] : [null,null,null,null,null,null]; barre = null; avantBarre = null;
     store.set("barre", barre); store.set("pos", pos);
     document.getElementById("tunerLine").textContent = "";
     render(); // remettre les cordes à vide ne fait pas de bruit
@@ -1050,8 +1052,9 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
 
   // Barré : le poser couvre les cordes libres ; le déplacer emmène toute la forme avec lui
   function setBarre(b) {
-    if (!b) { barre = null; store.set("barre", barre); render(); return; }
+    if (!b) return leverBarre();
     if (b.fret <= capo || b.fret > FRETS) return;
+    if (!barre) avantBarre = { pos: pos.slice(), fret: b.fret };
     if (barre && barre.fret !== b.fret) {
       const d = b.fret - barre.fret;
       const moved = pos.map(f => (f == null || f === 0 ? f : f + d));
@@ -1061,15 +1064,31 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     for (let s = b.from; s < 6; s++) if (pos[s] == null || pos[s] < b.fret) pos[s] = b.fret;
     if (b.from === 1 && (pos[0] == null || pos[0] <= b.fret)) pos[0] = null;
     barre = b;
-    store.set("barre", barre); store.set("pos", pos);
+    store.set("barre", barre); store.set("pos", pos); store.set("avantBarre", avantBarre);
     if (sound) { const n = []; pos.forEach((f, i) => { if (f != null) n.push(midiOf(i, f)); }); playNotes(n, 0.035); }
     render();
+  }
+  // Lever le barré, c'est lever l'index : les cordes qu'il tenait reviennent comme avant (à vide si on ne sait pas)
+  function leverBarre() {
+    if (!barre) return;
+    const d = avantBarre ? barre.fret - avantBarre.fret : 0;
+    for (let s = 0; s < 6; s++) {
+      if (s >= barre.from ? pos[s] !== barre.fret : pos[s] != null) continue;
+      let v = avantBarre ? avantBarre.pos[s] : (s >= barre.from ? 0 : null);
+      if (v > 0) v += d;
+      if (v > 0 && (v > FRETS || v <= capo)) v = 0;
+      pos[s] = v;
+    }
+    barre = null; avantBarre = null;
+    store.set("barre", barre); store.set("pos", pos); store.set("avantBarre", avantBarre);
+    render(); // sans bruit, comme quand on enlève un doigt
   }
   const barreSeg = document.getElementById("barreSeg");
   barreSeg.addEventListener("click", e => {
     const v = e.target.closest("button")?.dataset.v; if (!v) return;
     if (v === "off") return setBarre(null);
     const from = v === "5" ? 1 : 0;
+    if (barre && barre.from === from) return setBarre(null); // retoucher le même bouton enlève le barré
     setBarre({ fret: barre ? barre.fret : capo + (from ? 2 : 1), from });
   });
   document.getElementById("barreMinus").addEventListener("click", () => { if (barre) setBarre({ ...barre, fret: barre.fret - 1 }); });
@@ -1085,9 +1104,10 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     const b = barre || { fret: capo + (1), from: 0 };
     const shape = SHAPES[b.from][v];
     if (shape.some(o => o != null && b.fret + o > FRETS)) return;
+    if (!barre) avantBarre = { pos: pos.slice(), fret: b.fret };
     pos = shape.map(o => (o == null ? null : b.fret + o));
     barre = b;
-    store.set("barre", barre); store.set("pos", pos);
+    store.set("barre", barre); store.set("pos", pos); store.set("avantBarre", avantBarre);
     if (sound) { const n = []; pos.forEach((f, i) => { if (f != null) n.push(midiOf(i, f)); }); playNotes(n, 0.035); }
     render();
   });
@@ -1224,7 +1244,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     }
     return out;
   }
-  function loadPosition(p) { pos = toAbs(p); barre = null; store.set("barre", barre); store.set("pos", pos); render(); document.getElementById("boardScroll").scrollIntoView({ behavior: "smooth", block: "nearest" }); }
+  function loadPosition(p) { pos = toAbs(p); barre = null; avantBarre = null; store.set("barre", barre); store.set("pos", pos); render(); document.getElementById("boardScroll").scrollIntoView({ behavior: "smooth", block: "nearest" }); }
   document.getElementById("loadForm").addEventListener("submit", e => {
     e.preventDefault();
     const err = document.getElementById("loadErr");
@@ -1635,7 +1655,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     const m = Math.min(...fr);
     return p[from] === m && p[5] === m ? { fret: Math.min(FRETS, m + capo), from } : null;
   };
-  const fromHash = () => { const m = location.hash.match(/^#pos-([x0-9-]+)$/i); const p = m && parsePosition(m[1]); if (p) { pos = toAbs(p); barre = barreOf(p); store.set("pos", pos); store.set("barre", barre); render(); } };
+  const fromHash = () => { const m = location.hash.match(/^#pos-([x0-9-]+)$/i); const p = m && parsePosition(m[1]); if (p) { pos = toAbs(p); barre = barreOf(p); avantBarre = null; store.set("pos", pos); store.set("barre", barre); render(); } };
   window.addEventListener("hashchange", fromHash);
   const scaleFromHash = () => {
     const m = location.hash.match(/^#gamme-([a-z]+)-([a-z-]+?)(?:-z(\d+))?$/i);
