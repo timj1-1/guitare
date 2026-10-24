@@ -46,12 +46,12 @@
       <div class="wrap" id="coursBody"></div>
     </section>
 
-    <section class="view" id="view-morceaux" data-view="morceaux" hidden>
-      <div class="wrap" id="morceauxBody"></div>
-    </section>
-
     <section class="view" id="view-manche" data-view="manche" hidden>
       <iframe id="mancheFrame" title="Mon manche" allow="microphone; autoplay"></iframe>
+    </section>
+
+    <section class="view" id="view-morceaux" data-view="morceaux" hidden>
+      <div class="wrap" id="morceauxBody"></div>
     </section>
 
     <section class="view" id="view-bilan" data-view="bilan" hidden>
@@ -64,13 +64,13 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
       <span>Mon cours</span>
     </button>
-    <button type="button" data-go="morceaux">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5.5l11-2V16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-      <span>Mes morceaux</span>
-    </button>
     <button type="button" data-go="manche">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2.5" width="8" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 7.5h8M8 12h8M8 16.5h8" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="9.8" r="1.2" fill="currentColor"/></svg>
       <span>Mon manche</span>
+    </button>
+    <button type="button" data-go="morceaux">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5.5l11-2V16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span>Mes morceaux</span>
     </button>
     <button type="button" data-go="bilan">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>

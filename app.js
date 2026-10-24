@@ -495,23 +495,34 @@
     return wrap;
   }
 
-  // Les tablatures : celles que j'ai trouvées (liens), puis les tiennes (liens, photos, PDF)
+  // Les tablatures : celles que j'ai trouvées (liens), puis les tiennes (liens, photos, PDF). Chacune est un bouton :
+  // son nom, sa source en dessous (« Tablature (Ultimate Guitar) » → « Tablature » + « Ultimate Guitar »), et où elle s'ouvre.
+  const ICONE_TAB = {
+    tab: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke="currentColor" stroke-width="1.3" opacity=".55"/><circle cx="8" cy="10" r="1.9" fill="currentColor"/><circle cx="13" cy="14" r="1.9" fill="currentColor"/><circle cx="17" cy="6" r="1.9" fill="currentColor"/>',
+    pdf: '<path d="M7 3h7l4 4v14H7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v4h4M9.5 12h5M9.5 15.5h5" stroke="currentColor" stroke-width="1.5"/>',
+    photo: '<rect x="3.5" y="5" width="17" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="1.7" fill="currentColor"/><path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  };
+  function tabCarte(t, { href, onclick, icone = "tab", source }) {
+    const m = !source && /^(.*?)\s*\((.+)\)$/.exec(t.t), nom = m ? m[1] : t.t;
+    source ||= m ? m[2] : href ? new URL(href).hostname.replace(/^www\./, "") : "";
+    const ic = el("span", { class: "tab-ic", "aria-hidden": "true" }); ic.innerHTML = `<svg viewBox="0 0 24 24">${ICONE_TAB[icone]}</svg>`;
+    const kids = [ic, el("span", { class: "tab-txt" }, el("strong", { text: nom }), source ? el("span", { text: source }) : null),
+      el("span", { class: "tab-go", "aria-hidden": "true", text: href ? "↗" : "›" })];
+    return href ? el("a", { class: "tab-card", href, target: "_blank", rel: "noopener" }, kids) : el("button", { class: "tab-card", type: "button", onclick }, kids);
+  }
   function listeTabs(pz, onChange) {
     const box = el("div", { class: "tabs-list" });
     const mine = state.ajouts?.[pz.id]?.tabs || [];
-    const ul = el("ul", { class: "tab-links" });
-    (pz.tabs || []).forEach(t => ul.append(el("li", {}, el("a", { href: t.u, target: "_blank", rel: "noopener" }, "🎼 " + t.t + " ↗"))));
+    const ul = el("ul", { class: "tab-cards" });
+    (pz.tabs || []).forEach(t => ul.append(el("li", {}, tabCarte(t, { href: t.u }))));
     mine.forEach(t => {
       const li = el("li", { class: "mine" });
-      if (t.u) li.append(el("a", { href: t.u, target: "_blank", rel: "noopener" }, "🎼 " + t.t + " ↗"));
-      else {
-        const b = el("button", { class: "link-btn", type: "button", onclick: async () => {
-          try { const f = await fichiers.get(t.f); if (!f) throw 0; if (f.type === "application/pdf") window.open(URL.createObjectURL(f), "_blank"); else openFichier(f, t.t); }
-          catch { toast("Ce fichier n'est plus sur cet appareil : ajoute-le à nouveau."); }
-        } }, (t.type === "application/pdf" ? "📄 " : "🖼️ ") + t.t);
-        li.append(b);
-      }
-      li.append(el("button", { class: "link-btn x", type: "button", "aria-label": `Retirer ${t.t}`, text: "✕", onclick: async () => {
+      const pdf = t.type === "application/pdf";
+      li.append(t.u ? tabCarte(t, { href: t.u, source: "Ton lien" }) : tabCarte(t, { icone: pdf ? "pdf" : "photo", source: pdf ? "Ton PDF" : "Ta photo", onclick: async () => {
+        try { const f = await fichiers.get(t.f); if (!f) throw 0; if (f.type === "application/pdf") window.open(URL.createObjectURL(f), "_blank"); else openFichier(f, t.t); }
+        catch { toast("Ce fichier n'est plus sur cet appareil : ajoute-le à nouveau."); }
+      } }));
+      li.append(el("button", { class: "icon-btn tab-x", type: "button", "aria-label": `Retirer ${t.t}`, text: "✕", onclick: async () => {
         const a = ajoutsDe(pz); a.tabs = a.tabs.filter(x => x !== t); sansAjouts(pz); save();
         if (t.f) fichiers.del(t.f).catch(() => {});
         onChange();
@@ -1111,12 +1122,19 @@
 
     // Les retours du prof
     if (RETOURS.length) {
-      const card = el("section", { class: "card" }, el("h2", { text: "Les récaps du prof" }));
-      [...RETOURS].reverse().forEach(r => {
+      const recap = r => {
         const box = el("div", { class: "card prof-card", style: "margin-top:10px" }, el("span", { class: "eyebrow", text: (r.date ? new Date(r.date).toLocaleDateString("fr-FR") + " · " : "") + (r.titre || "Récap") }));
         String(r.texte).split(/\n+/).forEach(t => box.append(el("p", { text: t })));
-        card.append(box);
-      });
+        return box;
+      };
+      // le dernier récap en entier, les précédents repliés
+      const [dernier, ...avant] = [...RETOURS].reverse();
+      const card = el("section", { class: "card" }, el("h2", { text: "Les récaps du prof" }), recap(dernier));
+      if (avant.length) {
+        const d = el("details", { class: "mini" }, el("summary", { text: avant.length > 1 ? `Les ${avant.length} récaps précédents` : "Le récap précédent" }));
+        d.addEventListener("toggle", () => { if (d.open && d.children.length === 1) d.append(...avant.map(recap)); });
+        card.append(d);
+      }
       body.append(card);
     }
 
@@ -1202,14 +1220,13 @@
       b.addEventListener("click", () => { set(!get()); b.setAttribute("aria-checked", String(get())); });
       return el("div", { class: "setting" }, el("div", {}, el("strong", { text: label }), el("span", { class: "muted small", text: hint })), b);
     };
-    const reglages = el("section", { class: "card", style: "display:flex;flex-direction:column;gap:12px" },
-      el("h2", { text: "Sons et voix" }),
+    const reglages = el("div", { class: "pli-pile" },
       toggle("Petits sons", "Un « cling » quand tu coches un exercice, une mélodie quand un bloc ou un cours est fini.", () => Sons.sfx, v => { Sons.sfx = v; if (v) Sons.cling(); }));
     reglages.append(toggle("Voix dans les jeux", "Une voix naturelle lit les questions et les réponses des jeux.", () => Sons.voix, v => { Sons.voix = v; if (v) Sons.dire("D'accord, je lis les consignes des jeux."); }));
     reglages.append(toggle("Le prof te parle", "Il présente le cours quand tu lances la séance, et fait le bilan quand tu le termines.", profOn, v => { try { localStorage.setItem("maguitare:prof", v ? "1" : "0"); } catch {} if (!v) Sons.tais(); }));
     reglages.append(choixVoix());
     reglages.append(el("p", { class: "muted small", text: "Dans chaque bloc, les boutons « Écouter » lisent la consigne, le « pourquoi » et l'explication. Les phrases sont enregistrées d'avance : une phrase toute neuve (après une adaptation du cours) est lue par la voix de ton appareil, le temps que je l'enregistre." }));
-    body.append(reglages);
+    body.append(pli("sons", "Sons et voix", el("span", { class: "muted small", text: "Les petits sons, la voix des jeux, et la voix du prof." }), () => reglages));
 
     // Sauvegarde
     const fileIn = el("input", { type: "file", accept: "application/json,.json", hidden: true });
@@ -1223,16 +1240,25 @@
         toast("Sauvegarde restaurée."); renderTabs(); renderCours(); updateSeance(); renderBilan();
       } catch { toast("Ce fichier n'est pas une sauvegarde de Ma guitare."); }
     });
-    body.append(el("section", { class: "card", style: "display:flex;flex-direction:column;gap:10px" },
-      el("h2", { text: "Mes données" }),
+    body.append(pli("donnees", "Mes données", el("span", { class: "muted small", text: "Sauvegarder, restaurer, chercher une mise à jour du cours." }), () => el("div", { class: "pli-pile" },
       el("p", { class: "muted small", text: "Tes cases, tempos et commentaires restent sur cet appareil. Fais une sauvegarde de temps en temps, ou pour passer du téléphone à l'ordi." }),
       el("div", { class: "row-tools" },
         el("button", { class: "btn", type: "button", onclick: exportData }, "Sauvegarder"),
         el("button", { class: "btn", type: "button", onclick: () => fileIn.click() }, "Restaurer"),
         el("button", { class: "btn", type: "button", onclick: checkUpdate }, "Chercher une mise à jour du cours")),
       fileIn,
-      el("p", { class: "muted small", text: `Cours mis à jour le ${new Date(DATA.maj).toLocaleDateString("fr-FR")}.` }),
-    ));
+      el("p", { class: "muted small", text: `Cours mis à jour le ${new Date(DATA.maj).toLocaleDateString("fr-FR")}.` }))));
+  }
+
+  // Une carte du bilan qui se déplie : son titre et l'essentiel, le reste au toucher (construit à la première ouverture).
+  function pli(key, titre, resume, build, { ouvert = false, cls = "" } = {}) {
+    const k = "bilan/" + key, d = el("details", { class: ("card pli " + cls).trim(), open: state.open[k] ?? ouvert });
+    const corps = el("div", { class: "pli-corps" });
+    const remplir = () => { if (!corps.childElementCount) corps.append(...[build()].flat()); };
+    if (d.open) remplir();
+    d.addEventListener("toggle", () => { if (d.open) remplir(); if (state.open[k] !== d.open) { state.open[k] = d.open; save(); } });
+    d.append(el("summary", {}, el("div", { class: "pli-head" }, el("h2", { text: titre }), el("span", { class: "pli-chev", "aria-hidden": "true" })), resume), corps);
+    return d;
   }
 
   // Barres de progression : tout le parcours, puis chaque thème (exercices cochés sur les 36 cours).
@@ -1243,32 +1269,27 @@
     const bar = (n, t, cls = "") => el("div", { class: "progress " + cls, "aria-hidden": "true" }, el("i", { style: `width:${t ? (n / t) * 100 : 0}%` }));
     const nbDone = DATA.cours.filter(c => isDone(c.id)).length;
     const exDone = all.filter(a => a.x?.done).length;
-    const card = el("section", { class: "card progression" },
-      el("h2", { text: "Ma progression" }),
-      el("div", { class: "prog-main" },
-        el("div", { class: "prog-top" }, el("strong", { text: "Le parcours" }), el("span", { class: "prog-pct", text: pct(nbDone, DATA.cours.length) + " %" })),
-        bar(nbDone, DATA.cours.length, "big"),
-        el("span", { class: "muted small", text: `${nbDone} cours terminé${nbDone > 1 ? "s" : ""} sur ${DATA.cours.length} · ${exDone} exercices faits sur ${all.length}` })));
-    const list = el("div", { class: "prog-list" });
-    for (const t of DATA.themes || []) {
-      const mine = all.filter(a => a.theme === t.id);
-      if (!mine.length) continue;
-      const d = mine.filter(a => a.x?.done).length;
-      const fac = mine.filter(a => a.x?.feel === "facile").length, gal = mine.filter(a => a.x?.feel === "galere").length;
-      const bits = [`${d} / ${mine.length} exercices`];
-      if (fac) bits.push(`${fac} facile${fac > 1 ? "s" : ""}`);
-      if (gal) bits.push(`${gal} galère${gal > 1 ? "s" : ""}`);
-      const row = el("details", { class: "prog-row" });
-      const sum = el("summary", {},
-        el("div", { class: "prog-top" }, el("span", { text: t.label }), el("span", { class: "prog-pct", text: pct(d, mine.length) + " %" })),
-        bar(d, mine.length, "theme"),
-        el("span", { class: "muted small" }, bits.join(" · "), el("span", { class: "prog-voir", text: "Voir les exercices" })));
-      row.append(sum);
-      row.addEventListener("toggle", () => { if (row.open && !row.dataset.built) { row.dataset.built = "1"; row.append(themeDetail(mine)); } });
-      list.append(row);
-    }
-    card.append(list);
-    return card;
+    const resume = el("div", { class: "prog-main" },
+      el("div", { class: "prog-top" }, el("span", { class: "muted small", text: `${nbDone} cours sur ${DATA.cours.length} · ${exDone} exercices sur ${all.length}` }), el("span", { class: "prog-pct", text: pct(nbDone, DATA.cours.length) + " %" })),
+      bar(nbDone, DATA.cours.length, "big"));
+    return pli("progression", "Ma progression", resume, () => {
+      const list = el("div", { class: "prog-list" });
+      for (const t of DATA.themes || []) {
+        const mine = all.filter(a => a.theme === t.id);
+        if (!mine.length) continue;
+        const d = mine.filter(a => a.x?.done).length;
+        const fac = mine.filter(a => a.x?.feel === "facile").length, gal = mine.filter(a => a.x?.feel === "galere").length;
+        const bits = [`${d} exercices faits sur ${mine.length}`];
+        if (fac) bits.push(`${fac} facile${fac > 1 ? "s" : ""}`);
+        if (gal) bits.push(`${gal} galère${gal > 1 ? "s" : ""}`);
+        // une ligne par thème : son nom, sa barre, son pourcentage ; le détail au toucher
+        const row = el("details", { class: "prog-row" }, el("summary", {},
+          el("span", { class: "prog-nom", text: t.label }), bar(d, mine.length, "theme"), el("span", { class: "prog-pct", text: pct(d, mine.length) + " %" })));
+        row.addEventListener("toggle", () => { if (row.open && !row.dataset.built) { row.dataset.built = "1"; row.append(el("p", { class: "muted small prog-bits", text: bits.join(" · ") }), themeDetail(mine)); } });
+        list.append(row);
+      }
+      return list;
+    }, { cls: "progression" });
   }
 
   // Les exercices d'un thème, regroupés : leur palier, quand ils arrivent, où tu en es.
@@ -1310,32 +1331,48 @@
   }
 
   // Comment le cours est construit, tiré du cours lui-même
+  const BLOCS_NOMS = ["Échauffement", "Gamme", "Pentatonique", "Notes du manche", "Barrés et rythme", "Morceau"];
   function renderConstruction() {
-    const card = el("section", { class: "card construction" }, el("h2", { text: "Comment est construit ton cours" }));
-    const P = t => card.append(el("p", { text: t }));
-    P(`${DATA.cours.length} cours : 12 semaines de 3 séances (A, B et C), en 3 paliers de 4 semaines. Chaque séance dure environ 1 h 10 et suit toujours les mêmes 6 blocs, dans le même ordre : échauffement, gamme, pentatonique, notes du manche, barrés et rythme, morceau.`);
-    P("Le contenu change toutes les 2 semaines : chaque bloc apporte une nouveauté en semaine 1 et en semaine 3 de chaque palier. Pendant ces 2 semaines, tes 6 séances reprennent les mêmes exercices, et seul le bloc Morceau change un peu selon la séance. C'est voulu : un geste s'installe quand on le répète plusieurs jours de suite.");
-    P(`Les cours ${DATA.cours.filter(c => c.bilan).map(c => c.num).join(", ").replace(/, (\d+)$/, " et $1")} finissent chaque palier par un bilan de tests. Avec tous les tests réussis sauf un au plus, tu passes au palier suivant. Sinon, on ajoute une semaine sur ce qui manque. Et ton bilan de chaque semaine, envoyé après la séance C, me sert à adapter la semaine suivante.`);
-    for (const p of DATA.paliers) {
-      const pc = DATA.cours.filter(c => c.palier === p.num);
-      const d = el("details", { class: "constr-pal" }, el("summary", {},
-        el("strong", { text: `Palier ${p.num} · ${p.nom} : ${p.titre.toLowerCase()}` }),
-        el("span", { class: "muted small", text: `Semaines ${pc[0].semaine} à ${pc.at(-1).semaine} · cours ${pc[0].num} à ${pc.at(-1).num}` })));
-      d.append(el("p", { class: "small" }, el("strong", { text: "Le but : " }), p.but, " ", el("strong", { text: "Ta mission : " }), p.mission));
-      const weeks = [...new Set(pc.map(c => c.semaine))];
-      for (let h = 0; h < weeks.length; h += 2) {
-        const six = pc.filter(c => c.semaine === weeks[h] || c.semaine === weeks[h + 1]);
-        d.append(el("h4", { text: `Semaines ${weeks[h]} et ${weeks[h + 1]} · cours ${six[0].num} à ${six.at(-1).num}` }));
-        d.append(el("ol", { class: "constr-blocs" }, six[0].blocs.map((b, bi) => {
-          const labels = [...new Set(six.flatMap(c => c.blocs[bi].exercices.map(e => e.label)))];
-          return el("li", {}, el("strong", { text: b.titre.replace(/^\d+\.\s*/, "") }), el("span", { class: "muted", text: labels.join(" · ") }));
-        })));
+    const nbSem = new Set(DATA.cours.map(c => c.semaine)).size;
+    const resume = el("span", { class: "muted small", text: `${nbSem} semaines · ${DATA.paliers.length} paliers · 3 séances d'1 h 10 par semaine` });
+    return pli("construction", "Comment est construit ton cours", resume, () => {
+      const out = [];
+      out.push(el("div", { class: "constr-seance" }, el("span", { class: "eyebrow", text: "Chaque séance : 6 blocs, toujours dans cet ordre" }),
+        el("ol", { class: "constr-chips" }, BLOCS_NOMS.map(n => el("li", { text: n })))));
+      // trois principes : une ligne chacun, l'explication au toucher
+      const mini = (titre, texte) => el("details", { class: "mini" }, el("summary", { text: titre }), el("p", { class: "small", text: texte }));
+      out.push(mini("Une nouveauté par bloc toutes les 2 semaines",
+        "Chaque bloc apporte une nouveauté en semaine 1 et en semaine 3 de chaque palier. Pendant ces 2 semaines, tes 6 séances reprennent les mêmes exercices, et seul le bloc Morceau change un peu selon la séance. C'est voulu : un geste s'installe quand on le répète plusieurs jours de suite."));
+      out.push(mini("Un bilan de tests à la fin de chaque palier",
+        `Les cours ${DATA.cours.filter(c => c.bilan).map(c => c.num).join(", ").replace(/, (\d+)$/, " et $1")} finissent chaque palier par un bilan de tests. Avec tous les tests réussis sauf un au plus, tu passes au palier suivant. Sinon, on ajoute une semaine sur ce qui manque.`));
+      out.push(mini("Ton bilan de la semaine adapte la suite",
+        "Après la séance C, tu m'envoies ton bilan de la semaine : il regroupe tes 3 séances, et je m'en sers pour adapter la semaine suivante."));
+      const ici = nextCours().palier;
+      for (const p of DATA.paliers) {
+        const pc = DATA.cours.filter(c => c.palier === p.num);
+        const d = el("details", { class: "constr-pal" + (p.num === ici ? " ici" : "") }, el("summary", {},
+          el("span", { class: "constr-pal-top" }, el("strong", { text: `Palier ${p.num} · ${p.nom}` }), p.num === ici ? el("span", { class: "pill now", text: "Tu es ici" }) : null),
+          el("span", { class: "muted small", text: `${p.titre} · semaines ${pc[0].semaine} à ${pc.at(-1).semaine}` })));
+        d.addEventListener("toggle", () => {
+          if (!d.open || d.dataset.built) return;
+          d.dataset.built = "1";
+          d.append(el("p", { class: "small" }, el("strong", { text: "Le but : " }), p.but, " ", el("strong", { text: "Ta mission : " }), p.mission));
+          const weeks = [...new Set(pc.map(c => c.semaine))];
+          for (let h = 0; h < weeks.length; h += 2) {
+            const six = pc.filter(c => c.semaine === weeks[h] || c.semaine === weeks[h + 1]);
+            d.append(el("h4", { text: `Semaines ${weeks[h]} et ${weeks[h + 1]} · cours ${six[0].num} à ${six.at(-1).num}` }));
+            d.append(el("ol", { class: "constr-blocs" }, six[0].blocs.map((b, bi) => {
+              const labels = [...new Set(six.flatMap(c => c.blocs[bi].exercices.map(e => e.label)))];
+              return el("li", {}, el("strong", { text: b.titre.replace(/^\d+\.\s*/, "") }), el("span", { class: "muted", text: labels.join(" · ") }));
+            })));
+          }
+          const bil = pc.find(c => c.bilan);
+          if (bil) d.append(el("p", { class: "small constr-bilan" }, el("strong", { text: `Cours ${bil.num} · ${bil.bilan.titre} (${bil.bilan.tests.length} tests) : ` }), bil.bilan.tests.map(t => t.label).join(" · ") + "."));
+        });
+        out.push(d);
       }
-      const bil = pc.find(c => c.bilan);
-      if (bil) d.append(el("p", { class: "small constr-bilan" }, el("strong", { text: `Cours ${bil.num} · ${bil.bilan.titre} (${bil.bilan.tests.length} tests) : ` }), bil.bilan.tests.map(t => t.label).join(" · ") + "."));
-      card.append(d);
-    }
-    return card;
+      return out;
+    }, { cls: "construction" });
   }
 
   async function exportData() {
