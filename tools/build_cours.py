@@ -29,7 +29,7 @@ PALIERS = [
           "Sol7 = Sol avec un Fa en plus : le Mi aigu se joue case 1 au lieu de case 3.",
           "Les arpèges : le pouce (p) joue la basse, l'index (i) la corde de Sol, le majeur (m) la corde de Si et l'annulaire (a) le Mi aigu. Chaque doigt garde sa corde. Joue-les en pincé, lentement, avec le même volume sur chaque note (120 arpèges de Giuliani).",
         ],
-        "videos": [V("Exercices d'étirements de la main du manche", "https://www.youtube.com/watch?v=mlLPc915RLs"), V("L'araignée, un exercice pour l'indépendance des doigts", "https://www.youtube.com/watch?v=L7ZORKLDHVc"), V("Arpèges main droite PIMA", "https://www.youtube.com/watch?v=YReUxlS_4sY"), V("Giuliani's 120 Right-Hand Exercises (en anglais)", "https://www.youtube.com/watch?v=L1OscPf4NiA")],
+        "videos": [V("Bien s'échauffer avant de jouer, sans puis avec la guitare", "https://www.youtube.com/watch?v=YHSqWScgQvU"), V("L'araignée, cases 5 à 8, pas à pas (en anglais)", "https://www.youtube.com/watch?v=Msj5ZwcUAQQ"), V("Jouer des arpèges aux doigts : pouce sur la basse, i-m-a sur les cordes aiguës", "https://www.youtube.com/watch?v=sNZqpUwu-Hc"), V("Les 120 arpèges de Giuliani, avec le PDF (en anglais)", "https://www.youtube.com/watch?v=AXWetJHbUhA")],
         "positions": [{"label": "Do", "code": "x32010"}, {"label": "Sol7", "code": "320001"}],
         "moities": [
           {"faire": "Jeu facile (4 min), étirements (2 min), araignée cases 5 à 8 à 60 bpm (7 min), arpèges p-i-m-a et p-a-m-i sur Do puis Sol7 (7 min).",
@@ -118,7 +118,7 @@ PALIERS = [
         "explication": [
           "Main gauche seule, puis les deux mains lentement, puis tu enchaînes. Le pouce joue les basses et i-m-a les cordes aiguës, comme dans tes arpèges d'échauffement.",
         ],
-        "videos": [V("Apprendre les accords de Fragile de Sting", "https://www.youtube.com/watch?v=AeNQf3T-CJ0"), V("GuitAstuce : Fragile, tuto", "https://www.youtube.com/watch?v=rxFkOUI49v0")],
+        "videos": [V("Apprendre les accords de Fragile de Sting", "https://www.youtube.com/watch?v=AeNQf3T-CJ0"), V("Fragile : la vraie partie de guitare, en sixtes (en anglais)", "https://www.youtube.com/watch?v=8a1gXKQKvcE")],
         "moities": [
           {"faire": "Les passages qui accrochent, 2 mesures à la fois (une mesure = un groupe de temps, souvent 4, séparé par une barre verticale sur la tab), lentement.",
            "ex": [{"id": "passages", "label": "Fragile : les passages qui accrochent, 2 mesures à la fois"}]},
@@ -148,7 +148,7 @@ PALIERS = [
           "Les permutations : c'est l'araignée du palier 1, mais en changeant l'ordre des doigts. Les doigts qui ne jouent pas restent près des cordes, jamais crispés en l'air.",
           "Lié ascendant : index posé en case 5, tu joues la corde, puis un autre doigt frappe la case 6, 7 ou 8 d'un coup sec, comme un marteau, sans que la main droite rejoue. Lié descendant : les deux doigts sont posés, tu joues la note du haut, puis tu retires ce doigt en tirant légèrement la corde vers le sol. La 2e note doit sonner aussi fort que la 1re.",
         ],
-        "videos": [V("Indépendance des doigts de la main gauche", "https://www.youtube.com/watch?v=Lzm87u2y2VY"), V("Apprendre à jouer les hammer / pull-off", "https://www.youtube.com/watch?v=COzP3U5OG1A"), V("Comment travailler les hammers et les pull-offs", "https://www.youtube.com/watch?v=ODR6WoI_WC4")],
+        "videos": [V("Indépendance et contrôle des doigts de la main gauche", "https://www.youtube.com/watch?v=0HIJv86vSWs"), V("Apprendre à jouer les hammer / pull-off", "https://www.youtube.com/watch?v=COzP3U5OG1A"), V("3 conseils pour des liés faciles en guitare classique (en anglais)", "https://www.youtube.com/watch?v=b4Vxf-TCIhE")],
         "moities": [
           {"faire": "Jeu facile (4 min), étirements (2 min), permutations 1-3-2-4 puis 1-4-2-3 cases 5 à 8 à 60 bpm (7 min), liés ascendants (7 min).",
            "ex": [FACILE, ETIREMENTS, {"id": "permutations", "label": "Permutations 1-3-2-4 puis 1-4-2-3", "tempo": 60}, {"id": "lies", "label": "Liés ascendants"}]},
@@ -162,7 +162,7 @@ PALIERS = [
         "explication": [
           "En position fixe, la main ne bouge pas : un doigt par case sur 4 cases, comme l'araignée. La gamme commence sur le Sol de la 6e corde, case 3. Décale toute la forme et la gamme prend le nom de cette première note.",
         ],
-        "videos": [V("Gamme majeure de Sol, première position", "https://www.youtube.com/watch?v=P3PoCM_veUc"), V("Les positions de la gamme majeure", "https://www.youtube.com/watch?v=MrqsX1fzcLs")],
+        "videos": [V("La gamme de Sol majeur : formule et position au début du manche", "https://www.youtube.com/watch?v=XC1-y-gcA8k"), V("Les positions de la gamme majeure", "https://www.youtube.com/watch?v=MrqsX1fzcLs")],
         "moities": [
           {"faire": "Sol majeur : index case 2, auriculaire case 5, montée et descente à 60 bpm en butée, en disant les notes.",
            "ex": [{"id": "gamme", "label": "Sol majeur en position fixe, en butée", "tempo": 60}]},
@@ -204,7 +204,7 @@ PALIERS = [
         "explication": [
           "Sur la corde de Si, l'octave se décale de 3 cases au lieu de 2 : c'est la seule corde accordée différemment des autres.",
         ],
-        "videos": [V("Le manche de la guitare maîtrisé en 17 minutes", "https://www.youtube.com/watch?v=HDZx0XgrHgI"), V("Placer les notes sur le manche facilement", "https://www.youtube.com/watch?v=_m8qu8ogAug")],
+        "videos": [V("Notes du manche : la meilleure technique pour les mémoriser", "https://www.youtube.com/watch?v=WijDKCRDzfs"), V("Placer les notes sur le manche facilement", "https://www.youtube.com/watch?v=_m8qu8ogAug")],
         "moities": [
           {"faire": "Corde de Sol : 4 min à dire chaque note de la case 0 à 12 puis au hasard, 3 min à retrouver tous les Sol par les octaves, puis le jeu du bloc (3 min).",
            "ex": [{"id": "corde", "label": "Corde de Sol : notes de 0 à 12, puis au hasard (4 min)"}, {"id": "octaves", "label": "Octaves : tous les Sol du manche (3 min)"}]},
@@ -266,7 +266,7 @@ PALIERS = [
           "L'écartement vient après le jeu facile, jamais à froid. Commence par les cases hautes (5 à 8), plus étroites : vers la case 1, les cases sont plus larges et l'écart entre tes doigts grandit petit à petit. Stop à la moindre douleur : si ça tire dans la main, arrête et reprends le lendemain.",
           "1-3-1 en un seul coup de main droite : un lié ascendant puis un descendant. En semaines 11-12, la version d'Abel Carlevaro : pose l'auriculaire sur la corde voisine (case 8) et laisse-le posé pendant tes liés avec les autres doigts.",
         ],
-        "videos": [V("Exercices d'étirements de la main du manche", "https://www.youtube.com/watch?v=mlLPc915RLs"), V("Fixer un doigt ?! Exercices pour la main gauche", "https://www.youtube.com/watch?v=7F-AG0J6eV8"), V("Comment travailler les hammers et les pull-offs", "https://www.youtube.com/watch?v=ODR6WoI_WC4")],
+        "videos": [V("Exercices d'étirements de la main du manche", "https://www.youtube.com/watch?v=mlLPc915RLs"), V("Fixer un doigt ?! Exercices pour la main gauche", "https://www.youtube.com/watch?v=7F-AG0J6eV8"), V("3 conseils pour des liés faciles en guitare classique (en anglais)", "https://www.youtube.com/watch?v=b4Vxf-TCIhE")],
         "moities": [
           {"faire": "Jeu facile (4 min), étirements (2 min), puis l'écartement : l'araignée descend d'une case à chaque passage, en partant des cases hautes (5-8, 4-7, 3-6, 2-5, 1-4), à 60 bpm, stop à la moindre douleur (7 min). Enfin les liés 1-3-1 et 1-4-1 (7 min).",
            "ex": [FACILE, ETIREMENTS, {"id": "ecartement", "label": "Écartement : araignée de 5-8 jusqu'à 1-4", "tempo": 60}, {"id": "lies", "label": "Liés combinés 1-3-1 et 1-4-1"}]},
@@ -280,7 +280,7 @@ PALIERS = [
         "explication": [
           "La mineur utilise exactement les mêmes notes que Do majeur, mais en partant de La : La Si Do Ré Mi Fa Sol La. C'est la « relative » de Do majeur. L'alternance a-m muscle l'annulaire, et les triolets montrent si ton alternance est vraiment régulière. Pour les triolets, dis « tri-o-let » à chaque clic et joue une note par syllabe. Comme 3 est impair, chaque clic tombe sur un doigt différent : impossible de tricher.",
         ],
-        "videos": [V("La gamme mineure naturelle", "https://www.youtube.com/watch?v=s39Lt7wEpEU"), V("La gamme de Lam, une petite impro", "https://www.youtube.com/watch?v=JIs7PRgDrBo")],
+        "videos": [V("La gamme mineure naturelle", "https://www.youtube.com/watch?v=s39Lt7wEpEU"), V("Gammes mineures naturelle, harmonique et mélodique", "https://www.youtube.com/watch?v=Vp6OVxU6u0Y")],
         "moities": [
           {"faire": "Position fixe, cases 4 à 8, 70 bpm, montée et descente en butée i-m (le coup en butée du palier 1, en alternant index et majeur).",
            "ex": [{"id": "gamme", "label": "La mineur en butée i-m", "tempo": 70}, {"id": "phrygien", "label": "Mi phrygien en butée : Mi Fa Sol La Si Do Ré, la gamme de la cadence andalouse", "tempo": 60}]},
@@ -295,7 +295,7 @@ PALIERS = [
                "Astuces : de petits mouvements qui partent de la phalange du milieu, la main ne bouge pas. Alterne toujours, même quand tu changes de corde. La régularité d'abord, la vitesse ensuite.",
                "Erreur fréquente : jouer deux fois de suite avec le même doigt au changement de corde. Ça casse la régularité.",
              ]}],
-             "videos": [V("Tuto flamenco : rasgueado, arpèges, picado, trémolo, alzapúa (Fly Guitars)", "https://www.youtube.com/watch?v=MSM35pXTRPA"), V("Developing the picado technique, for beginner flamenco guitarists (en anglais)", "https://www.youtube.com/watch?v=4SjU9pfQbjo")],
+             "videos": [V("Le picado pas à pas, flamenco et classique (en anglais)", "https://www.youtube.com/watch?v=D-_kMZeXw3E"), V("Developing the picado technique, for beginner flamenco guitarists (en anglais)", "https://www.youtube.com/watch?v=4SjU9pfQbjo")],
              "schemas": ["picado"],
              "quand": ["Le picado, c'est ce qui fait sonner tes gammes comme du flamenco : dans les traits rapides des falsetas (les petites mélodies entre deux couplets) et dans les fins de phrase d'une impro."],
            }},
@@ -307,7 +307,7 @@ PALIERS = [
         "explication": [
           "Pour l'impro : des phrases courtes de 3 à 5 notes, des silences entre elles, et finis tes phrases sur La ou sur Mi. Glisse des liés dans tes phrases. Quand l'accord de Mi arrive, essaie Sol# (Sol dièse, une case au-dessus de Sol) à la place de Sol : c'est une note de l'accord de Mi, celle qui sonne « espagnol ».",
         ],
-        "videos": [V("Maîtriser les 5 positions (Simon Ghnassia)", "https://www.youtube.com/watch?v=H-knhchvGWc"), V("Apprendre la pentatonique, 5e position", "https://www.youtube.com/watch?v=fA-GVxcoemw"), V("3 exercices d'improvisation", "https://www.youtube.com/watch?v=mqwvMdhBYEM")],
+        "videos": [V("Exercices pour enchaîner les 5 positions de la pentatonique", "https://www.youtube.com/watch?v=CWU16INDe-A"), V("Apprendre la pentatonique, 5e position", "https://www.youtube.com/watch?v=fA-GVxcoemw"), V("3 exercices d'improvisation", "https://www.youtube.com/watch?v=mqwvMdhBYEM")],
         "moities": [
           {"faire": "Positions 4 (cases 0 à 3) et 5 (cases 2 à 5), une octave plus bas que sur le manche : elles sonnent mieux sur une guitare classique (6 min). Puis le vibrato (4 min) : une note tenue au majeur, case 7 de la corde de Sol, 4 temps sans vibrato puis 4 temps avec, lent (2 oscillations par clic à 60 bpm), puis avec chaque doigt. Enfin 5 min d'impro sur la position de ton choix, avec un vibrato sur la dernière note de chaque phrase.",
            "ex": [{"id": "penta45", "label": "Positions 4 et 5, une octave plus bas (cases 0 à 5) (6 min)", "tempo": 70},
@@ -364,7 +364,7 @@ PALIERS = [
         "explication": [
           "Main fermée, pouce posé sur la 6e corde. Les doigts s'ouvrent l'un après l'autre vers le sol et frappent les cordes avec l'ongle. Chaque coup doit s'entendre séparément, à intervalles égaux : c'est la régularité qui fait le roulement, pas la vitesse.",
         ],
-        "videos": [V("How to play rasgueado (en anglais)", "https://www.youtube.com/watch?v=_1kSB1u4pTY"), V("Le rasgueado en 4 doigts c-a-m-i", "https://www.youtube.com/watch?v=jNOMVXzlfAs")],
+        "videos": [V("How to play rasgueado (en anglais)", "https://www.youtube.com/watch?v=_1kSB1u4pTY"), V("Le rasgueado en 4 doigts c-a-m-i (en anglais)", "https://www.youtube.com/watch?v=jNOMVXzlfAs")],
         "positions": [{"label": "La mineur", "code": "x02210"}],
         "moities": [
           {"faire": "Rasgueado en 3 doigts (a, m, i) sur La mineur, lentement (7 min), puis la rumba sur la grille (8 min).",
@@ -392,7 +392,7 @@ PALIERS = [
         "explication": [
           "Bamboleo en rumba avec un rasgueado à la fin de chaque tour, puis 1 minute d'impro sur la grille enregistrée.",
         ],
-        "videos": [V("Bamboleo, full tutorial", "https://www.youtube.com/watch?v=SNlXBNy2Tuo"), V("Improviser n°1 : la pentatonique mineure", "https://www.youtube.com/watch?v=L6MArHsN2Mw")],
+        "videos": [V("Bamboleo : accords de base et variantes", "https://www.youtube.com/watch?v=CfO7CLHz3nw"), V("Improviser n°1 : la pentatonique mineure", "https://www.youtube.com/watch?v=L6MArHsN2Mw")],
         "positions": [{"label": "La mineur", "code": "x02210"}, {"label": "Sol", "code": "320003"}, {"label": "Fa", "code": "133211"}, {"label": "Mi", "code": "022100"}],
         "moities": [
           {"faire": "Bamboleo en rumba à 90 bpm avec un rasgueado à la fin de chaque tour, puis 1 minute d'impro.",
@@ -671,7 +671,7 @@ for p in PALIERS:
             cours.append(c)
 
 # ---------- Répertoire : morceaux au choix par palier (il choisit dans l'app, bloc Morceau) ----------
-# vidéos choisies sur leur titre (YouTube n'est pas joignable d'ici pour les vérifier)
+# vidéos vérifiées le 2026-10-24 (titre, chaîne, vues, durée, description, sous-titres)
 YT = lambda v: "https://www.youtube.com/watch?v=" + v
 def piece(id, style, titre, artiste, travaille, pourquoi, ecouter, tuto=None, des=1, niveau=1, techniques=(), interet="", palier=None, mission=False, tabs=(), plus=()):
     # des : semaine à partir de laquelle il se débloque ; niveau : 1 abordable, 2 moyen, 3 costaud (dans son palier)
@@ -686,7 +686,7 @@ YT_CHERCHE = lambda q: "https://www.youtube.com/results?search_query=" + q.repla
 # Les missions du cours : elles restent les morceaux de base, dans le bloc Morceau
 MISSIONS = [
     piece("fragile", "Pop, arpèges", "Fragile", "Sting", "Arpèges p-i-m-a, pouce sur les basses, accords qui s'enchaînent.",
-          "Ta mission du palier 1, puis en entretien.", "lB6a-iD6ZOY", "rxFkOUI49v0", des=1, niveau=2,
+          "Ta mission du palier 1, puis en entretien.", "lB6a-iD6ZOY", "8a1gXKQKvcE", des=1, niveau=2,
           tabs=[("Tablature (Ultimate Guitar, 4,75/5)", "https://tabs.ultimate-guitar.com/tab/sting/fragile-tabs-84266")],
           techniques=["Arpèges p-i-m-a", "Pouce sur les basses", "Enchaînements d'accords"],
           interet="Il réunit tout le palier 1 : ta main droite en arpèges et des accords qui changent sans casser le rythme. Un classique de la guitare nylon, dans le style que tu aimes.",
@@ -701,21 +701,21 @@ MISSIONS = [
 REPERTOIRE = {
     1: [
         piece("sos", "Chanson française", "Tous les cris, les S.O.S.", "Daniel Balavoine", "Accords ouverts, enchaînements, accompagnement régulier.",
-              "Ton morceau : tu l'as déjà commencé, ce palier sert à le jouer vraiment propre.", "urWV2OjAmUQ", des=1, niveau=1,
+              "Ton morceau : tu l'as déjà commencé, ce palier sert à le jouer vraiment propre.", "urWV2OjAmUQ", "WPH8TOvdsG0", des=1, niveau=1,
               techniques=["Accords ouverts", "Changements d'accords en rythme", "Accompagnement régulier"],
               interet="Tu le connais déjà en partie. Le jouer vraiment propre, c'est vérifier que chaque changement d'accord tombe pile en rythme, sans trou ni corde qui frise."),
         piece("sevillanas", "Flamenco", "Sevillanas : le rythme de base", "Traditionnel", "Compter en 3 temps sur des accords simples, premiers accents de la main droite.",
-              "Une entrée douce dans le flamenco, avant la rumba du palier 2.", "", "KGxuvqcVnEU", des=1, niveau=1,
+              "Une entrée douce dans le flamenco, avant la rumba du palier 2.", "", "ziKwNEzKw6c", des=1, niveau=1,
               tabs=[("Sevillana de base en Do, d'après Sabicas, tablatures gratuites (Ravenna Flamenco)", "https://ravennaflamenco.com/palos/sevillanas")],
               techniques=["Mesure à 3 temps", "Accents de la main droite", "Accords simples"],
               interet="Une première porte vers le flamenco, avec des accords que tu connais déjà. Compter en 3 temps et placer les accents prépare la rumba et le rasgueado."),
         piece("fields", "Pop", "Fields of Gold", "Sting", "Arpèges sur une grille d'accords, avec un Fa barré.",
-              "Si Fragile te plaît : le même style, quand ton Fa barré tient.", "KLVq0IAzh1A", des=2, niveau=2,
+              "Si Fragile te plaît : le même style, quand ton Fa barré tient.", "KLVq0IAzh1A", "sj_9-svbePA", des=2, niveau=2,
               tabs=[("Accords et tablature (JustinGuitar)", "https://www.justinguitar.com/songs/sting-fields-of-gold-chords-tabs-guitar-lesson-bs-803"), ("Tablature (Ultimate Guitar)", "https://tabs.ultimate-guitar.com/tab/sting/fields-of-gold-tabs-84265")],
               techniques=["Arpèges", "Fa barré", "Enchaînements d'accords"],
               interet="Le même univers que Fragile, sur une autre grille. Il met ton Fa barré dans un vrai morceau, au milieu des arpèges : le barré doit sonner sans casser le flux."),
         piece("tarrega-mim", "Classique, arpèges", "Étude en Mi mineur", "Francisco Tárrega", "Arpège p-i-m-a régulier, formes d'accords qui se déplacent sur le manche.",
-              "Le plus exigeant du palier : quand ton arpège p-i-m-a est régulier.", "5EdL4_J9Se0", "G2r-rdjuAWI", des=3, niveau=3,
+              "Le plus exigeant du palier : quand ton arpège p-i-m-a est régulier.", "2Rg4KJhzkOM", "G2r-rdjuAWI", des=3, niveau=3,
               tabs=[("Partition et tablature, PDF gratuit (This is Classical Guitar)", "https://thisisclassicalguitar.com/estudio-in-e-minor-tarrega-free-pdf"), ("Tablature (Ultimate Guitar)", "https://tabs.ultimate-guitar.com/tab/325357")],
               plus=[("Leçon pas à pas, en espagnol", "hUNcojDqvhI")],
               techniques=["Arpège p-i-m-a régulier", "Formes d'accords qui se déplacent", "Une vraie étude classique"],
@@ -728,13 +728,13 @@ REPERTOIRE = {
               techniques=["Arpèges d'accompagnement", "Barrés", "Enchaînements d'accords"],
               interet="Il demande des barrés sûrs et un accompagnement en arpèges qui coule. Au palier 2, tu as enfin les deux : c'est le moment de le maîtriser."),
         piece("djobi", "Rumba", "Djobi Djoba", "Gipsy Kings", "Rumba avec golpe, barrés, cadence andalouse.",
-              "Le même rythme que Bamboleo, pour varier.", "znxb6KtOo_c", des=6, niveau=2,
+              "Le même rythme que Bamboleo, pour varier.", "znxb6KtOo_c", "Qj1IerLbiz0", des=6, niveau=2,
               techniques=["Rumba avec golpe", "Barrés", "Cadence andalouse"],
               interet="La même famille que Bamboleo, en plus enlevé. Un rythme s'installe vraiment quand on le joue dans plusieurs morceaux : celui-ci fixe ta rumba."),
         piece("pompe", "Gypsy", "La pompe manouche sur Minor Swing", "Django Reinhardt", "Main droite alternée basse et accord, accords sans corde à vide.",
               "La base du jazz manouche, quand tes barrés forme La sont en place.", "", "VbBBpfOZ0z0", des=6, niveau=2,
               tabs=[("La pompe expliquée, avec vidéos (Guitare Jazz Manouche)", "https://guitarejazzmanouche.com/en_wiki/index.php/The_pompe")],
-              plus=[("La pompe décomposée", "vR4NSvfe9k4"), ("La pompe swing", "LCKfvDWBYs8")],
+              plus=[("La pompe jazz manouche, 3 choses à savoir", "4uddzoZhKTU")],
               techniques=["Pompe : basse puis accord", "Accords sans corde à vide", "Swing"],
               interet="La porte d'entrée du jazz manouche. La pompe muscle ta main droite et tes accords fermés, et prépare Les Yeux noirs au palier 3."),
         piece("romance", "Classique, arpèges", "Romance anonyme (Jeux interdits), 1re partie", "Anonyme", "Arpèges en triolets, mélodie sur la corde aiguë, un barré case 7.",
@@ -749,7 +749,7 @@ REPERTOIRE = {
               techniques=["Mélodie au pouce", "Rasgueado", "Mi phrygien"],
               interet="Le grand classique espagnol, en version accessible. Il met en musique exactement la gamme et le rasgueado que tu apprends au palier 3."),
         piece("yeuxnoirs", "Gypsy", "Les Yeux noirs (thème)", "Django Reinhardt", "Mélodie en mineure harmonique, puis la pompe dessous.",
-              "Ta gamme mineure du palier 3, dans le style que tu aimes.", "39k4pNjusq8", des=10, niveau=2,
+              "Ta gamme mineure du palier 3, dans le style que tu aimes.", "39k4pNjusq8", "Egpy_itN1k0", des=10, niveau=2,
               tabs=[("Accords (Ultimate Guitar)", "https://pt.ultimate-guitar.com/tab/django-reinhardt/les-yeux-noir-chords-453966")],
               techniques=["Mineure harmonique", "Jouer une mélodie", "Pompe manouche"],
               interet="Un standard du jazz manouche. Tu joues ta gamme mineure comme une vraie mélodie, puis tu l'accompagnes avec la pompe du palier 2."),
@@ -759,7 +759,7 @@ REPERTOIRE = {
               techniques=["Grands écarts de doigts", "Barrés", "Arpèges en triolets"],
               interet="La suite de la Romance, plus dure : des écarts larges et des barrés en position. C'est exactement l'écartement que tu travailles à l'échauffement du palier 3."),
         piece("shape", "Pop", "Shape of My Heart", "Sting", "Arpèges plus riches, accords en position, sons tenus.",
-              "La suite naturelle de Fragile, un cran plus dur, en fin de parcours.", "NlwIDxCjL-8", des=11, niveau=3,
+              "La suite naturelle de Fragile, un cran plus dur, en fin de parcours.", "NlwIDxCjL-8", "PMRF-Zv-yQw", des=11, niveau=3,
               tabs=[("Leçon et tablature (JustinGuitar, niveau avancé)", "https://www.justinguitar.com/songs/sting-shape-of-my-heart-chords-tabs-guitar-lesson-rf-015"), ("Tablature (Ultimate Guitar)", "https://pt.ultimate-guitar.com/tab/sting/shape-of-my-heart-tabs-956868")],
               techniques=["Arpèges riches", "Accords plus haut sur le manche", "Notes tenues"],
               interet="Un des morceaux de Sting les plus connus à la guitare, la suite naturelle de Fragile. Les accords montent sur le manche et les notes doivent tenir pendant l'arpège."),
@@ -768,12 +768,12 @@ REPERTOIRE = {
 # après le palier 3 : un palier 4 « Bossa » proposé (accords 7e, pouce régulier contre doigts décalés)
 BOSSA = [
     piece("ipanema", "Bossa nova", "Garota de Ipanema", "João Gilberto, Stan Getz", "Accords majeur 7 et mineur 7, rythme bossa.",
-          "Le standard pour commencer la bossa, en accompagnement.", "otGz6hz-AXo", "mhMoykUUgKA", des=13, niveau=2,
+          "Le standard pour commencer la bossa, en accompagnement.", "otGz6hz-AXo", "nwrIroFzdbY", des=13, niveau=2,
           tabs=[("Accords, rythme et tablature (Jazz Guitar Online)", "https://www.jazzguitar.be/blog/the-girl-from-ipanema-chords/")],
           techniques=["Accords majeur 7 et mineur 7", "Rythme bossa", "Pouce indépendant des doigts"],
           interet="Le standard de la bossa nova. Le pouce garde une basse régulière pendant que les doigts jouent en décalé : le sommet de l'indépendance des deux mains."),
     piece("corcovado", "Bossa nova", "Corcovado", "João Gilberto, Stan Getz", "Accords enrichis, rythme bossa plus lent.",
-          "Le deuxième standard, tout en douceur.", "kjilv-saThE", des=13, niveau=2,
+          "Le deuxième standard, tout en douceur.", "kjilv-saThE", "qfLYrOsL74g", des=13, niveau=2,
           tabs=[("Grille d'accords (Guitar Composer's Toolbox)", "https://www.guitarcomposerstoolbox.com/latin-standards/corcovado-in-c"), ("Accords (Ultimate Guitar)", "https://tabs.ultimate-guitar.com/tab/1528068")],
           techniques=["Accords enrichis", "Rythme bossa lent", "Toucher doux"],
           interet="Plus lent et plus doux qu'Ipanema : parfait pour soigner chaque accord enrichi et le toucher de la bossa."),
