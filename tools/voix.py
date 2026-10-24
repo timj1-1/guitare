@@ -93,6 +93,22 @@ def phrases_jeux():
     P += ["On continue, ça va venir.", "C'est en train de rentrer.", "Très bien !"]
     return P
 
+def phrases_niveaux():
+    """Les consignes lues par niveaux.js (à garder identiques)."""
+    P = []
+    S = list(NOM_CORDE)
+    BEMOL = ["Ré♭", "Mi♭", "Sol♭", "La♭", "Si♭"]
+    P += [f"Trouve tous les {n} sur {corde(s)}" for n in FR + BEMOL for s in S if n not in NATURALS]
+    P += ["Replace les notes manquantes.", "Replace la note manquante.", "Place toute la position, de mémoire."]
+    P += ["Quel est cet accord ?", "Écoute : majeur ou mineur ?"]
+    QP = {"maj": "", "min": " mineur", "7": " sept", "maj7": " majeur sept", "m7": " mineur sept"}
+    ouverts = [("Do", "maj"), ("Ré", "maj"), ("Mi", "maj"), ("Sol", "maj"), ("La", "maj"), ("La", "min"), ("Ré", "min"), ("Mi", "min"),
+               ("Do", "7"), ("Ré", "7"), ("Mi", "7"), ("Sol", "7"), ("La", "7"), ("Si", "7"),
+               ("Do", "maj7"), ("Fa", "maj7"), ("Sol", "maj7"), ("Ré", "maj7"), ("La", "maj7"), ("La", "m7"), ("Ré", "m7"), ("Mi", "m7")]
+    P += [f"Place l'accord de {r}{QP[q]}." for r, q in ouverts]
+    P += ["Bravo, niveau suivant débloqué !", "Nouveau record !", "Bien joué !", "Parfait !"]
+    return P
+
 EXEMPLE = "Salut Timothée ! Aujourd'hui, on travaille la gamme de Do majeur. Prends ton temps : un son propre vaut mieux qu'un tempo rapide."
 PHRASES_APP = [
     "D'accord, je lis les consignes des jeux.",
@@ -213,7 +229,7 @@ def main():
     ap.add_argument("--debit", type=float, default=1.0); ap.add_argument("--kbps", type=int, default=40)
     a = ap.parse_args()
 
-    textes = list(dict.fromkeys(norm(t) for t in phrases_cours() + phrases_jeux() + PHRASES_APP if norm(t)))
+    textes = list(dict.fromkeys(norm(t) for t in phrases_cours() + phrases_jeux() + phrases_niveaux() + PHRASES_APP if norm(t)))
     if a.dire: textes = [norm(a.dire)]
     if a.azure:
         ids = [v[0] for v in VOIX if v[4]] if a.azure == "toutes" else a.azure.split(",")

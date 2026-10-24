@@ -629,6 +629,7 @@ REPERTOIRE = {
               interet="Tu le connais déjà en partie. Le jouer vraiment propre, c'est vérifier que chaque changement d'accord tombe pile en rythme, sans trou ni corde qui frise."),
         piece("sevillanas", "Flamenco", "Sevillanas : le rythme de base", "Traditionnel", "Compter en 3 temps sur des accords simples, premiers accents de la main droite.",
               "Une entrée douce dans le flamenco, avant la rumba du palier 2.", "", "KGxuvqcVnEU", des=1, niveau=1,
+              tabs=[("Sevillana de base en Do, d'après Sabicas, tablatures gratuites (Ravenna Flamenco)", "https://ravennaflamenco.com/palos/sevillanas")],
               techniques=["Mesure à 3 temps", "Accents de la main droite", "Accords simples"],
               interet="Une première porte vers le flamenco, avec des accords que tu connais déjà. Compter en 3 temps et placer les accents prépare la rumba et le rasgueado."),
         piece("fields", "Pop", "Fields of Gold", "Sting", "Arpèges sur une grille d'accords, avec un Fa barré.",

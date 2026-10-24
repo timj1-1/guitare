@@ -55,7 +55,7 @@
   }
 
   // ---------- Navigation entre sections ----------
-  const VIEWS = ["cours", "morceaux", "manche", "bilan"];
+  const VIEWS = ["cours", "manche", "morceaux", "jeux", "bilan"]; // dans l'ordre de la barre du bas (balayage)
   // En revenant au cours (barre du bas, « ← Cours N », balayage), on retrouve l'endroit où on était.
   function go(view, opts = {}) {
     if (!VIEWS.includes(view)) view = "cours";
@@ -67,6 +67,7 @@
     if (view === "manche") openManche(opts.pos); else $("#backToCours").hidden = true;
     if (view === "bilan") renderBilan();
     if (view === "morceaux") renderMorceaux();
+    if (view === "jeux") renderJeux();
     if (view !== "cours") window.scrollTo({ top: 0 });
     else if (from !== "cours" || opts.restore) window.scrollTo({ top: coursScroll });
   }
@@ -319,6 +320,7 @@
       wasComplete = now; updateProgress();
     })));
     inner.append(ul);
+    const jb = jeuBloc(c, bi); if (jb) inner.append(jb);
 
     const more = el("details", { class: "more" }, el("summary", { text: "Explication et vidéos" }));
     const mi = el("div", { class: "more-in" });
@@ -438,18 +440,61 @@
       return (await new Promise(ok => c.toBlob(ok, "image/jpeg", 0.85))) || file;
     } catch { return file; }
   }
+  // La visionneuse plein écran des tablatures importées (photo ou PDF) : zoom avec − et +, ou double toucher.
+  // Les PDF sont dessinés par pdf.js (lib/pdfjs, chargé seulement à la première ouverture).
+  let pdfjs = null;
+  const chargePdf = () => (pdfjs ||= new Promise((ok, ko) => {
+    const sc = el("script", { src: "lib/pdfjs/pdf.min.js" });
+    sc.onload = () => { const L = window.pdfjsLib; if (!L) return ko(new Error("pdf.js")); L.GlobalWorkerOptions.workerSrc = "lib/pdfjs/pdf.worker.min.js"; ok(L); };
+    sc.onerror = () => { pdfjs = null; ko(new Error("pdf.js")); };
+    document.head.append(sc);
+  }));
   let fichierView = null;
-  function openFichier(blob, titre) {
+  async function openFichier(blob, titre) {
     if (!fichierView) {
       fichierView = el("dialog", { class: "fichier-view", "aria-label": "Tablature" });
-      fichierView.addEventListener("click", e => { if (e.target === fichierView || e.target.closest(".fv-close")) fichierView.close(); });
+      fichierView.addEventListener("click", e => { if (e.target.closest(".fv-close")) fichierView.close(); });
       document.body.append(fichierView);
     }
-    const url = URL.createObjectURL(blob);
-    fichierView.replaceChildren(el("div", { class: "fv-bar" }, el("strong", { text: titre }), el("button", { class: "icon-btn fv-close", type: "button", "aria-label": "Fermer", text: "✕" })),
-      el("div", { class: "fv-scroll" }, el("img", { src: url, alt: titre })));
-    fichierView.addEventListener("close", () => URL.revokeObjectURL(url), { once: true });
+    const pdf = blob.type === "application/pdf";
+    const pages = el("div", { class: "fv-pages" }), scroll = el("div", { class: "fv-scroll", "data-noswipe": "" }, pages);
+    const zt = el("span", { class: "fv-zoom", "aria-live": "polite", text: "100 %" });
+    let z = 1;
+    const zoom = k => {
+      const cx = scroll.scrollLeft + scroll.clientWidth / 2, cy = scroll.scrollTop + scroll.clientHeight / 2, r = Math.min(4, Math.max(1, k)) / z;
+      z *= r; pages.style.width = z * 100 + "%"; pages.style.maxWidth = z > 1 ? "none" : ""; zt.textContent = Math.round(z * 100) + " %";
+      scroll.scrollLeft = cx * r - scroll.clientWidth / 2; scroll.scrollTop = cy * r - scroll.clientHeight / 2;
+    };
+    scroll.addEventListener("dblclick", () => zoom(z > 1 ? 1 : 2));
+    const bouton = (txt, label, fn) => el("button", { class: "icon-btn fv-btn", type: "button", "aria-label": label, text: txt, onclick: fn });
+    fichierView.replaceChildren(
+      el("div", { class: "fv-bar" }, el("strong", { class: "fv-titre", text: titre }),
+        el("div", { class: "fv-outils" }, bouton("−", "Dézoomer", () => zoom(z / 1.4)), zt, bouton("+", "Zoomer", () => zoom(z * 1.4)), bouton("✕", "Fermer", () => fichierView.close()))),
+      scroll);
+    const urls = [];
+    fichierView.addEventListener("close", () => urls.forEach(u => URL.revokeObjectURL(u)), { once: true });
     openSheet(fichierView);
+    if (!pdf) { const u = URL.createObjectURL(blob); urls.push(u); pages.append(el("img", { src: u, alt: titre })); return; }
+    const attente = el("p", { class: "fv-attente", text: "J'ouvre le PDF…" });
+    pages.append(attente);
+    try {
+      const L = await chargePdf();
+      const doc = await L.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;
+      attente.remove();
+      // chaque page dessinée assez grande pour rester nette quand on zoome
+      const largeur = Math.min(2400, Math.max(1200, scroll.clientWidth * (window.devicePixelRatio || 1) * 2));
+      for (let i = 1; i <= doc.numPages; i++) {
+        if (!fichierView.open) break;
+        const page = await doc.getPage(i), v0 = page.getViewport({ scale: 1 }), vp = page.getViewport({ scale: largeur / v0.width });
+        const cv = el("canvas", { width: Math.floor(vp.width), height: Math.floor(vp.height), "aria-label": `${titre}, page ${i}` });
+        pages.append(cv);
+        await page.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise;
+      }
+    } catch {
+      // pdf.js indisponible : le PDF s'ouvre dans le lecteur de l'appareil
+      attente.textContent = "Je n'arrive pas à l'afficher ici : il s'ouvre dans un nouvel onglet.";
+      const u = URL.createObjectURL(blob); urls.push(u); window.open(u, "_blank");
+    }
   }
 
   const ajoutsDe = pz => ((state.ajouts ||= {})[pz.id] ||= { videos: [], tabs: [] });
@@ -496,19 +541,18 @@
   }
 
   // Les tablatures : celles que j'ai trouvées (liens), puis les tiennes (liens, photos, PDF). Chacune est un bouton :
-  // son nom, sa source en dessous (« Tablature (Ultimate Guitar) » → « Tablature » + « Ultimate Guitar »), et où elle s'ouvre.
+  // son nom (sans la source entre parenthèses) ; un contour laiton pour les miennes, vert pour les tiennes.
   const ICONE_TAB = {
     tab: '<path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke="currentColor" stroke-width="1.3" opacity=".55"/><circle cx="8" cy="10" r="1.9" fill="currentColor"/><circle cx="13" cy="14" r="1.9" fill="currentColor"/><circle cx="17" cy="6" r="1.9" fill="currentColor"/>',
     pdf: '<path d="M7 3h7l4 4v14H7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v4h4M9.5 12h5M9.5 15.5h5" stroke="currentColor" stroke-width="1.5"/>',
     photo: '<rect x="3.5" y="5" width="17" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="1.7" fill="currentColor"/><path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
   };
-  function tabCarte(t, { href, onclick, icone = "tab", source }) {
-    const m = !source && /^(.*?)\s*\((.+)\)$/.exec(t.t), nom = m ? m[1] : t.t;
-    source ||= m ? m[2] : href ? new URL(href).hostname.replace(/^www\./, "") : "";
+  function tabCarte(t, { href, onclick, icone = "tab", mine = false }) {
+    const nom = mine ? t.t : t.t.replace(/\s*\(.+\)$/, "");
     const ic = el("span", { class: "tab-ic", "aria-hidden": "true" }); ic.innerHTML = `<svg viewBox="0 0 24 24">${ICONE_TAB[icone]}</svg>`;
-    const kids = [ic, el("span", { class: "tab-txt" }, el("strong", { text: nom }), source ? el("span", { text: source }) : null),
-      el("span", { class: "tab-go", "aria-hidden": "true", text: href ? "↗" : "›" })];
-    return href ? el("a", { class: "tab-card", href, target: "_blank", rel: "noopener" }, kids) : el("button", { class: "tab-card", type: "button", onclick }, kids);
+    const kids = [ic, el("span", { class: "tab-txt" }, el("strong", { text: nom })), el("span", { class: "tab-go", "aria-hidden": "true", text: href ? "↗" : "›" })];
+    const cls = "tab-card" + (mine ? " mine" : ""), title = mine ? "Ta tablature" : t.t;
+    return href ? el("a", { class: cls, href, target: "_blank", rel: "noopener", title }, kids) : el("button", { class: cls, type: "button", title, onclick }, kids);
   }
   function listeTabs(pz, onChange) {
     const box = el("div", { class: "tabs-list" });
@@ -518,8 +562,8 @@
     mine.forEach(t => {
       const li = el("li", { class: "mine" });
       const pdf = t.type === "application/pdf";
-      li.append(t.u ? tabCarte(t, { href: t.u, source: "Ton lien" }) : tabCarte(t, { icone: pdf ? "pdf" : "photo", source: pdf ? "Ton PDF" : "Ta photo", onclick: async () => {
-        try { const f = await fichiers.get(t.f); if (!f) throw 0; if (f.type === "application/pdf") window.open(URL.createObjectURL(f), "_blank"); else openFichier(f, t.t); }
+      li.append(t.u ? tabCarte(t, { href: t.u, mine: true }) : tabCarte(t, { icone: pdf ? "pdf" : "photo", mine: true, onclick: async () => {
+        try { const f = await fichiers.get(t.f); if (!f) throw 0; openFichier(f, t.t); }
         catch { toast("Ce fichier n'est plus sur cet appareil : ajoute-le à nouveau."); }
       } }));
       li.append(el("button", { class: "icon-btn tab-x", type: "button", "aria-label": `Retirer ${t.t}`, text: "✕", onclick: async () => {
@@ -531,6 +575,7 @@
     });
     if (ul.children.length) box.append(ul);
     else box.append(el("p", { class: "muted small", text: "Pas encore de tablature : ajoute la tienne ci-dessous." }));
+    if (pz.tabs?.length && mine.length) box.append(el("p", { class: "tab-legende" }, el("span", { text: "Trouvées pour toi" }), el("span", { class: "mine", text: "Les tiennes" })));
     return box;
   }
 
@@ -1045,6 +1090,17 @@
         }
       }
     });
+    // les jeux à niveaux joués cette semaine : le meilleur score par jeu et par niveau
+    const NOMS_JEUX = { manche: "Notes du manche", gammes: "Gammes et penta", accords: "Accords", revision: "Révision du jour" };
+    const essais = new Map();
+    for (const r of (state.niveaux?.log || []).filter(r => r.w === w)) {
+      const k = r.f + "|" + r.n, e = essais.get(k) || { r, n: 0 };
+      e.n++; if (r.s > e.r.s) e.r = r; essais.set(k, e);
+    }
+    if (essais.size) {
+      L.push(""); L.push("Jeux à niveaux");
+      for (const { r, n } of essais.values()) L.push(`${NOMS_JEUX[r.f] || r.f}${r.n ? `, niveau ${r.n}` : ""} : ${r.n === 10 ? `série de ${r.s}` : `${r.s}/${r.t}`}${n > 1 ? ` (meilleur de ${n} essais)` : ""}`);
+    }
     for (const x of wk) if (x.bilan) {
       const s = cs(x.id);
       L.push(""); L.push(x.bilan.titre);
@@ -1168,30 +1224,6 @@
       body.append(el("section", { class: "card" }, el("h2", { text: "Mes semaines" }), el("div", { style: "height:8px" }), ul));
     }
 
-    // Jeux du manche, en libre
-    if (window.Jeux) {
-      const sel = new Set(state.jeuxCordes || [6, 5]);
-      const chips = el("div", { class: "row-tools" });
-      [6, 5, 4, 3, 2, 1].forEach(n => {
-        const b = el("button", { class: "btn small corde-chip", type: "button", "aria-pressed": String(sel.has(n)), text: Jeux.NOM_CORDE[n] });
-        b.addEventListener("click", () => {
-          if (sel.has(n) && sel.size > 1) sel.delete(n); else sel.add(n);
-          b.setAttribute("aria-pressed", String(sel.has(n))); state.jeuxCordes = [...sel]; save();
-        });
-        chips.append(b);
-      });
-      const cfg = mode => ({ mode, cordes: [...sel].sort((a, b) => b - a), label: Jeux.MODES[mode].titre });
-      body.append(el("section", { class: "card", style: "display:flex;flex-direction:column;gap:10px" },
-        el("h2", { text: "Jeux du manche" }),
-        el("p", { class: "muted small", text: "En dehors des cours, pour t'entraîner quand tu veux. Choisis tes cordes :" }),
-        chips,
-        el("div", { class: "row-tools" },
-          el("button", { class: "btn jeu-btn", type: "button", onclick: () => Jeux.open(cfg("trouve")) }, "▶ Trouve les notes"),
-          el("button", { class: "btn jeu-btn", type: "button", onclick: () => Jeux.open(cfg("nomme")) }, "▶ Quelle note ?"),
-          el("button", { class: "btn jeu-btn", type: "button", onclick: () => Jeux.open(cfg("octave")) }, "▶ Octaves"),
-          el("button", { class: "btn jeu-btn", type: "button", onclick: () => Jeux.open({ mode: "quiz", label: "Quiz du manche" }) }, "▶ Quiz 6 cordes"))));
-    }
-
     // Choix de la voix : la liste vient de voix/voix.json (une voix « prete » a toutes ses phrases enregistrées)
     function choixVoix() {
       const list = el("div", { class: "voix-list", role: "radiogroup", "aria-label": "Voix du prof" });
@@ -1248,6 +1280,121 @@
         el("button", { class: "btn", type: "button", onclick: checkUpdate }, "Chercher une mise à jour du cours")),
       fileIn,
       el("p", { class: "muted small", text: `Cours mis à jour le ${new Date(DATA.maj).toLocaleDateString("fr-FR")}.` }))));
+  }
+
+  // ---------- Jeux à niveaux (niveaux.js) ----------
+  // Le niveau proposé par chaque bloc, semaine par semaine (1 à 12), en lien avec ce que le bloc enseigne.
+  const JEU_BLOC = {
+    1: { f: "gammes", sem: [2, 2, 2, 2, 5, 5, 7, 7, 8, 8, 8, 10] },  // gamme : Do majeur, Sol majeur, La majeur, La mineur
+    2: { f: "gammes", sem: [1, 1, 3, 4, 6, 6, 7, 7, 9, 9, 10, 10] }, // pentatonique : positions 1 à 5
+    3: { f: "manche", sem: [3, 3, 4, 4, 5, 5, 5, 5, 6, 7, 8, 9] },   // notes du manche : la corde du moment
+    4: { f: "accords", sem: [5, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9, 10] }, // barrés : forme Mi, forme La, partout, à l'oreille
+  };
+  const NIV = () => window.Jeux?.niveaux;
+  if (window.Jeux) {
+    Jeux.memoire = () => (state.niveaux ||= {});
+    Jeux.sauve = save;
+    Jeux.semaine = () => nextCours().semaine;
+    // le cours ouvre d'office les niveaux de sa semaine
+    Jeux.niveauCours = f => Math.max(1, ...Object.values(JEU_BLOC).filter(x => x.f === f).map(x => x.sem[Math.min(11, nextCours().semaine - 1)]));
+  }
+  const dernierEssai = (f, n) => (state.niveaux?.log || []).filter(x => x.f === f && x.n === n).at(-1);
+
+  // Dans un bloc : son jeu au niveau de la semaine, avec − et + pour descendre ou monter
+  function jeuBloc(c, bi) {
+    const J = JEU_BLOC[bi], N = NIV(); if (!J || !N) return null;
+    const F = N.FAMILLES[J.f];
+    let n = J.sem[Math.min(11, c.semaine - 1)];
+    const titre = el("strong"), desc = el("span", { class: "muted small" }), last = el("p", { class: "jeu-last" });
+    const moins = el("button", { class: "icon-btn niv-step", type: "button", "aria-label": "Niveau plus facile", text: "−" });
+    const plus = el("button", { class: "icon-btn niv-step", type: "button", "aria-label": "Niveau plus dur", text: "+" });
+    const sync = () => {
+      const max = N.debloque(J.f);
+      titre.textContent = `${F.titre} · niveau ${n}`; desc.textContent = F.niveaux[n - 1].txt;
+      moins.disabled = n <= 1; plus.disabled = n >= Math.min(10, max);
+      const r = dernierEssai(J.f, n), best = N.etat(J.f).best[n];
+      last.textContent = r ? `Dernier essai : ${n === 10 ? "série de " + r.s : r.s + "/" + r.t}` + (best != null ? ` · record ${n === 10 ? best : best + "/10"}` : "") : "";
+      last.hidden = !r;
+    };
+    moins.addEventListener("click", () => { n--; sync(); });
+    plus.addEventListener("click", () => { n++; sync(); });
+    const jouer = el("button", { class: "btn small jeu-btn", type: "button", onclick: () => N.ouvrir(J.f, n, { onDone: sync }) }, "▶ Jouer");
+    sync();
+    return el("div", { class: "niv-bloc" },
+      el("span", { class: "eyebrow", text: "Le jeu du bloc" }), titre, desc,
+      el("div", { class: "niv-bloc-row" }, moins, plus, jouer), last);
+  }
+
+  // Les jeux libres du manche (sans niveaux), sur les cordes de ton choix
+  function jeuxLibres() {
+    const sel = new Set(state.jeuxCordes || [6, 5]);
+    const chips = el("div", { class: "row-tools" });
+    [6, 5, 4, 3, 2, 1].forEach(n => {
+      const b = el("button", { class: "btn small corde-chip", type: "button", "aria-pressed": String(sel.has(n)), text: Jeux.NOM_CORDE[n] });
+      b.addEventListener("click", () => {
+        if (sel.has(n) && sel.size > 1) sel.delete(n); else sel.add(n);
+        b.setAttribute("aria-pressed", String(sel.has(n))); state.jeuxCordes = [...sel]; save();
+      });
+      chips.append(b);
+    });
+    const cfg = mode => ({ mode, cordes: [...sel].sort((a, b) => b - a), label: Jeux.MODES[mode].titre });
+    const d = el("details", { class: "mini" }, el("summary", { text: "Jeux libres, sur les cordes de ton choix (avec le micro)" }));
+    d.append(el("div", { class: "pli-pile", style: "margin-top:8px" },
+      el("p", { class: "muted small", text: "Sans niveaux, pour t'entraîner quand tu veux. Le mode écoute reconnaît les notes jouées sur ta guitare. Choisis tes cordes :" }),
+      chips,
+      el("div", { class: "row-tools" },
+        el("button", { class: "btn small jeu-btn", type: "button", onclick: () => Jeux.open(cfg("trouve")) }, "▶ Trouve les notes"),
+        el("button", { class: "btn small jeu-btn", type: "button", onclick: () => Jeux.open(cfg("nomme")) }, "▶ Quelle note ?"),
+        el("button", { class: "btn small jeu-btn", type: "button", onclick: () => Jeux.open(cfg("octave")) }, "▶ Octaves"),
+        el("button", { class: "btn small jeu-btn", type: "button", onclick: () => Jeux.open({ mode: "quiz", label: "Quiz du manche" }) }, "▶ Quiz 6 cordes"))));
+    return d;
+  }
+
+  function renderJeux() {
+    const body = $("#jeuxBody"), N = NIV();
+    body.replaceChildren(el("div", { class: "cours-head" },
+      el("span", { class: "eyebrow", text: "Jeux" }),
+      el("h1", { text: "Apprendre en jouant" }),
+      el("p", { class: "sub", text: "10 niveaux par jeu. 8 bonnes réponses sur 10 ouvrent le niveau suivant, et ce que tu rates revient plus souvent." })));
+    if (!N) return;
+    const refresh = () => renderJeux();
+    // Révision du jour
+    const nb = N.aReviser().length;
+    body.append(el("section", { class: "card niv-rev" },
+      el("div", {}, el("h2", { text: "Révision du jour" }),
+        el("p", { class: "muted small", text: nb ? `${nb} note${nb > 1 ? "s, gammes ou accords" : ", gamme ou accord"} à revoir, les 3 jeux mélangés.` : "Rien de raté à revoir : je mélange des questions de tes niveaux." })),
+      el("button", { class: "btn primary", type: "button", onclick: () => N.revision({ onDone: refresh }) }, "▶ Réviser")));
+    const sem = Math.min(12, nextCours().semaine);
+    for (const [f, F] of Object.entries(N.FAMILLES)) {
+      const { max, best } = N.etat(f);
+      const auCours = [...new Set(Object.values(JEU_BLOC).filter(x => x.f === f).map(x => x.sem[sem - 1]))];
+      state.jeuxNiv ||= {};
+      let n = Math.min(state.jeuxNiv[f] || max, max);
+      const pips = el("div", { class: "niv-pips", role: "radiogroup", "aria-label": "Choisir un niveau" });
+      const desc = el("p", { class: "niv-desc" }), rec = el("p", { class: "muted small niv-rec" });
+      const jouer = el("button", { class: "btn primary", type: "button" });
+      const sync = () => {
+        pips.querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-checked", String(i + 1 === n)));
+        desc.replaceChildren(el("strong", { text: `Niveau ${n} : ` }), F.niveaux[n - 1].txt);
+        const b = best[n];
+        rec.textContent = (b != null ? (n === 10 ? `Record : série de ${b}` : `Record : ${b}/10`) : "Pas encore joué") + (auCours.includes(n) ? " · c'est le niveau du cours cette semaine" : "");
+        jouer.textContent = `▶ Jouer le niveau ${n}`;
+      };
+      for (let i = 1; i <= 10; i++) {
+        const passe = i === 10 ? best[10] > 0 : best[i] >= 8;
+        const b = el("button", { type: "button", role: "radio", class: "niv-pip" + (passe ? " passe" : "") + (auCours.includes(i) ? " cours" : ""), disabled: i > max, "aria-label": `Niveau ${i}`, text: String(i) });
+        b.addEventListener("click", () => { n = i; state.jeuxNiv[f] = i; save(); sync(); });
+        pips.append(b);
+      }
+      jouer.addEventListener("click", () => N.ouvrir(f, n, { onDone: refresh }));
+      sync();
+      const card = el("section", { class: "card niv-fam" },
+        el("div", { class: "niv-fam-head" }, el("h2", { text: F.titre }), el("span", { class: "muted small", text: `${max} niveau${max > 1 ? "x" : ""} ouvert${max > 1 ? "s" : ""} sur 10` })),
+        pips, desc, rec, el("div", { class: "row-tools" }, jouer));
+      if (f === "manche" && window.Jeux) card.append(jeuxLibres());
+      body.append(card);
+    }
+    body.append(el("p", { class: "muted small niv-note", text: "Le niveau 10 est sans fin : 3 vies, et ton record est gardé. Il sert à rester solide. Dans le cours, chaque bloc te propose son jeu au niveau de la semaine." }));
   }
 
   // Une carte du bilan qui se déplie : son titre et l'essentiel, le reste au toucher (construit à la première ouverture).
@@ -1350,9 +1497,11 @@
       const ici = nextCours().palier;
       for (const p of DATA.paliers) {
         const pc = DATA.cours.filter(c => c.palier === p.num);
+        const faits = pc.filter(c => isDone(c.id)).length;
         const d = el("details", { class: "constr-pal" + (p.num === ici ? " ici" : "") }, el("summary", {},
           el("span", { class: "constr-pal-top" }, el("strong", { text: `Palier ${p.num} · ${p.nom}` }), p.num === ici ? el("span", { class: "pill now", text: "Tu es ici" }) : null),
-          el("span", { class: "muted small", text: `${p.titre} · semaines ${pc[0].semaine} à ${pc.at(-1).semaine}` })));
+          el("span", { class: "muted small", text: `${p.titre} · semaines ${pc[0].semaine} à ${pc.at(-1).semaine} · ${faits} cours sur ${pc.length} faits` }),
+          el("div", { class: "progress theme", "aria-hidden": "true" }, el("i", { style: `width:${(faits / pc.length) * 100}%` }))));
         d.addEventListener("toggle", () => {
           if (!d.open || d.dataset.built) return;
           d.dataset.built = "1";
@@ -1554,7 +1703,7 @@
     if (state.repertoire) { for (const ids of Object.values(state.repertoire)) for (const id of ids) (state.morceaux ||= {})[id] ||= "travail"; delete state.repertoire; save(); }
     if (!state.current || !byId(state.current)) state.current = nextCours().id;
     renderTabs(); renderCours(); updateSeance();
-    go(["bilan", "morceaux"].includes(state.view) ? state.view : "cours");
+    go(["bilan", "morceaux", "jeux"].includes(state.view) ? state.view : "cours");
   }
   boot();
 

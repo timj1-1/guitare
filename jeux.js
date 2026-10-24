@@ -40,7 +40,8 @@
   try { soundOn = localStorage.getItem("maguitare:son") !== "0"; } catch {}
 
   // ---------- Le manche du jeu ----------
-  function Board(host, { vertical }) {
+  // frets : nombre de cases (12 par défaut, jusqu'à 15 pour les gammes hautes)
+  function Board(host, { vertical, frets: FRETS = 12 }) {
     const cells = new Map();
     const strings = [6, 5, 4, 3, 2, 1];
     const W = vertical ? 330 : 760, H = vertical ? 600 : 250;
@@ -50,6 +51,7 @@
     const openSpan = vertical ? 46 : 54;
     const lenAvail = (vertical ? H : W) - padA - openSpan - 10;
     const fretLen = lenAvail / FRETS;
+    const r = Math.min(15, fretLen * 0.36 + 2); // rayon des pastilles : plus petit quand il y a plus de cases
     const crossPad = vertical ? 38 : 24;
     const crossSpan = (vertical ? W : H) - crossPad - 16;
     const gap = crossSpan / 6;
@@ -65,13 +67,14 @@
     rect(wire(0), c0, wire(FRETS) - wire(0), c1 - c0, { class: "jb-wood", rx: 4 });
     // repères
     [3, 5, 7, 9].forEach(f => { const [x, y] = vertical ? [(c0 + c1) / 2, along(f)] : [along(f), (c0 + c1) / 2]; root.append(svg("circle", { cx: x, cy: y, r: 7, class: "jb-inlay" })); });
-    [-1, 1].forEach(k => { const m = (c0 + c1) / 2 + k * gap * 1.5; const [x, y] = vertical ? [m, along(12)] : [along(12), m]; root.append(svg("circle", { cx: x, cy: y, r: 7, class: "jb-inlay" })); });
+    if (FRETS >= 15) { const [x, y] = vertical ? [(c0 + c1) / 2, along(15)] : [along(15), (c0 + c1) / 2]; root.append(svg("circle", { cx: x, cy: y, r: 7, class: "jb-inlay" })); }
+    if (FRETS >= 12) [-1, 1].forEach(k => { const m = (c0 + c1) / 2 + k * gap * 1.5; const [x, y] = vertical ? [m, along(12)] : [along(12), m]; root.append(svg("circle", { cx: x, cy: y, r: 7, class: "jb-inlay" })); });
     for (let f = 0; f <= FRETS; f++) line(wire(f), c0, wire(f), c1, { class: f === 0 ? "jb-nut" : "jb-fret" });
     strings.forEach(s => line(padA + 6, cross(s), wire(FRETS), cross(s), { class: "jb-string", "stroke-width": 0.9 + (s - 1) * 0.42 }));
     // numéros de case et noms de cordes
     for (let f = 1; f <= FRETS; f++) {
       const [x, y] = vertical ? [14, along(f) + 5] : [along(f), H - 6];
-      root.append(Object.assign(svg("text", { x, y, class: "jb-num" + ([3, 5, 7, 9, 12].includes(f) ? " strong" : ""), "text-anchor": "middle" }), { textContent: f }));
+      root.append(Object.assign(svg("text", { x, y, class: "jb-num" + ([3, 5, 7, 9, 12, 15].includes(f) ? " strong" : ""), "text-anchor": "middle" }), { textContent: f }));
     }
     strings.forEach(s => {
       const [x, y] = vertical ? [cross(s), 14] : [14, cross(s) + 5];
@@ -86,7 +89,7 @@
         const g = svg("g", { class: "jb-cell", "data-s": s, "data-f": f });
         const hw = vertical ? gap / 2 : fretLen / 2, hh = vertical ? fretLen / 2 : gap / 2;
         g.append(svg("rect", { x: x - (vertical ? hw : (f === 0 ? openSpan / 2 : hw)), y: y - (vertical ? (f === 0 ? openSpan / 2 : hh) : hh), width: vertical ? gap : (f === 0 ? openSpan : fretLen), height: vertical ? (f === 0 ? openSpan : fretLen) : gap, class: "jb-hit" }));
-        const dot = svg("circle", { cx: x, cy: y, r: 15, class: "jb-dot" });
+        const dot = svg("circle", { cx: x, cy: y, r, class: "jb-dot" });
         const txt = Object.assign(svg("text", { x, y: y + 5, "text-anchor": "middle", class: "jb-label" }), { textContent: "" });
         g.append(dot, txt);
         layer.append(g);
@@ -102,7 +105,10 @@
       },
       clear() { cells.forEach(c => { c.g.setAttribute("data-state", ""); c.txt.textContent = ""; }); },
       clearState(st) { cells.forEach(c => { if (c.g.getAttribute("data-state") === st) { c.g.setAttribute("data-state", ""); c.txt.textContent = ""; } }); },
-      dim(onlyStrings) { cells.forEach((c, k) => c.g.classList.toggle("dimmed", !!onlyStrings && !onlyStrings.includes(+k.split(":")[0]))); },
+      // win : [première case, dernière case] ; les cases en dehors sont grisées
+      dim(onlyStrings, win) {
+        cells.forEach((c, k) => { const [s, f] = k.split(":").map(Number); c.g.classList.toggle("dimmed", (!!onlyStrings && !onlyStrings.includes(s)) || (!!win && (f < win[0] || f > win[1]))); });
+      },
       onClick(fn) {
         root.addEventListener("click", e => {
           const g = e.target.closest(".jb-cell"); if (!g || g.classList.contains("dimmed")) return;
@@ -480,5 +486,7 @@
   const resume = r => `${r.label}${r.ecoute ? " (à l'écoute)" : ""} : ${r.ask || (r.mode === "nomme" && !r.ecoute) ? `${r.score}/${r.total} justes` : `${r.score}/${r.total} tours sans faute, ${r.errors} erreur${r.errors > 1 ? "s" : ""}`}`
     + (r.hints ? `, ${r.hints} indice${r.hints > 1 ? "s" : ""}` : "") + (r.solved ? `, ${r.solved} résolu${r.solved > 1 ? "s" : ""}` : "")
     + `${r.ms ? `, ${(r.ms / 1000).toFixed(1).replace(".", ",")} s par note` : ""}`;
-  window.Jeux = { open, resume, MODES, NOM_CORDE, ecouteEnCours: () => !!mic };
+  window.Jeux = { open, resume, MODES, NOM_CORDE, ecouteEnCours: () => !!mic,
+    // pour les jeux à niveaux (niveaux.js)
+    base: { Board, el, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, nameOf, shuffle, pick, play, son: { get: () => soundOn, set: v => { soundOn = !!v; try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} } } } };
 })();
