@@ -1,4 +1,4 @@
-/* Ma guitare : mon cours, mon manche, mon bilan */
+/* Ma gratte : mon cours, mon manche, mon bilan */
 (() => {
   "use strict";
 
@@ -168,7 +168,8 @@
   }
 
   // ---------- Un cours ----------
-  const ICON_POS = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2.5" width="8" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="9.8" r="1.6" fill="currentColor"/></svg>';
+  // un bout de manche vu comme une grille d'accord : sillet, 2 cases, un doigt posé
+  const ICON_POS = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 7.6h14" stroke="currentColor" stroke-width="2.4"/><path d="M5 12.2h14M5 16.4h14" stroke="currentColor" stroke-width="1.2"/><path d="M9.7 7.6v12.9M14.3 7.6v12.9" stroke="currentColor" stroke-width="1"/><circle cx="14.3" cy="10" r="1.7" fill="currentColor"/></svg>';
   const CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const ICON_TIMER = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 13.5V9.5M9.5 2.5h5M12 2.5V6M18.4 6.6l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   const ICON_SPEAK = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
@@ -624,46 +625,79 @@
       formAjout(pz, onChange));
   }
 
+  // « Pour le maîtriser » : les notions du morceau et les jeux qui t'y préparent, repliés dans la fiche
+  function maitriserBox(pz) {
+    const M = pz.maitriser; if (!M) return null;
+    const k = "maitriser/" + pz.id, d = el("details", { class: "maitriser", open: !!state.open[k] });
+    d.addEventListener("toggle", () => { state.open[k] = d.open; save(); });
+    const N = NIV();
+    d.append(el("summary", {}, el("span", { class: "mt-titre", text: "Pour le maîtriser" }),
+      el("span", { class: "mt-resume", text: [M.notions?.length && `${M.notions.length} notion${M.notions.length > 1 ? "s" : ""}`, M.jeux?.length && `${M.jeux.length} jeu${M.jeux.length > 1 ? "x" : ""}`].filter(Boolean).join(" · ") })));
+    const corps = el("div", { class: "mt-corps" });
+    if (M.notions?.length) corps.append(el("ul", { class: "mt-notions" }, M.notions.map(n => el("li", {}, el("strong", { text: n.t }), el("span", { text: n.d })))));
+    if (M.jeux?.length && N) {
+      corps.append(el("span", { class: "eyebrow", text: "Les jeux qui t'y préparent" }));
+      corps.append(el("div", { class: "mt-jeux" }, M.jeux.map(j => {
+        const F = N.FAMILLES[j.f]; if (!F) return null;
+        const n = Math.min(j.n, N.debloque(j.f)), bas = n < j.n;
+        return el("button", { class: "mt-jeu", type: "button", onclick: () => N.ouvrir(j.f, n, { source: "morceau:" + pz.id }) },
+          el("span", { class: "mt-jeu-nom", text: `${F.titre} · niveau ${n}` }),
+          el("span", { class: "mt-jeu-p", text: j.p + (bas ? ` (le niveau ${j.n} s'ouvrira en avançant)` : "") }));
+      })));
+    }
+    d.append(corps);
+    return d;
+  }
+
   function morceauCard(pz, sem, refresh) {
     const lock = verrou(pz, sem), st = statutDe(pz, sem);
     const li = el("li", { class: "piece" + (lock ? " locked" : "") + (st === "travail" ? " chosen" : "") + (st === "maitrise" ? " mastered" : "") });
     const nv = pz.niveau || 0;
-    // toucher le morceau ouvre sa fiche ; les morceaux en cours sont ouverts, sauf si tu l'as refermée
+    // toucher le titre ouvre la fiche ; les morceaux en cours sont ouverts, sauf si tu l'as refermée
     const ouvKey = "morceau/" + pz.id;
-    const fiche = el("details", { class: "piece-fiche", open: state.open[ouvKey] ?? st === "travail" });
-    fiche.addEventListener("toggle", () => { if (state.open[ouvKey] !== fiche.open) { state.open[ouvKey] = fiche.open; save(); } });
-    const corps = el("div", { class: "piece-corps" });
+    let ouvert = state.open[ouvKey] ?? st === "travail";
+    const corps = el("div", { class: "piece-corps", hidden: !ouvert });
+    const head = el("button", { class: "piece-head", type: "button", "aria-expanded": String(ouvert) },
+      el("span", { class: "piece-titres" },
+        pz.mission ? el("span", { class: "piece-tag mission", text: "Mission du cours" }) : pz.perso ? el("span", { class: "piece-tag", text: "Ton morceau" }) : null,
+        el("span", { class: "piece-titre", text: pz.titre }),
+        pz.artiste ? el("span", { class: "piece-artiste", text: pz.artiste }) : null),
+      el("span", { class: "pli-chev", "aria-hidden": "true" }));
+    head.addEventListener("click", () => {
+      ouvert = !ouvert; corps.hidden = !ouvert; head.setAttribute("aria-expanded", String(ouvert));
+      li.classList.toggle("ouvert", ouvert); state.open[ouvKey] = ouvert; save();
+    });
+    li.classList.toggle("ouvert", ouvert);
     const draw = () => {
       corps.replaceChildren();
-      if (pz.interet) corps.append(el("p", { class: "small" }, el("strong", { text: "Pourquoi le travailler : " }), pz.interet));
-      if (pz.techniques?.length) corps.append(el("div", { class: "tech" }, el("span", { class: "muted small", text: "Ce qu'il te fait travailler :" }),
-        el("ul", {}, pz.techniques.map(t => el("li", { text: t })))));
-      if (!pz.perso) corps.append(el("p", { class: "muted small quand-pz", text: lock ? `${quandTxt(pz)} : tu peux l'écouter, et le travailler quand le cours t'aura donné sa technique.` : pz.mission && pz.id === "fragile" && sem > 4 ? "En entretien : une fois en entier à la séance A." : "Débloqué : tu as la technique." }));
+      if (pz.interet) corps.append(el("p", { class: "piece-interet" }, pz.interet));
+      if (pz.techniques?.length) corps.append(el("div", { class: "tech" }, el("ul", {}, pz.techniques.map(t => el("li", { text: t })))));
+      if (!pz.perso && lock) corps.append(el("p", { class: "muted small quand-pz", text: `${quandTxt(pz)} : tu peux l'écouter, et le travailler quand le cours t'aura donné sa technique.` }));
+      else if (pz.mission && pz.id === "fragile" && sem > 4) corps.append(el("p", { class: "muted small quand-pz", text: "En entretien : une fois en entier à la séance A." }));
       corps.append(ficheMorceau(pz, () => { const o = corps.querySelector(".ajout")?.open; draw(); if (o) corps.querySelector(".ajout").open = true; }));
+      const mt = maitriserBox(pz); if (mt) corps.append(mt);
     };
     draw();
-    fiche.append(el("summary", { class: "piece-head" },
-      pz.mission ? el("span", { class: "chip mission", text: "Mission du cours" }) : null,
-      pz.perso ? el("span", { class: "chip", text: "Ton morceau" }) : el("span", { class: "chip", text: pz.style }),
-      nv ? el("span", { class: "niveau n" + nv, title: "Difficulté dans son niveau", text: "●".repeat(nv) + "○".repeat(3 - nv) + " " + NIVEAU[nv] }) : null,
-      el("strong", { text: pz.titre }), pz.artiste ? el("span", { class: "muted small", text: pz.artiste }) : null,
-      el("span", { class: "voir", "aria-hidden": "true", text: "Voir la fiche" })), corps);
-    li.append(fiche);
-    const tools = el("div", { class: "row-tools" });
+    // la ligne d'action : le bouton, puis le niveau et le style, discrets
+    const tools = el("div", { class: "piece-actions" });
     const act = (text, fn, cls = "") => el("button", { class: "btn small pick-btn " + cls, type: "button", onclick: () => { fn(); refresh(); } }, text);
     if (lock) tools.append(el("button", { class: "btn small pick-btn", type: "button", disabled: true }, quandTxt(pz)));
     else if (st === "travail") {
       tools.append(act("✓ Je le maîtrise", () => { setStatut(pz, "maitrise"); Sons.bloc(); }, "maitrise-btn"));
-      if (!pz.mission && !pz.perso) tools.append(act("Je ne le travaille plus", () => setStatut(pz, "")));
+      if (!pz.mission && !pz.perso) tools.append(act("Je ne le travaille plus", () => setStatut(pz, ""), "ghost"));
     } else if (st === "maitrise") tools.append(act("Le retravailler", () => setStatut(pz, "travail")));
     else tools.append(act("Je le travaille", () => { setStatut(pz, "travail"); Sons.cling(); }, "primary"));
+    const meta = el("span", { class: "piece-meta" },
+      nv ? el("span", { class: "niveau n" + nv, title: "Difficulté dans son niveau" }, el("span", { class: "pts", "aria-hidden": "true", text: "●".repeat(nv) + "○".repeat(3 - nv) }), " " + NIVEAU[nv]) : null,
+      !pz.perso && pz.style ? el("span", { class: "piece-style", text: pz.style }) : null);
+    tools.append(meta);
     if (pz.perso) tools.append(el("button", { class: "link-btn", type: "button", text: "Supprimer", onclick: () => {
       if (!confirm(`Retirer « ${pz.titre} » de tes morceaux ?`)) return;
       (state.ajouts?.[pz.id]?.tabs || []).forEach(t => t.f && fichiers.del(t.f).catch(() => {}));
       delete state.ajouts?.[pz.id];
       state.mesPieces = (state.mesPieces || []).filter(x => x.id !== pz.id); delete state.morceaux?.[pz.id]; save(); refresh();
     } }));
-    li.append(tools);
+    li.append(head, tools, corps);
     return li;
   }
 
@@ -743,8 +777,8 @@
       }
       // la vidéo et la tablature du morceau du moment, à portée de main pendant le bloc
       const cur = pz || base, ouvKey = "cours-fiche/" + cur.id;
-      const det = el("details", { class: "piece-fiche", open: !!state.open[ouvKey] }, el("summary", { class: "piece-head" }, el("strong", { text: `Vidéo et tablature : ${cur.titre}` })),
-        el("div", { class: "piece-corps" }, ficheMorceau(cur, () => { const o = det.querySelector(".ajout")?.open; draw(); const n = card.querySelector(".ajout"); if (n && o) n.open = true; })));
+      const det = el("details", { class: "mini fiche-cours", open: !!state.open[ouvKey] }, el("summary", { text: `Vidéo et tablature : ${cur.titre}` }),
+        el("div", { class: "piece-corps" }, ficheMorceau(cur, () => { const o = det.querySelector(".ajout")?.open; draw(); const n = card.querySelector(".ajout"); if (n && o) n.open = true; }), maitriserBox(cur)));
       det.addEventListener("toggle", () => { if (!!state.open[ouvKey] !== det.open) { state.open[ouvKey] = det.open; save(); } });
       card.replaceChildren(...kids, det);
     };
@@ -1090,16 +1124,30 @@
         }
       }
     });
-    // les jeux à niveaux joués cette semaine : le meilleur score par jeu et par niveau
-    const NOMS_JEUX = { manche: "Notes du manche", gammes: "Gammes et penta", accords: "Accords", revision: "Révision du jour" };
-    const essais = new Map();
-    for (const r of (state.niveaux?.log || []).filter(r => r.w === w)) {
-      const k = r.f + "|" + r.n, e = essais.get(k) || { r, n: 0 };
-      e.n++; if (r.s > e.r.s) e.r = r; essais.set(k, e);
-    }
-    if (essais.size) {
+    // les jeux à niveaux joués cette semaine : par jeu et par niveau, le meilleur score, les essais, les notes, et ce qui coince le plus
+    const NOMS_JEUX = { manche: "Notes du manche", gammes: "Gammes", penta: "Pentatonique", accords: "Accords", revision: "Révision du jour" };
+    const parties = (state.niveaux?.log || []).filter(r => r.w === w);
+    if (parties.length) {
+      const groupes = new Map(), fautes = new Map();
+      for (const r of parties) {
+        const k = r.f + "|" + r.n, g = groupes.get(k) || { r, n: 0, q: 0, notes: 0, x: 0, e: 0, dt: 0, cours: new Set() };
+        g.n++; g.q += r.t || 0; g.notes += r.no || 0; g.x += r.x || 0; g.e += r.e || 0; g.dt += r.dt || 0;
+        if (r.s > g.r.s) g.r = r;
+        if (r.src?.startsWith("cours:")) g.cours.add(r.src.slice(6));
+        groupes.set(k, g);
+        for (const [lab, n] of r.r || []) fautes.set(lab, (fautes.get(lab) || 0) + n);
+      }
       L.push(""); L.push("Jeux à niveaux");
-      for (const { r, n } of essais.values()) L.push(`${NOMS_JEUX[r.f] || r.f}${r.n ? `, niveau ${r.n}` : ""} : ${r.n === 10 ? `série de ${r.s}` : `${r.s}/${r.t}`}${n > 1 ? ` (meilleur de ${n} essais)` : ""}`);
+      for (const g of groupes.values()) {
+        const r = g.r, bits = [`${g.n} partie${g.n > 1 ? "s" : ""}`];
+        if (g.notes) bits.push(`${g.notes} notes demandées`);
+        if (g.x) bits.push(`${g.x} essais, dont ${g.e} faute${g.e > 1 ? "s" : ""}`);
+        if (g.dt >= 60) bits.push(`${Math.round(g.dt / 60)} min`);
+        if (g.cours.size) bits.push(`joué pendant le cours ${[...g.cours].join(", ")}`);
+        L.push(`${NOMS_JEUX[r.f] || r.f}${r.n ? `, niveau ${r.n}` : ""} : ${r.n === 10 ? `meilleure série ${r.s}` : `meilleur score ${r.s}/${r.t}`} (${bits.join(", ")})`);
+      }
+      const top = [...fautes].sort((a, b) => b[1] - a[1]).slice(0, 6);
+      if (top.length) L.push("Ce qui coince le plus : " + top.map(([lab, n]) => `${lab}${n > 1 ? ` ×${n}` : ""}`).join(" · "));
     }
     for (const x of wk) if (x.bilan) {
       const s = cs(x.id);
@@ -1270,7 +1318,7 @@
         state = Object.assign(blank(), data); flush();
         setBpm(state.bpm || 60); setBeats(state.beats || 4);
         toast("Sauvegarde restaurée."); renderTabs(); renderCours(); updateSeance(); renderBilan();
-      } catch { toast("Ce fichier n'est pas une sauvegarde de Ma guitare."); }
+      } catch { toast("Ce fichier n'est pas une sauvegarde de Ma gratte."); }
     });
     body.append(pli("donnees", "Mes données", el("span", { class: "muted small", text: "Sauvegarder, restaurer, chercher une mise à jour du cours." }), () => el("div", { class: "pli-pile" },
       el("p", { class: "muted small", text: "Tes cases, tempos et commentaires restent sur cet appareil. Fais une sauvegarde de temps en temps, ou pour passer du téléphone à l'ordi." }),
@@ -1285,8 +1333,8 @@
   // ---------- Jeux à niveaux (niveaux.js) ----------
   // Le niveau proposé par chaque bloc, semaine par semaine (1 à 12), en lien avec ce que le bloc enseigne.
   const JEU_BLOC = {
-    1: { f: "gammes", sem: [2, 2, 2, 2, 5, 5, 7, 7, 8, 8, 8, 10] },  // gamme : Do majeur, Sol majeur, La majeur, La mineur
-    2: { f: "gammes", sem: [1, 1, 3, 4, 6, 6, 7, 7, 9, 9, 10, 10] }, // pentatonique : positions 1 à 5
+    1: { f: "gammes", sem: [1, 2, 3, 3, 4, 5, 6, 7, 8, 8, 9, 10] },  // gamme : Do majeur, Sol majeur, La majeur, La mineur
+    2: { f: "penta", sem: [1, 2, 3, 4, 5, 5, 6, 6, 7, 7, 8, 9] },    // pentatonique : positions 1 à 5, et seulement elle
     3: { f: "manche", sem: [3, 3, 4, 4, 5, 5, 5, 5, 6, 7, 8, 9] },   // notes du manche : la corde du moment
     4: { f: "accords", sem: [5, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9, 10] }, // barrés : forme Mi, forme La, partout, à l'oreille
   };
@@ -1318,7 +1366,7 @@
     };
     moins.addEventListener("click", () => { n--; sync(); });
     plus.addEventListener("click", () => { n++; sync(); });
-    const jouer = el("button", { class: "btn small jeu-btn", type: "button", onclick: () => N.ouvrir(J.f, n, { onDone: sync }) }, "▶ Jouer");
+    const jouer = el("button", { class: "btn small jeu-btn", type: "button", onclick: () => N.ouvrir(J.f, n, { onDone: sync, source: `cours:${c.num}` }) }, "▶ Jouer");
     sync();
     return el("div", { class: "niv-bloc" },
       el("span", { class: "eyebrow", text: "Le jeu du bloc" }), titre, desc,
@@ -1362,7 +1410,7 @@
     const nb = N.aReviser().length;
     body.append(el("section", { class: "card niv-rev" },
       el("div", {}, el("h2", { text: "Révision du jour" }),
-        el("p", { class: "muted small", text: nb ? `${nb} note${nb > 1 ? "s, gammes ou accords" : ", gamme ou accord"} à revoir, les 3 jeux mélangés.` : "Rien de raté à revoir : je mélange des questions de tes niveaux." })),
+        el("p", { class: "muted small", text: nb ? `${nb} question${nb > 1 ? "s ratées" : " ratée"} à revoir, les 4 jeux mélangés.` : "Rien de raté à revoir : je mélange des questions de tes niveaux." })),
       el("button", { class: "btn primary", type: "button", onclick: () => N.revision({ onDone: refresh }) }, "▶ Réviser")));
     const sem = Math.min(12, nextCours().semaine);
     for (const [f, F] of Object.entries(N.FAMILLES)) {
@@ -1527,10 +1575,10 @@
   async function exportData() {
     flush();
     const json = JSON.stringify(state, null, 1);
-    const name = `ma-guitare-${new Date().toISOString().slice(0, 10)}.json`;
+    const name = `ma-gratte-${new Date().toISOString().slice(0, 10)}.json`;
     const file = new File([json], name, { type: "application/json" });
     if (navigator.canShare?.({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: "Sauvegarde Ma guitare" }); return; } catch (e) { if (e?.name === "AbortError") return; }
+      try { await navigator.share({ files: [file], title: "Sauvegarde Ma gratte" }); return; } catch (e) { if (e?.name === "AbortError") return; }
     }
     const a = el("a", { href: URL.createObjectURL(file), download: name }); document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);

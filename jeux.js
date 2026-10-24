@@ -38,6 +38,19 @@
   }
   let soundOn = true;
   try { soundOn = localStorage.getItem("maguitare:son") !== "0"; } catch {}
+  // Les noms des cordes au bout du manche : affichés ou cachés (pour ne pas s'en servir comme antisèche)
+  let nomsOn = true;
+  try { nomsOn = localStorage.getItem("maguitare:nomsCordes") !== "0"; } catch {}
+  const appliqueNoms = () => document.documentElement.classList.toggle("sans-noms", !nomsOn);
+  appliqueNoms();
+  function nomsBtn() {
+    const b = el("button", { class: "icon-btn noms-btn", type: "button", title: "Noms des cordes sur le manche", "aria-label": "Noms des cordes sur le manche", "aria-pressed": String(nomsOn), text: "Mi" });
+    b.addEventListener("click", () => {
+      nomsOn = !nomsOn; appliqueNoms(); b.setAttribute("aria-pressed", String(nomsOn));
+      try { localStorage.setItem("maguitare:nomsCordes", nomsOn ? "1" : "0"); } catch {}
+    });
+    return b;
+  }
 
   // ---------- Le manche du jeu ----------
   // frets : nombre de cases (12 par défaut, jusqu'à 15 pour les gammes hautes)
@@ -185,14 +198,15 @@
 
   // ---------- Les jeux ----------
   const MODES = {
-    trouve: { titre: "Trouve les notes", regle: "Touche toutes les cases de la note demandée, sur la corde indiquée (cases 0 à 12).", ecoute: "Joue sur ta guitare chaque case de la note demandée, sur la corde indiquée (cases 0 à 12). Le micro les place sur le manche." },
+    trouve: { titre: "Trouve les notes", regle: "Touche toutes les cases de la note demandée, sur la corde indiquée (cases 1 à 12).", ecoute: "Joue sur ta guitare chaque case de la note demandée, sur la corde indiquée (cases 0 à 12). Le micro les place sur le manche." },
     nomme: { titre: "Quelle note ?", regle: "Une case s'allume : choisis son nom. Objectif : moins de 3 secondes.", ecoute: "Joue sur ta guitare la note demandée, sur la bonne corde. Objectif : moins de 3 secondes." },
-    partout: { titre: "Partout sur le manche", regle: "Touche toutes les cases de la note demandée, sur les 6 cordes (cases 0 à 12).", ecoute: "Joue la note demandée sur chaque corde, de la plus grave à la plus aiguë (cases 0 à 12)." },
+    partout: { titre: "Partout sur le manche", regle: "Touche toutes les cases de la note demandée, sur les 6 cordes (cases 1 à 12).", ecoute: "Joue la note demandée sur chaque corde, de la plus grave à la plus aiguë (cases 0 à 12)." },
     octave: { titre: "Octaves", regle: "Une note est posée : touche son octave, deux cordes plus loin vers l'aigu. +2 cases depuis le Mi grave ou le La. +3 cases depuis le Ré ou le Sol (on passe la corde de Si).", ecoute: "Joue la note posée, puis son octave : deux cordes plus loin vers l'aigu, +2 cases (+3 depuis le Ré ou le Sol)." },
     quiz: { titre: "Quiz du manche", regle: "Une note au hasard : trouve-la sur chaque corde, le plus vite possible.", ecoute: "Une note au hasard : joue-la sur chaque corde, de la plus grave à la plus aiguë, le plus vite possible." },
   };
 
-  const targetsOn = (s, n) => { const t = []; for (let f = 0; f <= FRETS; f++) if (pcOf(s, f) === PC[n]) t.push([s, f]); return t; };
+  // min = 1 : jamais la corde à vide (son nom est écrit au bout du manche) ; à l'écoute, elle compte
+  const targetsOn = (s, n, min = 1) => { const t = []; for (let f = min; f <= FRETS; f++) if (pcOf(s, f) === PC[n]) t.push([s, f]); return t; };
   function makeRounds(cfg, listen) {
     const cordes = cfg.cordes?.length ? cfg.cordes : [6, 5, 4, 3, 2, 1];
     const R = [];
@@ -201,29 +215,29 @@
       for (let i = 0; i < 8; i++) {
         const s = pick(cordes);
         let n; do { n = pick(NATURALS); } while (n === last); last = n;
-        R.push({ q: `${listen ? "Joue" : "Trouve"} tous les ${n} sur ${corde(s)}`, note: n, only: [s], targets: targetsOn(s, n) });
+        R.push({ q: `${listen ? "Joue" : "Trouve"} tous les ${n} sur ${corde(s)}`, note: n, only: [s], targets: targetsOn(s, n, listen ? 0 : 1) });
       }
     } else if (cfg.mode === "nomme") {
       let lastKey = "";
       for (let i = 0; i < 10; i++) {
-        let s, f; do { s = pick(cordes); f = Math.floor(Math.random() * (FRETS + 1)); } while (!isNatural(s, f) || s + ":" + f === lastKey);
+        let s, f; do { s = pick(cordes); f = 1 + Math.floor(Math.random() * FRETS); } while (!isNatural(s, f) || s + ":" + f === lastKey);
         lastKey = s + ":" + f;
         const n = nameOf(s, f);
         // à l'écoute, on fait l'inverse : le nom est donné, il faut trouver la case sur sa guitare
-        if (listen) R.push({ q: `Joue un ${n} sur ${corde(s)}`, note: n, only: [s], targets: targetsOn(s, n), anyOf: true });
+        if (listen) R.push({ q: `Joue un ${n} sur ${corde(s)}`, note: n, only: [s], targets: targetsOn(s, n, 0), anyOf: true });
         else R.push({ q: `Quelle est cette note, sur ${corde(s)} ?`, ask: [s, f], answer: n });
       }
     } else if (cfg.mode === "partout" || cfg.mode === "quiz") {
       const notes = cfg.mode === "partout" && cfg.note ? [cfg.note, ...shuffle(NATURALS.filter(n => n !== cfg.note)).slice(0, 2)] : shuffle(NATURALS).slice(0, 5);
       notes.forEach(n => {
-        const targets = [6, 5, 4, 3, 2, 1].flatMap(s => targetsOn(s, n));
+        const targets = [6, 5, 4, 3, 2, 1].flatMap(s => targetsOn(s, n, listen ? 0 : 1));
         R.push({ q: `${listen ? "Joue" : "Trouve"} tous les ${n} du manche`, note: n, targets, seq: listen });
       });
     } else if (cfg.mode === "octave") {
       const from = cordes.filter(s => s >= 3);
       let lastKey = "";
       for (let i = 0; i < 8; i++) {
-        let s, f; do { s = pick(from.length ? from : [6, 5]); f = Math.floor(Math.random() * 10); } while (!isNatural(s, f) || s + ":" + f === lastKey);
+        let s, f; do { s = pick(from.length ? from : [6, 5]); f = 1 + Math.floor(Math.random() * 9); } while (!isNatural(s, f) || s + ":" + f === lastKey);
         lastKey = s + ":" + f;
         // +3 cases quand on arrive sur la corde de Si ou au-delà (depuis le Ré ou le Sol), sinon +2
         const t = s - 2, tf = f + (s <= 4 ? 3 : 2);
@@ -278,7 +292,7 @@
     const boardHost = el("div", { class: "jeu-board-wrap" + (vertical ? " vertical" : "") });
     const answers = el("div", { class: "jeu-answers", hidden: true });
     const body = el("div", { class: "sheet-in jeu-in" },
-      el("div", { class: "sheet-head" }, el("div", {}, (cfg.label && cfg.label !== info.titre) ? el("span", { class: "eyebrow", text: info.titre + (listen ? " · écoute" : "") }) : null, title), el("div", { class: "jeu-tools" }, voixBtn, sound, close)),
+      el("div", { class: "sheet-head" }, el("div", {}, (cfg.label && cfg.label !== info.titre) ? el("span", { class: "eyebrow", text: info.titre + (listen ? " · écoute" : "") }) : null, title), el("div", { class: "jeu-tools" }, nomsBtn(), voixBtn, sound, close)),
       el("p", { class: "muted small", text: listen ? info.ecoute : info.regle }),
       el("div", { class: "jeu-bar" }, q, prog), actions, listenBar, fb, boardHost, answers);
     d.replaceChildren(body);
@@ -374,6 +388,7 @@
       if (run.found.has(key(s, f))) return;
       if (r.targets.some(([ts, tf]) => ts === s && tf === f)) return hit(s, f);
       const nm = nameOf(s, f);
+      if (f === 0 && nm === r.note && !r.src) return setFb(`Oui, c'est un ${nm}, mais à vide : cherche-le sur les cases.`, "hint", false);
       board.set(s, f, "bad", nm.replace("♯", "#"));
       play(OPEN[s] + f);
       miss(r.src && nm === r.note ? `C'est bien un ${nm}, mais pas l'octave deux cordes plus loin vers l'aigu.` : `Ça, c'est un ${nm}.`);
@@ -488,5 +503,5 @@
     + `${r.ms ? `, ${(r.ms / 1000).toFixed(1).replace(".", ",")} s par note` : ""}`;
   window.Jeux = { open, resume, MODES, NOM_CORDE, ecouteEnCours: () => !!mic,
     // pour les jeux à niveaux (niveaux.js)
-    base: { Board, el, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, nameOf, shuffle, pick, play, son: { get: () => soundOn, set: v => { soundOn = !!v; try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} } } } };
+    base: { Board, el, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, nameOf, shuffle, pick, play, nomsBtn, son: { get: () => soundOn, set: v => { soundOn = !!v; try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} } } } };
 })();

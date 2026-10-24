@@ -667,26 +667,6 @@ pre.tab { background: var(--surface-2); border-radius: 12px; padding: 12px 14px;
     </div>
   </section>
 
-  <section class="panel prof" aria-labelledby="hProf">
-    <div>
-      <div class="eyebrow" id="hProf">Demander au prof</div>
-      <p class="note">Le prof voit la position que tu as sur le manche au moment où tu envoies ta question.</p>
-    </div>
-    <div class="chips scroller" id="quickAsks"></div>
-    <div class="chat" id="chat" aria-live="polite">
-      <p class="empty" id="chatEmpty">Pose une question sur la position affichée : doigté, nom de l'accord, enchaînements, exercice à faire avec.</p>
-    </div>
-    <form class="ask" id="askForm">
-      <textarea id="askInput" placeholder="Ta question, par exemple : pourquoi mon barré de Fa frise sur la corde de Sol ?" aria-label="Ta question au prof"></textarea>
-      <div class="row">
-        <button class="btn primary" id="sendBtn" type="submit">Envoyer</button>
-        <button class="btn" id="stopBtn" type="button" hidden>Arrêter</button>
-        <button class="btn" id="resetChat" type="button">Nouvelle conversation</button>
-      </div>
-      <p class="err" id="askErr" role="alert"></p>
-    </form>
-    <p class="note" id="profNote">Ce prof intégré ne garde pas la mémoire de nos cours. Pour la suite de ton programme, copie la position et colle-la dans notre conversation habituelle.</p>
-  </section>
 </div>
 
 <!-- Barre du bas, sur téléphone seulement : l'accord reste visible pendant qu'on pose les doigts -->
@@ -841,7 +821,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
         if ([3,5,7,9,15].includes(f) && s === 3) c.classList.add("inlay");
         if (f === 12 && (s === 4 || s === 2)) c.classList.add("inlay2");
         c.dataset.s = s; c.dataset.f = f;
-        c.addEventListener("click", () => { if (f > 0 && f <= capo) return; setString(s, pos[s] !== f ? f : f === 0 ? null : 0); });
+        c.addEventListener("click", () => { if (f > 0 && f <= capo) return; setString(s, pos[s] !== f ? f : f === 0 ? null : 0, pos[s] === f); }); // enlever un doigt : sans bruit
         board.appendChild(c);
       }
     }
@@ -891,11 +871,12 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     const lab = board.querySelector(".fnum.lab"); if (lab) lab.textContent = v ? "" : "case";
   }
 
-  function setString(s, f) {
+  // silencieux : quand on enlève un doigt, la corde repasse à vide sans sonner (elle ne sonne à vide que si on touche son nom)
+  function setString(s, f, silencieux = false) {
     pos[s] = f;
     document.getElementById("tunerLine").textContent = "";
     store.set("pos", pos);
-    if (sound && f != null) playNotes([midiOf(s, f)], 0);
+    if (sound && f != null && !silencieux) playNotes([midiOf(s, f)], 0);
     render();
   }
 
@@ -989,7 +970,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
       if (a.alts.length) alts.textContent = "Peut aussi se lire : " + a.alts.map(c => symOf(c, a.bass.pc, false)).join(" · ");
     } else if (a.kind === "note") { sym.textContent = noteName(a.root); fr.textContent = "une seule note"; }
     else if (a.kind === "interval") { sym.textContent = noteName(a.root) + " + " + noteName((a.root + a.iv) % 12); fr.textContent = INTERVAL_FR[a.iv]; }
-    else if (a.kind === "unknown") { sym.textContent = "?"; fr.textContent = "accord que je ne sais pas nommer, demande au prof"; }
+    else if (a.kind === "unknown") { sym.textContent = "?"; fr.textContent = "accord que je ne sais pas nommer"; }
     else { sym.textContent = "–"; fr.textContent = "pose des doigts sur le manche"; }
 
     const body = document.getElementById("stringsBody");
@@ -1043,8 +1024,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     pos = open ? [0,0,0,0,0,0] : [null,null,null,null,null,null]; barre = null;
     store.set("barre", barre); store.set("pos", pos);
     document.getElementById("tunerLine").textContent = "";
-    if (open && sound) playNotes(pos.map((f, s) => midiOf(s, 0)), 0.035);
-    render();
+    render(); // remettre les cordes à vide ne fait pas de bruit
   });
   function syncClear() {
     const open = allMuted(), t = open ? "Tout à vide" : "Tout étouffer";
@@ -1647,139 +1627,6 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   dockMic.addEventListener("click", () => micBtn.click());
   document.getElementById("dockPlay").addEventListener("click", () => document.getElementById("playBtn").click());
   document.getElementById("dockClear").addEventListener("click", () => document.getElementById("clearBtn").click());
-  // ---------- Le prof (Claude depuis la page) ----------
-  const RULES = `Tu es le prof de guitare personnel de Timothée. Il t'écrit depuis sa page « Mon manche », un manche de guitare cliquable : à chaque message, la page te donne la position qu'il a posée sur le manche.
-
-Son profil : 26 ans, guitare classique à cordes nylon, accordage standard. Accords ouverts propres, bonne rythmique, lit les tablatures mais pas les partitions. Arpèges moyens (il travaille Fragile de Sting). Faible sur les barrés (il en connaît 2), les notes du manche (il ne connaît que la corde de Mi grave), les gammes (aucune) et le solo (pentatonique en une seule position). Objectif principal : devenir techniquement solide (gammes, connaissance du manche, écartement et indépendance des doigts de la main gauche). Il aime Sting, le gypsy et le flamenco. Il pratique 3 séances de 30 minutes par semaine.
-
-Règles de réponse :
-- Français, tutoiement, ton de prof bienveillant mais exigeant. Va droit au but : 180 mots maximum sauf s'il demande plus.
-- Main gauche : 1 index, 2 majeur, 3 annulaire, 4 auriculaire, P pouce. Main droite classique : p i m a.
-- Les tablatures vont dans un bloc de code, corde de Mi aigu (e) en haut.
-- Quand tu proposes une position qu'il peut afficher sur son manche, écris-la exactement sous la forme [[pos:x-0-2-2-1-0]] : 6 valeurs de la corde de Mi grave à la corde de Mi aigu, x pour étouffée, 0 pour à vide, sinon le numéro de case (15 maximum). La page en fait un bouton qui pose la position sur le manche.
-- Si la position semble contenir une erreur ou un doigté difficile, dis-le et propose mieux.
-- Si tu cites une vidéo, ne donne pas de lien inventé : propose plutôt quoi chercher sur YouTube.`;
-
-  const chatEl = document.getElementById("chat"), chatEmpty = document.getElementById("chatEmpty");
-  const askForm = document.getElementById("askForm"), askInput = document.getElementById("askInput");
-  const sendBtn = document.getElementById("sendBtn"), stopBtn = document.getElementById("stopBtn"), askErr = document.getElementById("askErr");
-  let turns = []; // {role, content, shown, posCode}
-  let ctl = null;
-  let samplePromise = null;
-  const getSample = () => (samplePromise ||= (window.claude?.use ? window.claude.use("sample").catch(() => null) : Promise.resolve(null)));
-
-  const QUICK = [
-    "Quel doigté pour cette position ?",
-    "Comment je nomme cet accord et pourquoi ?",
-    "Comment rendre cet accord plus propre ?",
-    "Avec quels accords ça s'enchaîne bien ?",
-    "Donne-moi un exercice de 5 min avec ça",
-  ];
-  const quick = document.getElementById("quickAsks");
-  QUICK.forEach(q => {
-    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = q;
-    b.addEventListener("click", () => ask(q)); quick.appendChild(b);
-  });
-
-  function esc(s) { return s.replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c])); }
-  function inline(s) {
-    return esc(s)
-      .replace(/\[\[pos:([^\]]+)\]\]/g, (m, code) => parsePosition(code) ? `<button type="button" class="posbtn" data-pos="${esc(code)}" title="Afficher sur le manche">▸ ${esc(code)}</button>` : esc(m))
-      .replace(/`([^`]+)`/g, "<code>$1</code>")
-      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-      .replace(/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-  }
-  function md(src) {
-    const out = []; const lines = src.replace(/\r/g, "").split("\n");
-    let i = 0;
-    while (i < lines.length) {
-      const l = lines[i];
-      if (/^```/.test(l)) {
-        const buf = []; i++;
-        while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
-        i++; out.push(`<pre>${esc(buf.join("\n"))}</pre>`); continue;
-      }
-      if (/^\s*[-*•] /.test(l)) {
-        const items = []; while (i < lines.length && /^\s*[-*•] /.test(lines[i])) items.push(lines[i++].replace(/^\s*[-*•] /, ""));
-        out.push("<ul>" + items.map(x => `<li>${inline(x)}</li>`).join("") + "</ul>"); continue;
-      }
-      if (/^\s*\d+[.)] /.test(l)) {
-        const items = []; while (i < lines.length && /^\s*\d+[.)] /.test(lines[i])) items.push(lines[i++].replace(/^\s*\d+[.)] /, ""));
-        out.push("<ol>" + items.map(x => `<li>${inline(x)}</li>`).join("") + "</ol>"); continue;
-      }
-      if (!l.trim()) { i++; continue; }
-      const para = []; while (i < lines.length && lines[i].trim() && !/^```|^\s*[-*•] |^\s*\d+[.)] /.test(lines[i])) para.push(lines[i++]);
-      out.push("<p>" + para.map(x => { const h = x.match(/^#{1,4}\s+(.*)/); return h ? `<strong>${inline(h[1])}</strong>` : inline(x); }).join("<br>") + "</p>");
-    }
-    return out.join("");
-  }
-  chatEl.addEventListener("click", e => {
-    const b = e.target.closest(".posbtn"); if (!b) return;
-    const p = parsePosition(b.dataset.pos); if (p) loadPosition(p);
-  });
-
-  function addBubble(role, html) {
-    chatEmpty.hidden = true;
-    const d = document.createElement("div"); d.className = "msg " + role; d.innerHTML = html;
-    chatEl.appendChild(d); chatEl.scrollTop = chatEl.scrollHeight;
-    return d;
-  }
-  const errCopy = code => ({
-    not_granted: "Tu n'as pas autorisé la page à interroger Claude. Recharge la page pour qu'elle te le redemande.",
-    rate_limited: "Trop de questions d'affilée. Attends une minute avant de renvoyer.",
-    cancelled: "",
-  }[code] ?? "La réponse n'est pas arrivée (" + code + "). Renvoie ta question dans un instant.");
-
-  async function ask(question) {
-    question = question.trim();
-    if (!question || ctl) return;
-    askErr.textContent = "";
-    const sample = await getSample();
-    if (!sample) { askErr.textContent = "Le prof intégré n'est pas disponible ici. Copie la position et colle-la dans notre conversation."; return; }
-    const code = compactOf(pos);
-    const content = `${question}\n\n---\n${positionText()}`;
-    addBubble("me", `${esc(question)}<span class="pos">position : ${esc(code)}</span>`);
-    turns.push({ role: "user", content });
-    const bubble = addBubble("prof", `<span class="thinking">Le prof réfléchit…</span>`);
-    ctl = new AbortController();
-    sendBtn.disabled = true; stopBtn.hidden = false; askInput.value = "";
-    const input = turns.map((t, k) => ({ role: t.role, content: k === 0 ? RULES + "\n\n=== Message de Timothée ===\n" + t.content : t.content }));
-    try {
-      const { text, truncated } = await sample(input, {
-        cache: false, signal: ctl.signal,
-        onText: ({ text }) => { bubble.innerHTML = md(text); chatEl.scrollTop = chatEl.scrollHeight; },
-      });
-      bubble.innerHTML = md(text) + (truncated ? `<p class="note">Réponse coupée. Demande la suite.</p>` : "");
-      turns.push({ role: "assistant", content: text });
-    } catch (e) {
-      const keep = e && e.text;
-      if (keep) { bubble.innerHTML = md(keep); turns.push({ role: "assistant", content: keep }); }
-      else { bubble.remove(); turns.pop(); }
-      askErr.textContent = errCopy(e && e.code);
-    } finally {
-      ctl = null; sendBtn.disabled = false; stopBtn.hidden = true;
-      if (turns.length > 16) turns = turns.slice(-16).filter((t, k, arr) => !(k === 0 && t.role === "assistant"));
-    }
-  }
-  askForm.addEventListener("submit", e => { e.preventDefault(); ask(askInput.value); });
-  askInput.addEventListener("keydown", e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); ask(askInput.value); } });
-  stopBtn.addEventListener("click", () => ctl?.abort());
-  document.getElementById("resetChat").addEventListener("click", () => {
-    ctl?.abort(); turns = [];
-    chatEl.querySelectorAll(".msg").forEach(m => m.remove()); chatEmpty.hidden = false; askErr.textContent = "";
-  });
-  const ARTIFACT_URL = "https://claude.ai/artifact/PnNWHRTJFDVPVWBCYXZMGq";
-  getSample().then(s => {
-    if (s) return;
-    const note = document.getElementById("profNote");
-    sendBtn.disabled = true; quick.querySelectorAll("button").forEach(b => (b.disabled = true));
-    if (window.claude) { note.textContent = "Le prof intégré n'est pas disponible dans cette vue. Utilise « Copier pour le prof » et colle le texte dans notre conversation."; return; }
-    // version ouverte sur le Mac : le prof n'existe que dans la version Claude, on y envoie la position
-    note.innerHTML = "Le prof répond seulement dans la version Claude de ce manche. Ce bouton l'ouvre avec ta position déjà posée : <br><a class=\"btn primary\" id=\"openClaude\" target=\"_blank\" rel=\"noopener\" style=\"margin-top:8px\">Demander dans la version Claude</a>";
-    const link = document.getElementById("openClaude");
-    const sync = () => { link.href = ARTIFACT_URL + "#pos-" + compactOf(toRel(pos)).replace(/^(.{6})$/, m => m.split("").join("-")); };
-    sync(); link.addEventListener("click", sync); link.addEventListener("mouseenter", sync);
-  });
   // Une position venue du cours : sans corde à vide, si l'index tient la plus basse case de la basse jusqu'au Mi aigu, c'est un barré
   const barreOf = p => {
     if (p.some(f => f === 0)) return null;

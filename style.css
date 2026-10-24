@@ -429,6 +429,10 @@ dialog.jeu-sheet { max-width: 820px; max-height: 100dvh; height: 100dvh; margin:
 .jb-num { font: 600 11px var(--f-body); fill: var(--muted); }
 .jb-num.strong { fill: var(--ink); }
 .jb-sname { font: 700 12px var(--f-body); fill: var(--muted); }
+html.sans-noms .jb-sname { display: none; }
+html.sans-noms .jb-cell[data-state="rep"] .jb-dot, html.sans-noms .jb-cell[data-state="rep"] .jb-label { display: none; }
+.noms-btn { font: 700 .82rem var(--f-body); letter-spacing: -.01em; }
+.noms-btn[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; }
 .jb-hit { fill: transparent; cursor: pointer; }
 .jb-dot { fill: transparent; stroke: transparent; stroke-width: 2.5; transition: fill .12s; pointer-events: none; }
 .jb-label { font: 700 11px var(--f-body); fill: #fff; pointer-events: none; }
@@ -705,10 +709,24 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 
 /* Morceaux au choix du palier (bloc Morceau) */
 .pieces { list-style: none; margin: 8px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.piece { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.piece { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
 .piece.chosen { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok); }
-.piece-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
-.piece .chip { font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.piece-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.piece-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+.piece-titres { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.piece-titre { font-family: var(--f-display); font-size: 1.35rem; line-height: 1.15; }
+.piece-artiste { font-size: .88rem; color: var(--muted); }
+.piece-tag { align-self: flex-start; font-size: .72rem; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+.piece-tag.mission { color: var(--ok); }
+.piece.ouvert .pli-chev::after { top: 55%; transform: translate(-50%, -50%) rotate(-135deg); border-color: var(--accent); }
+.piece-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.piece-meta { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; font-size: .8rem; color: var(--muted); }
+.piece-meta .niveau { font-size: .8rem; }
+.piece-meta .pts { letter-spacing: 1px; font-size: .7rem; }
+.piece-style::before { content: "·"; margin-right: 10px; color: var(--line); }
+.piece-meta .niveau + .piece-style::before { color: var(--muted); }
+.piece-interet { margin: 0; font-size: .92rem; }
+.piece-corps { border-top: 1px solid var(--line); padding-top: 12px; }
 .piece p { margin: 0; }
 .pick-btn[aria-pressed="true"] { background: var(--ok); color: #fff; border-color: var(--ok); }
 .piece.locked { opacity: .62; }
@@ -719,7 +737,6 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 /* Mes morceaux */
 .morceaux-sec { display: flex; flex-direction: column; gap: 6px; }
 .morceaux-sec .pieces { margin-top: 4px; }
-.piece .chip.mission { background: var(--ok-soft); color: var(--ok); }
 .piece.mastered { border-color: var(--line); background: var(--ok-soft); }
 .maitrise-btn { border-color: var(--ok); color: var(--ok); }
 .tech { display: flex; flex-direction: column; gap: 4px; }
@@ -740,12 +757,6 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 @media (max-width: 370px) { .tabbar button { font-size: .6rem; } }
 
 /* Fiche d'un morceau : vidéo dans l'app, tablatures, ajouts */
-.piece-fiche > summary { cursor: pointer; list-style: none; }
-.piece-fiche > summary::-webkit-details-marker { display: none; }
-.piece-fiche > summary.piece-head { position: relative; padding-right: 4px; }
-.piece-fiche .voir { margin-left: auto; font-size: 0; font-weight: 600; color: var(--accent); white-space: nowrap; }
-.piece-fiche .voir::after { font-size: .78rem; content: "Voir la fiche ▾"; }
-.piece-fiche[open] .voir::after { content: "Fermer ▴"; }
 .piece-corps { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .fiche { display: flex; flex-direction: column; gap: 8px; }
 .fiche .eyebrow { margin-top: 4px; }
@@ -851,3 +862,24 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .niv-step:disabled { opacity: .4; }
 .niv-bloc .jeu-btn { background: var(--accent); color: var(--accent-ink); }
 .niv-bloc .jeu-last { margin: 4px 0 0; }
+
+/* « Pour le maîtriser » : un bandeau replié dans la fiche */
+details.maitriser { border-radius: 12px; background: var(--surface-2); padding: 10px 12px; }
+details.maitriser > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 10px; }
+details.maitriser > summary::-webkit-details-marker { display: none; }
+details.maitriser > summary::after { content: "▸"; margin-left: auto; color: var(--muted); }
+details.maitriser[open] > summary::after { content: "▾"; color: var(--accent); }
+.mt-titre { font-weight: 700; font-size: .92rem; }
+.mt-resume { font-size: .78rem; color: var(--muted); }
+.mt-corps { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.mt-notions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.mt-notions li { display: flex; flex-direction: column; gap: 2px; font-size: .88rem; padding-left: 12px; border-left: 2px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.mt-notions strong { font-size: .9rem; }
+.mt-jeux { display: grid; grid-template-columns: 1fr; gap: 6px; }
+@media (min-width: 640px) { .mt-jeux { grid-template-columns: 1fr 1fr; } }
+.mt-jeu { display: flex; flex-direction: column; gap: 1px; padding: 8px 12px 8px 34px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; position: relative; }
+.mt-jeu::before { content: "▶"; position: absolute; left: 12px; top: 10px; font-size: .75rem; color: var(--accent); }
+.mt-jeu:active { opacity: .7; }
+.mt-jeu-nom { font-weight: 600; font-size: .88rem; }
+.mt-jeu-p { font-size: .8rem; color: var(--muted); }
+details.fiche-cours > .piece-corps { margin-top: 10px; border-top: 0; padding-top: 0; }

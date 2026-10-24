@@ -1,4 +1,4 @@
-/* Jeux à niveaux : Notes du manche, Gammes et penta, Accords. Le même moteur pour les trois :
+/* Jeux à niveaux : Notes du manche, Gammes, Pentatonique, Accords. Le même moteur pour les quatre :
    - une manche = 10 questions ; 8 justes ouvrent le niveau suivant, et tous les niveaux restent rejouables ;
    - ce que tu rates revient plus souvent (boîtes de Leitner), et 3 questions sur 10 reprennent les niveaux d'avant ;
    - chrono dès le niveau 5 (8 s, puis 3 s au niveau 10) ;
@@ -7,7 +7,7 @@
 (() => {
   "use strict";
   const J = window.Jeux; if (!J?.base) return;
-  const { Board, el, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, shuffle, pick, son } = J.base;
+  const { Board, el, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, shuffle, pick, son, nomsBtn } = J.base;
   const corde = s => "la corde de " + NOM_CORDE[s];
   const BEMOL = { 1: "Ré♭", 3: "Mi♭", 6: "Sol♭", 8: "La♭", 10: "Si♭" };
   // noms usuels des tonalités et des accords
@@ -19,7 +19,7 @@
 
   // ---------- Mémoire : rangée dans l'état de l'app (et donc dans la sauvegarde) ----------
   let local = null;
-  const mem = () => J.memoire?.() || (local ||= {});
+  const mem = () => { const m = J.memoire?.() || (local ||= {}); if (m.v !== 2) migre(m); return m; };
   const famMem = f => { const m = mem(); return (m[f] ||= { max: 1, best: {}, items: {} }); };
   const sauve = () => { try { J.sauve?.(); } catch {} };
   // boîte 0 = jamais vu, 1 = raté (revient souvent) … 5 = solide (revient rarement)
@@ -56,24 +56,25 @@
   // 1. Notes du manche
   // =====================================================================
   const nat = (s, f) => NATURALS.includes(FR[pcOf(s, f)]);
-  const casesDe = (cordes, fmax, ok) => cordes.flatMap(s => Array.from({ length: fmax + 1 }, (_, f) => f).filter(f => ok(s, f)).map(f => `m:${s}:${f}`));
+  // jamais la case 0 : le nom de la corde à vide est écrit au bout du manche
+  const casesDe = (cordes, fmax, ok) => cordes.flatMap(s => Array.from({ length: fmax }, (_, f) => f + 1).filter(f => ok(s, f)).map(f => `m:${s}:${f}`));
   const MANCHE = [
-    { txt: "Mi grave, cases 0 à 5, avec des repères", pool: () => casesDe([6], 5, nat), win: [0, 5] },
-    { txt: "Mi grave, cases 0 à 12", pool: () => casesDe([6], 12, nat) },
+    { txt: "Mi grave, cases 1 à 5, avec des repères", pool: () => casesDe([6], 5, nat) },
+    { txt: "Mi grave, cases 1 à 12", pool: () => casesDe([6], 12, nat) },
     { txt: "Corde de La", pool: () => casesDe([5], 12, nat) },
     { txt: "Corde de Ré", pool: () => casesDe([4], 12, nat) },
     { txt: "Cordes de Sol et de Si", pool: () => casesDe([3, 2], 12, nat) },
     { txt: "Mi aigu", pool: () => casesDe([1], 12, nat) },
     { txt: "Dièses et bémols, sur toutes les cordes", pool: () => casesDe(STR, 12, (s, f) => !nat(s, f)) },
     { txt: "Toutes les cordes mélangées", pool: () => casesDe(STR, 12, () => true) },
-    { txt: "Octaves : la même note, deux cordes plus loin", pool: () => [6, 5, 4, 3].flatMap(s => Array.from({ length: 10 }, (_, f) => f).filter(f => nat(s, f)).map(f => `o:${s}:${f}`)) },
+    { txt: "Octaves : la même note, deux cordes plus loin", pool: () => [6, 5, 4, 3].flatMap(s => Array.from({ length: 9 }, (_, f) => f + 1).filter(f => nat(s, f)).map(f => `o:${s}:${f}`)) },
     { txt: "Tout le manche, sans indice", pool: () => [...MANCHE[7].pool(), ...MANCHE[8].pool()] },
   ];
   const choixNotes = chrom => chrom
     ? FR.map((n, pc) => ({ label: n, sub: BEMOL[pc], val: pc }))
     : NATURALS.map(n => ({ label: n, val: PC[n] }));
   function qManche(key, lvl, i) {
-    const [t, s0, f0] = key.split(":"), s = +s0, f = +f0, L = MANCHE[lvl - 1];
+    const [t, s0, f0] = key.split(":"), s = +s0, f = +f0;
     const rep = lvl <= 2 ? [[s, 0, "rep", NOM_CORDE[s].split(" ")[0]]] : [];
     if (t === "o") {
       const n = nomDe(OPEN[s] + f);
@@ -87,14 +88,13 @@
     }
     // l'inverse : le nom est donné, il faut toucher toutes ses cases sur la corde
     const n = BEMOL[pc] && Math.random() < 0.5 ? BEMOL[pc] : FR[pc];
-    const fmax = L.win ? L.win[1] : 12;
-    const targets = []; for (let k = 0; k <= fmax; k++) if (pcOf(s, k) === pc) targets.push([s, k]);
-    return { key, type: "cases", texte: `Trouve tous les ${n} sur ${corde(s)}` + (L.win ? " (cases 0 à 5)" : ""), voix: `Trouve tous les ${n} sur ${corde(s)}`,
-      targets, cordes: [s], win: L.win, donnees: pcOf(s, 0) === pc ? [] : rep }; // le repère de la corde à vide ne doit pas donner la réponse
+    const targets = []; for (let k = 1; k <= 12; k++) if (pcOf(s, k) === pc) targets.push([s, k]);
+    return { key, type: "cases", texte: `Trouve tous les ${n} sur ${corde(s)}`, voix: `Trouve tous les ${n} sur ${corde(s)}`,
+      targets, pc, cordes: [s], donnees: pcOf(s, 0) === pc ? [] : rep }; // le repère de la corde à vide ne doit pas donner la réponse
   }
 
   // =====================================================================
-  // 2. Gammes et penta : replacer les notes manquantes d'une position
+  // 2. Gammes, et 3. Pentatonique : replacer les notes manquantes d'une position
   // =====================================================================
   const PENTA = [9, 0, 2, 4, 7], DO = [0, 2, 4, 5, 7, 9, 11];
   const POS = {
@@ -103,7 +103,7 @@
     p3: { genre: "penta", n: 3, pcs: PENTA, win: [9, 13], ton: 9 },
     p4: { genre: "penta", n: 4, pcs: PENTA, win: [0, 3], ton: 9 }, // une octave plus bas, comme dans le cours
     p5: { genre: "penta", n: 5, pcs: PENTA, win: [2, 5], ton: 9 },
-    do: { genre: "majeur", pos: "position ouverte", pcs: DO, win: [0, 3], de: 48, a: 67, ton: 0 },
+    do: { genre: "majeur", pos: "position ouverte", pcs: DO, win: [0, 3], de: 48, a: 67, ton: 0, fixe: true }, // avec des cordes à vide : ne se transpose pas
     sol: { genre: "majeur", pos: "position fixe", pcs: [7, 9, 11, 0, 2, 4, 6], win: [2, 5], de: 43, a: 67, ton: 7 },
     la: { genre: "majeur", pos: "position fixe", pcs: [9, 11, 1, 2, 4, 6, 8], win: [4, 7], de: 45, a: 69, ton: 9 },
     lam: { genre: "mineur", pos: "position fixe", pcs: DO, win: [4, 8], de: 45, a: 69, ton: 9 },
@@ -121,37 +121,49 @@
     }
     return out;
   }
-  const TROUS = [1, 2, 3, 3, 3, 4, 4, 5, 5, 0];
-  const G = (...ids) => () => ids.map(id => "g:" + id);
+  // un niveau : ses positions, le nombre de notes manquantes (0 = toute la position), le nom des notes affiché ou non, transposé ou non
+  const NP = (txt, ids, trous, noms, tr = false) => ({ txt, pool: () => ids.map(id => "g:" + id), trous, noms, tr });
   const GAMMES = [
-    { txt: "Penta position 1 : une note manquante", pool: G("p1") },
-    { txt: "Do majeur : deux notes manquantes", pool: G("do") },
-    { txt: "Penta position 2 : trois notes manquantes", pool: G("p2") },
-    { txt: "Penta positions 1 et 2, sans le nom des notes", pool: G("p1", "p2") },
-    { txt: "Sol majeur en position fixe", pool: G("sol") },
-    { txt: "Penta position 3", pool: G("p3") },
-    { txt: "La majeur, et les positions 1, 2 et 3 de la penta", pool: G("la", "p1", "p2", "p3") },
-    { txt: "La mineur naturelle", pool: G("lam") },
-    { txt: "Penta positions 4 et 5", pool: G("p4", "p5") },
-    { txt: "Une position au hasard, en entier, de mémoire, dans une autre tonalité", pool: G(...Object.keys(POS)) },
+    NP("Do majeur : une note manquante", ["do"], 1, true),
+    NP("Do majeur : trois notes manquantes", ["do"], 3, true),
+    NP("Do majeur, sans le nom des notes", ["do"], 4, false),
+    NP("Sol majeur en position fixe (index en case 2)", ["sol"], 2, true),
+    NP("Sol majeur, sans le nom des notes", ["sol"], 3, false),
+    NP("La majeur : la même forme, deux cases plus haut", ["la"], 3, true),
+    NP("Do, Sol et La majeur mélangés", ["do", "sol", "la"], 4, false),
+    NP("La mineur naturelle (cases 4 à 8)", ["lam"], 4, true),
+    NP("Les formes fixes, dans d'autres tonalités", ["sol", "la", "lam"], 4, false, true),
+    NP("Une gamme au hasard, en entier, de mémoire", ["do", "sol", "la", "lam"], 0, false, true),
   ];
-  function qGamme(key, lvl) {
-    const P = POS[key.slice(2)];
-    const k = lvl === 10 ? pick([-2, -1, 0, 1, 2, 3, 4, 5].filter(d => P.win[0] + d >= 0 && P.win[1] + d <= 15 && d)) : 0;
+  const PENTAS = [
+    NP("Position 1 : une note manquante", ["p1"], 1, true),
+    NP("Position 1 : trois notes manquantes", ["p1"], 3, true),
+    NP("Position 2 (cases 7 à 10)", ["p2"], 2, true),
+    NP("Positions 1 et 2, sans le nom des notes", ["p1", "p2"], 3, false),
+    NP("Position 3 (cases 9 à 13)", ["p3"], 3, true),
+    NP("Positions 1, 2 et 3 mélangées", ["p1", "p2", "p3"], 4, false),
+    NP("Positions 4 et 5, vers le sillet", ["p4", "p5"], 3, true),
+    NP("Les 5 positions", ["p1", "p2", "p3", "p4", "p5"], 5, false),
+    NP("Les 5 positions, dans d'autres tonalités", ["p1", "p2", "p3", "p4", "p5"], 4, false, true),
+    NP("Une position au hasard, en entier, de mémoire, dans une autre tonalité", ["p1", "p2", "p3", "p4", "p5"], 0, false, true),
+  ];
+  const qPos = NIV => (key, lvl) => {
+    const L = NIV[lvl - 1], P = POS[key.slice(2)];
+    const k = L.tr && !P.fixe ? pick([-2, -1, 1, 2, 3, 4, 5].filter(d => P.win[0] + d >= 0 && P.win[1] + d <= 15)) : 0;
     const all = casesPos(P, k), ton = (P.ton + k + 120) % 12;
     const estTon = ([s, f]) => pcOf(s, f) === ton;
-    const trous = lvl === 10 ? all.filter(c => !estTon(c)) : shuffle(all.filter(c => !estTon(c))).slice(0, TROUS[lvl - 1]);
+    const trous = L.trous ? shuffle(all.filter(c => !estTon(c))).slice(0, L.trous) : all.filter(c => !estTon(c));
     const vu = new Set(trous.map(c => c.join(":")));
     const nom = nomPos(P, k), n = trous.length;
-    return { key, type: "cases", targets: trous, win: [P.win[0] + k, P.win[1] + k], frets: Math.max(12, P.win[1] + k),
-      texte: lvl === 10 ? `${nom} : place toutes les notes, de mémoire` : `${nom} : replace ${n > 1 ? `les ${n} notes manquantes` : "la note manquante"}`,
-      voix: lvl === 10 ? "Place toute la position, de mémoire." : n > 1 ? "Replace les notes manquantes." : "Replace la note manquante.",
-      donnees: all.filter(c => !vu.has(c.join(":"))).map(([s, f]) => [s, f, estTon([s, f]) ? "root" : "given", lvl <= 3 || estTon([s, f]) ? nomDe(OPEN[s] + f) : ""]),
+    return { key, type: "cases", targets: trous, win: [P.win[0] + k, P.win[1] + k], frets: Math.max(12, P.win[1] + k), pause: true,
+      texte: L.trous ? `${nom} : replace ${n > 1 ? `les ${n} notes manquantes` : "la note manquante"}` : `${nom} : place toutes les notes, de mémoire`,
+      voix: !L.trous ? "Place toute la position, de mémoire." : n > 1 ? "Replace les notes manquantes." : "Replace la note manquante.",
+      donnees: all.filter(c => !vu.has(c.join(":"))).map(([s, f]) => [s, f, estTon([s, f]) ? "root" : "given", L.noms || estTon([s, f]) ? nomDe(OPEN[s] + f) : ""]),
       aide: `Les points pleins sont les ${TON[ton]}, la tonique. Les notes de la gamme : ${P.pcs.map(p => TON[(p + k + 120) % 12]).join(", ")}.` };
-  }
+  };
 
   // =====================================================================
-  // 3. Accords : du diagramme vers le nom, puis l'inverse, puis à l'oreille
+  // 4. Accords : du diagramme vers le nom, puis l'inverse, puis à l'oreille
   // =====================================================================
   const Q = { maj: "", min: "m", "7": "7", maj7: "maj7", m7: "m7" };
   const QP = { maj: "", min: " mineur", "7": " sept", maj7: " majeur sept", m7: " mineur sept" };
@@ -224,11 +236,36 @@
   // =====================================================================
   // Les familles, et le moteur commun
   // =====================================================================
+  // le nom lisible d'une question, pour le compte-rendu
+  function libelle(f, key) {
+    const [t, a, b] = key.split(":");
+    if (f === "manche") return t === "o" ? `Octave du ${nomDe(OPEN[+a] + +b)} (${NOM_CORDE[+a]}, case ${b})` : `${nomDe(OPEN[+a] + +b)} sur ${NOM_CORDE[+a]} (case ${b})`;
+    if (f === "gammes" || f === "penta") return POS[a] ? nomPos(POS[a]) : key;
+    if (f === "accords") {
+      const k = key[0] === "p" || key[0] === "o" ? key.slice(1) : key, A = accord(k);
+      const nom = nomAcc(A) + (A.barre ? ` (barré case ${A.barre})` : "");
+      return key[0] === "p" ? `Placer ${nom}` : key[0] === "o" ? `${nom} à l'oreille` : nom;
+    }
+    return key;
+  }
   const FAMILLES = {
     manche: { titre: "Notes du manche", niveaux: MANCHE, q: qManche },
-    gammes: { titre: "Gammes et penta", niveaux: GAMMES, q: qGamme },
+    gammes: { titre: "Gammes", niveaux: GAMMES, q: qPos(GAMMES) },
+    penta: { titre: "Pentatonique", niveaux: PENTAS, q: qPos(PENTAS) },
     accords: { titre: "Accords", niveaux: ACCORDS, q: qAccord },
   };
+  // v2 (24 octobre 2026) : « Gammes et penta » devient deux jeux, Gammes et Pentatonique, avec leurs propres niveaux
+  function migre(m) {
+    m.v = 2;
+    const g = m.gammes; if (!g?.items) return;
+    const items = { gammes: {}, penta: {} };
+    for (const [k, v] of Object.entries(g.items)) {
+      const f = k.startsWith("g:p") ? "penta" : "gammes";
+      items[f][k] = [v[0], v[1], FAMILLES[f].niveaux.findIndex(L => L.pool().includes(k)) + 1 || 1];
+    }
+    m.gammes = { max: 1, best: {}, items: items.gammes };
+    m.penta = { max: 1, best: {}, items: items.penta };
+  }
   const debloque = f => Math.max(famMem(f).max || 1, J.niveauCours?.(f) || 1);
   const etat = f => ({ max: debloque(f), best: famMem(f).best || {} });
 
@@ -280,14 +317,15 @@
     const titre = rev ? "Révision du jour" : L.txt;
     const eyebrow = rev ? "Ce que tu as raté ces derniers jours" : `${FAMILLES[f].titre} · niveau ${lvl}${sansFin ? " · entretien" : ""}`;
     d.replaceChildren(el("div", { class: "sheet-in jeu-in" },
-      el("div", { class: "sheet-head" }, el("div", {}, el("span", { class: "eyebrow", text: eyebrow }), el("h2", { id: "nivTitre", text: titre })), el("div", { class: "jeu-tools" }, voixBtn, sound, close)),
-      el("p", { class: "muted small", text: rev ? "10 questions sur les notes, gammes et accords que tu as ratés. Réussies, elles reviendront moins souvent."
+      el("div", { class: "sheet-head" }, el("div", {}, el("span", { class: "eyebrow", text: eyebrow }), el("h2", { id: "nivTitre", text: titre })), el("div", { class: "jeu-tools" }, nomsBtn?.(), voixBtn, sound, close)),
+      el("p", { class: "muted small", text: rev ? "10 questions sur les notes, gammes, positions et accords que tu as ratés. Réussies, elles reviendront moins souvent."
         : sansFin ? "Sans fin : tu as 3 vies, et ton record est gardé. Le chrono est court : c'est l'entretien." : "10 questions. 8 justes du premier coup, sans indice, ouvrent le niveau suivant." + (CHRONO[lvl - 1] ? ` Chrono : ${CHRONO[lvl - 1]} s par note.` : "") }),
       el("div", { class: "jeu-bar" }, q, prog), chronoBar, actions, fb, ecoute, boardHost, answers));
     if (!d.open) d.showModal();
 
     let board = null, frets = 0;
-    run = { i: 0, ok: 0, vies: 3, serie: 0, faits: [], erreurs: 0, timer: null, chrono: null, locked: false, help: false, err: false, found: new Set(), hintLvl: 0, remis: new Set() };
+    // pour le compte-rendu : essais (touches et réponses), notes demandées, fautes par question
+    run = { i: 0, ok: 0, vies: 3, serie: 0, faits: [], erreurs: 0, essais: 0, notes: 0, fautes: {}, t0: Date.now(), timer: null, chrono: null, locked: false, help: false, err: false, found: new Set(), hintLvl: 0, remis: new Set() };
     const me = run;
     const cur = () => run?.cur;
     const setFb = (t, cls = "") => { fb.textContent = t; fb.className = "jeu-fb" + (cls ? " " + cls : ""); };
@@ -303,6 +341,7 @@
       const item = sansFin ? tirage(f, pool10, 1)[0] : queue[run.i];
       const F = FAMILLES[item.f], Q = F.q(item.key, item.lvl, run.i);
       Object.assign(run, { cur: { ...Q, item }, locked: false, help: false, err: false, found: new Set(), hintLvl: 0 });
+      run.notes += Q.type === "cases" ? Q.targets.length : 1;
       const fr = Q.frets || 12;
       if (!board || fr !== frets) { board = Board(boardHost, { vertical, frets: fr }); frets = fr; board.onClick(touche); }
       board.clear(); board.dim(Q.cordes || null, Q.win || null);
@@ -342,6 +381,7 @@
       const bon = juste && !run.help && !run.err;
       retenir(Q.item.f, Q.item.key, bon, Q.item.lvl);
       run.faits.push(bon);
+      if (!bon) { const fk = Q.item.f + "|" + Q.item.key; run.fautes[fk] = (run.fautes[fk] || 0) + 1; }
       if (bon) { run.ok++; run.serie++; } else if (sansFin) run.vies--;
       // une question ratée revient 3 questions plus loin (une fois)
       if (!bon && !sansFin && !run.remis.has(Q.item.key) && run.i + 3 < queue.length) { run.remis.add(Q.item.key); queue[run.i + 3] = Q.item; }
@@ -351,7 +391,10 @@
       sauve();
       const delai = bon ? 950 : 2200;
       if (sansFin && run.vies <= 0) { run.timer = setTimeout(() => run === me && finir(), delai); return; }
-      run.timer = setTimeout(() => { if (run !== me) return; run.i++; if (!sansFin && run.i >= queue.length) finir(); else poser(); }, delai);
+      const suite = () => { if (run !== me) return; run.i++; if (!sansFin && run.i >= queue.length) finir(); else poser(); };
+      // gammes et penta : le manche reste vide un moment, pour que le cerveau oublie la position d'avant
+      const blanc = () => { if (run !== me) return; board.clear(); board.dim(null, null); setFb(""); q.textContent = "…"; run.timer = setTimeout(suite, 1200); };
+      run.timer = setTimeout(Q.pause && !(sansFin && run.vies <= 0) ? blanc : suite, delai);
     }
     function rate(msg) {
       const Q = cur(); if (!Q || run.locked) return;
@@ -370,6 +413,7 @@
     function repond(v) {
       const Q = cur(); if (!Q || run.locked) return;
       const ok = String(v) === String(Q.bonne);
+      run.essais++; if (!ok) run.erreurs++;
       answers.querySelectorAll("button").forEach(b => { b.disabled = true; if (b.dataset.v === String(Q.bonne)) b.classList.add("good"); else if (b.dataset.v === String(v)) b.classList.add("bad"); });
       if (Q.ask) { board.set(Q.ask[0], Q.ask[1], ok ? "ok" : "bad", nomDe(OPEN[Q.ask[0]] + Q.ask[1])); J.base.play(OPEN[Q.ask[0]] + Q.ask[1]); }
       if (ok) { setFb(run.help ? "Oui ! (avec un indice, elle reviendra)" : "Oui !", "good"); window.Sons?.cling(); }
@@ -380,6 +424,9 @@
       const Q = cur(); if (!Q || run.locked || Q.type !== "cases") return;
       if (Q.src && s === Q.src[0] && fr === Q.src[1]) return;
       if (run.found.has(k2(s, fr)) || (Q.donnees || []).some(([a, b, st]) => a === s && b === fr && st !== "rep")) return;
+      // la bonne note hors du jeu (la corde à vide) : ce n'est pas une faute
+      if (Q.pc != null && pcOf(s, fr) === Q.pc && !Q.targets.some(([a, b]) => a === s && b === fr)) { J.base.play(OPEN[s] + fr); return setFb(`Oui, c'est un ${nomDe(OPEN[s] + fr)}, mais à vide : cherche-le sur les cases.`, "hint"); }
+      run.essais++;
       if (Q.targets.some(([a, b]) => a === s && b === fr)) {
         run.found.add(k2(s, fr)); board.set(s, fr, "ok", nomDe(OPEN[s] + fr)); J.base.play(OPEN[s] + fr);
         const r = reste(Q).length;
@@ -423,7 +470,10 @@
         if (score > prev) { fm.best[lvl] = score; record = sansFin && prev > 0; }
         if (!sansFin && score >= 8 && lvl < 10 && debloque(f) <= lvl) { fm.max = lvl + 1; ouvert = true; }
       }
-      const m = mem(); (m.log ||= []).push({ f: rev ? "revision" : f, n: rev ? 0 : lvl, s: score, t: total, d: new Date().toISOString(), w: J.semaine?.() });
+      // le journal, lu par le compte-rendu de la semaine : score, essais, notes, fautes les plus fréquentes, d'où le jeu a été lancé
+      const fautes = Object.entries(run.fautes).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, n]) => { const [ff, key] = k.split("|"); return [libelle(ff, key), n]; });
+      const m = mem(); (m.log ||= []).push({ f: rev ? "revision" : f, n: rev ? 0 : lvl, s: score, t: total, d: new Date().toISOString(), w: J.semaine?.(),
+        x: run.essais, no: run.notes, e: run.erreurs, dt: Math.round((Date.now() - run.t0) / 1000), r: fautes, src: opts.source || (rev ? "revision" : "jeux") });
       if (m.log.length > 300) m.log.splice(0, m.log.length - 300);
       sauve();
       const pct = total ? score / total : 0;
@@ -439,13 +489,13 @@
       fin.append(el("button", { class: "btn big" + (fin.childElementCount ? "" : " primary"), type: "button", text: "Rejouer", onclick: () => (rev ? revision(opts) : ouvrir(f, lvl, opts)) }),
         el("button", { class: "btn big", type: "button", text: "Terminé", onclick: () => d.close() }));
       boardHost.replaceChildren(fin); board = null; frets = 0;
-      try { opts.onDone?.({ f, lvl, score, total, ouvert }); } catch {}
+      try { opts.onDone?.({ f, lvl, score, total, ouvert, fautes }); } catch {}
     }
 
     poser();
   }
 
-  // ---------- Révision du jour : tout ce qui a été raté (boîtes 1 et 2), les 3 familles mélangées ----------
+  // ---------- Révision du jour : tout ce qui a été raté (boîtes 1 et 2), les 4 jeux mélangés ----------
   const aReviser = () => Object.keys(FAMILLES).flatMap(f => Object.entries(famMem(f).items).filter(([, v]) => v[0] <= 2).map(([key, v]) => ({ f, key, lvl: v[2] || 1 })))
     .filter(x => FAMILLES[x.f].niveaux[x.lvl - 1]);
   function revision(opts = {}) {
@@ -459,5 +509,5 @@
     ouvrir(null, null, { ...opts, revision: shuffle(items) });
   }
 
-  J.niveaux = { FAMILLES, ouvrir, revision, aReviser, etat, debloque, courant: () => run?.cur }; // courant : la question posée (pour les tests)
+  J.niveaux = { FAMILLES, ouvrir, revision, aReviser, etat, debloque, libelle, courant: () => run?.cur }; // courant : la question posée (pour les tests)
 })();
