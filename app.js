@@ -395,14 +395,17 @@
 
   // ---------- Mes morceaux : les missions du cours, les morceaux au choix et les tiens ----------
   // statut : « travail » (je le travaille), « maitrise », ou rien (je pourrais le travailler).
-  // Les missions (Fragile, Bamboleo) sont travaillées d'office dès leur semaine ; tes morceaux à toi aussi.
+  // Les missions (Fragile, Bamboleo) sont travaillées d'office dès leur semaine. Tes morceaux à toi vont dans « Mes morceaux »
+  // jusqu'à ce que tu choisisses de les travailler ; je les analyse au bilan (DATA.analyses, retrouvés par leur titre).
   const NIVEAU = ["", "Abordable", "Moyen", "Costaud"];
   const NIVEAUX = { 1: "Fondations", 2: "Indépendance", 3: "Liberté", 4: "Bossa nova" };
-  const tousMorceaux = () => [...(DATA.morceaux || []), ...(state.mesPieces || []).map(x => ({ ...x, perso: true }))];
+  const cleMorceau = t => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const analyseDe = x => (DATA.analyses || []).find(a => a.cle === cleMorceau(x.titre));
+  const tousMorceaux = () => [...(DATA.morceaux || []), ...(state.mesPieces || []).map(x => { const a = analyseDe(x); return { ...a, ...x, perso: true, analyse: !!a }; })];
   const morceau = id => tousMorceaux().find(x => x.id === id);
   const semaineAtteinte = c => Math.max(c?.semaine || 0, nextCours().semaine);
   const verrou = (pz, sem) => !pz.perso && sem < (pz.des || 1);
-  const statutDe = (pz, sem) => (state.morceaux ||= {})[pz.id] || (pz.perso || (pz.mission && !verrou(pz, sem)) ? "travail" : "");
+  const statutDe = (pz, sem) => (state.morceaux ||= {})[pz.id] || (pz.mission && !verrou(pz, sem) ? "travail" : "");
   const setStatut = (pz, st) => { (state.morceaux ||= {})[pz.id] = st; save(); };
   const missionDe = c => morceau(c.palier === 1 ? "fragile" : "bamboleo");
   const quandTxt = pz => (pz.des > 12 ? "Après le palier 3" : `Dès la semaine ${pz.des}`);
@@ -622,7 +625,16 @@
     return el("div", { class: "fiche" },
       el("span", { class: "eyebrow", text: "Vidéos" }), lecteurVideos(pz, onChange),
       el("span", { class: "eyebrow", text: "Tablatures" }), listeTabs(pz, onChange),
+      pz.perso ? chercheTab(pz) : null,
       formAjout(pz, onChange));
+  }
+  // une recherche toute prête sur les deux grandes banques de tablatures
+  function chercheTab(pz) {
+    const q = encodeURIComponent([pz.titre, pz.artiste].filter(Boolean).join(" "));
+    const lien = (href, text) => el("a", { class: "btn small", href, target: "_blank", rel: "noopener", text });
+    return el("div", { class: "cherche-tab" }, el("span", { class: "muted small", text: "Chercher la tablature :" }),
+      lien(`https://www.ultimate-guitar.com/search.php?search_type=title&value=${q}`, "Ultimate Guitar"),
+      lien(`https://www.songsterr.com/?pattern=${q}`, "Songsterr"));
   }
 
   // « Pour le maîtriser » : les notions du morceau et les jeux qui t'y préparent, repliés dans la fiche
@@ -659,7 +671,7 @@
     const corps = el("div", { class: "piece-corps", hidden: !ouvert });
     const head = el("button", { class: "piece-head", type: "button", "aria-expanded": String(ouvert) },
       el("span", { class: "piece-titres" },
-        pz.mission ? el("span", { class: "piece-tag mission", text: "Mission du cours" }) : pz.perso ? el("span", { class: "piece-tag", text: "Ton morceau" }) : null,
+        pz.mission ? el("span", { class: "piece-tag mission", text: "Mission du cours" }) : pz.perso ? el("span", { class: "piece-tag", text: pz.analyse ? "Ton morceau" : "Ton morceau · à analyser" }) : null,
         el("span", { class: "piece-titre", text: pz.titre }),
         pz.artiste ? el("span", { class: "piece-artiste", text: pz.artiste }) : null),
       el("span", { class: "pli-chev", "aria-hidden": "true" }));
@@ -671,7 +683,9 @@
     const draw = () => {
       corps.replaceChildren();
       if (pz.interet) corps.append(el("p", { class: "piece-interet" }, pz.interet));
+      if (pz.perso && !pz.analyse) corps.append(el("p", { class: "muted small quand-pz", text: "Je l'analyse à ton prochain bilan : sa difficulté, ce qu'il te fait travailler et ses passages difficiles." }));
       if (pz.techniques?.length) corps.append(el("div", { class: "tech" }, el("ul", {}, pz.techniques.map(t => el("li", { text: t })))));
+      if (pz.difficultes?.length) corps.append(el("div", { class: "piece-diffs" }, el("span", { class: "eyebrow", text: "Les passages difficiles" }), el("ul", {}, pz.difficultes.map(t => el("li", { text: t })))));
       if (!pz.perso && lock) corps.append(el("p", { class: "muted small quand-pz", text: `${quandTxt(pz)} : tu peux l'écouter, et le travailler quand le cours t'aura donné sa technique.` }));
       else if (pz.mission && pz.id === "fragile" && sem > 4) corps.append(el("p", { class: "muted small quand-pz", text: "En entretien : une fois en entier à la séance A." }));
       corps.append(ficheMorceau(pz, () => { const o = corps.querySelector(".ajout")?.open; draw(); if (o) corps.querySelector(".ajout").open = true; }));
@@ -684,7 +698,7 @@
     if (lock) tools.append(el("button", { class: "btn small pick-btn", type: "button", disabled: true }, quandTxt(pz)));
     else if (st === "travail") {
       tools.append(act("✓ Je le maîtrise", () => { setStatut(pz, "maitrise"); Sons.bloc(); }, "maitrise-btn"));
-      if (!pz.mission && !pz.perso) tools.append(act("Je ne le travaille plus", () => setStatut(pz, ""), "ghost"));
+      if (!pz.mission) tools.append(act("Je ne le travaille plus", () => setStatut(pz, ""), "ghost"));
     } else if (st === "maitrise") tools.append(act("Le retravailler", () => setStatut(pz, "travail")));
     else tools.append(act("Je le travaille", () => { setStatut(pz, "travail"); Sons.cling(); }, "primary"));
     const meta = el("span", { class: "piece-meta" },
@@ -706,14 +720,15 @@
     const sem = semaineAtteinte(), all = tousMorceaux().sort(tri);
     const refresh = () => { const y = window.scrollY; renderMorceaux(); window.scrollTo({ top: y }); };
     const by = st => all.filter(pz => statutDe(pz, sem) === st);
-    const enCours = by("travail").sort((a, b) => !!b.mission - !!a.mission), possibles = by(""), faits = by("maitrise");
+    const enCours = by("travail").sort((a, b) => !!b.mission - !!a.mission), faits = by("maitrise");
+    const miens = by("").filter(pz => pz.perso), possibles = by("").filter(pz => !pz.perso);
     body.replaceChildren(el("div", { class: "cours-head" },
       el("span", { class: "eyebrow", text: `Semaine ${Math.min(sem, 12)} du cours` }),
       el("h1", { text: "Mes morceaux" }),
-      el("p", { class: "sub", text: "Ceux que tu travailles, et ceux que tu pourras travailler, rangés par niveau. Fragile et Bamboleo restent tes morceaux de base ; les autres sont en plus." })));
-    const section = (titre, hint, kids) => body.append(el("section", { class: "card morceaux-sec" }, el("h2", { text: titre }), hint ? el("p", { class: "muted small", text: hint }) : null, kids));
+      el("p", { class: "sub", text: "Ceux que tu travailles, ceux que tu as ajoutés, et ceux que je te conseille. Fragile et Bamboleo restent tes morceaux de base ; les autres sont en plus." })));
+    const section = (titre, hint, ...kids) => body.append(el("section", { class: "card morceaux-sec" }, el("h2", { text: titre }), hint ? el("p", { class: "muted small", text: hint }) : null, ...kids));
     const swap = morceau(state.semaineMorceau?.[sem]);
-    section("Je les travaille", swap ? `Cette semaine, dans le cours : ${swap.titre}, à la place de ta mission.` : "Ta mission du moment, et les morceaux que tu as ajoutés.",
+    section("Je les travaille", swap ? `Cette semaine, dans le cours : ${swap.titre}, à la place de ta mission.` : "Ta mission du moment, et les morceaux que tu as choisis de travailler.",
       el("ul", { class: "pieces" }, enCours.map(pz => morceauCard(pz, sem, refresh))));
     const groupes = el("div", { class: "niveaux" });
     const palActuel = Math.min(3, DATA.cours.find(c => c.semaine === Math.min(sem, 12))?.palier || 1);
@@ -728,22 +743,23 @@
       det.addEventListener("toggle", () => { if (state.open[ouvKey] !== det.open) { state.open[ouvKey] = det.open; save(); } });
       groupes.append(det);
     }
-    if (possibles.length) section("Je pourrais les travailler", "Du plus abordable au plus costaud. Chacun se débloque quand le cours t'a donné sa technique.", groupes);
-    if (faits.length) section("Je les maîtrise", null, el("ul", { class: "pieces" }, faits.map(pz => morceauCard(pz, sem, refresh))));
     // un morceau à toi : il part dans ton bilan, et j'ajoute sa tablature et ses passages difficiles au cours
     const titre = el("input", { type: "text", placeholder: "Titre", "aria-label": "Titre du morceau" });
     const artiste = el("input", { type: "text", placeholder: "Artiste (facultatif)", "aria-label": "Artiste" });
     const lien = el("input", { type: "url", placeholder: "Lien YouTube (facultatif)", "aria-label": "Lien pour l'écouter" });
-    const add = el("details", { class: "card add-piece" }, el("summary", { text: "+ Ajouter un morceau à moi" }),
-      el("p", { class: "muted small", text: "Un morceau que tu travailles en dehors du cours. Il part dans ton bilan : je regarde sa difficulté et j'ajoute sa tablature au cours." }),
+    const add = el("details", { class: "add-piece" }, el("summary", { text: "+ Ajouter un morceau à moi" }),
+      el("p", { class: "muted small", text: "Un morceau qui te plaît, en dehors du cours. Il part dans ton bilan : j'analyse sa difficulté, ce qu'il te fait travailler et ses passages difficiles." }),
       titre, artiste, lien,
       el("button", { class: "btn primary", type: "button", onclick: () => {
         const t = titre.value.trim(); if (!t) { titre.focus(); return; }
         const u = lien.value.trim();
         (state.mesPieces ||= []).push({ id: "perso-" + Date.now().toString(36), titre: t, artiste: artiste.value.trim(), ecouter: /^https?:\/\//.test(u) ? u : "" });
-        save(); Sons.cling(); toast(`« ${t} » ajouté à tes morceaux.`); refresh();
+        save(); Sons.cling(); toast(`« ${t} » ajouté à Mes morceaux.`); refresh();
       } }, "Ajouter"));
-    body.append(add);
+    section("Mes morceaux", miens.length ? "Ceux que tu as ajoutés. Touche « Je le travaille » quand tu veux t'y mettre." : null,
+      miens.length ? el("ul", { class: "pieces" }, miens.map(pz => morceauCard(pz, sem, refresh))) : null, add);
+    if (possibles.length) section("Les morceaux que je te conseille", "Choisis ceux qui te tentent. Rangés par niveau, du plus abordable au plus costaud ; chacun se débloque quand le cours t'a donné sa technique.", groupes);
+    if (faits.length) section("Je les maîtrise", null, el("ul", { class: "pieces" }, faits.map(pz => morceauCard(pz, sem, refresh))));
   }
 
   // Dans le bloc Morceau : la mission reste le morceau de base ; on peut la changer pour une semaine seulement.
@@ -1104,6 +1120,8 @@
     const sem = semaineAtteinte(c0), nom = x => x.titre + (x.perso && x.artiste ? ` (${x.artiste})` : "") + (x.perso ? ", ajouté par moi" : "");
     const aussi = tousMorceaux().filter(x => !x.mission && statutDe(x, sem) === "travail").map(nom);
     if (aussi.length) L.push("Je travaille aussi : " + aussi.join(", "));
+    const aAnalyser = tousMorceaux().filter(x => x.perso && !x.analyse);
+    if (aAnalyser.length) L.push("Morceaux ajoutés, à analyser : " + aAnalyser.map(x => x.titre + (x.artiste ? ` (${x.artiste})` : "") + (x.ecouter ? ` ${x.ecouter}` : "")).join(" ; "));
     c0.blocs.forEach((b, bi) => {
       L.push(""); L.push(b.titre);
       const groups = new Map(); // un exercice, et ce que tu en as dit à chaque séance

@@ -883,3 +883,10 @@ details.maitriser[open] > summary::after { content: "▾"; color: var(--accent);
 .mt-jeu-nom { font-weight: 600; font-size: .88rem; }
 .mt-jeu-p { font-size: .8rem; color: var(--muted); }
 details.fiche-cours > .piece-corps { margin-top: 10px; border-top: 0; padding-top: 0; }
+/* Mes morceaux : l'ajout dans la section, la recherche de tablature, les passages difficiles */
+.morceaux-sec .add-piece { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.morceaux-sec h2 + .add-piece { border-top: 0; padding-top: 0; }
+.cherche-tab { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.cherche-tab .btn { text-decoration: none; }
+.piece-diffs ul { margin: 4px 0 0; padding-left: 18px; font-size: .88rem; }
+.piece-diffs li + li { margin-top: 3px; }

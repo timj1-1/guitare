@@ -864,6 +864,16 @@ MAITRISER = {
         N("Le rythme bossa lent", "Le même décalage pouce-doigts qu'à Ipanema, mais plus lent : garde le pouce parfaitement régulier.")],
         jeux=[J("accords", 9, "Les accords maj7 et m7"), J("accords", 10, "Tous les accords mélangés")]),
 }
+# Les morceaux que Timothée ajoute lui-même, analysés au bilan. L'app les retrouve par leur titre
+# (sans accents, en minuscules, la ponctuation remplacée par des espaces) : la clé est ce titre.
+ANALYSES = [
+    {"cle": "nothing else matters", "niveau": 2, "palier": 2,
+     "interet": "L'intro en Mi mineur est un arpège sur cordes à vide, de la même famille que Fragile : elle sonne très bien sur une guitare nylon. Il te fait travailler les liés du palier 2 et une mesure à 6/8, qu'on compte en deux groupes de trois (1-2-3 4-5-6).",
+     "techniques": ["Arpèges sur cordes à vide", "Liés (hammer-on et pull-off)", "Mesure à 6/8", "Accords ouverts et Si7"],
+     "difficultes": ["L'intro : laisser sonner les cordes à vide pendant les liés de la mélodie, sans les étouffer.",
+                     "Les changements d'accords des couplets et du refrain, sans casser l'arpège.",
+                     "Le solo : écrit pour la guitare électrique, laisse-le de côté pour l'instant."]},
+]
 MORCEAUX = [dict(pz, maitriser=MAITRISER[pz["id"]]) if pz["id"] in MAITRISER else pz
             for pz in MISSIONS + [dict(pz, palier=n) for n, lst in REPERTOIRE.items() for pz in lst] + [dict(pz, palier=4) for pz in BOSSA]]
 
@@ -985,6 +995,7 @@ out = {
     "themes": THEMES,
     "paliers": [{"num": p["num"], "nom": NOMS[p["num"]], "titre": p["titre"], "but": p["but"], "mission": p["mission"]} for p in PALIERS],
     "morceaux": MORCEAUX,
+    "analyses": ANALYSES,
     "cours": cours,
 }
 root = os.path.join(os.path.dirname(__file__), "..")
