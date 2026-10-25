@@ -163,7 +163,9 @@
   async function startMic(onNote, onLevel, isCurrent) {
     if (chromeMac) throw new Error("chrome-mac");
     if (!navigator.mediaDevices?.getUserMedia) throw new Error("micro");
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    // la demande la plus simple (celle qui marche sur Safari), puis sans les filtres de visioconférence si possible
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    await stream.getAudioTracks()[0]?.applyConstraints({ echoCancellation: false, noiseSuppression: false, autoGainControl: false }).catch(() => {});
     if (!isCurrent()) { stream.getTracks().forEach(t => t.stop()); return false; }
     stopMic();
     const c = Sons.ctx(); if (c.state === "suspended") await c.resume();
