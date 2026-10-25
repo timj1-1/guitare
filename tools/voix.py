@@ -31,7 +31,8 @@ empreinte = lambda t: hashlib.sha1(norm(t).encode("utf-8")).hexdigest()[:16]
 def phrases_cours():
     d = json.loads((ROOT / "data/cours.json").read_text(encoding="utf-8"))
     out = []
-    flat = lambda v: [v] if isinstance(v, str) else [y for x in (v.values() if isinstance(v, dict) else v) for y in flat(x)]
+    # les textes seulement (le plan de l'intro porte aussi le numéro de son bloc : {"b": 0, "t": "…"})
+    flat = lambda v: [v] if isinstance(v, str) else [y for x in (v.values() if isinstance(v, dict) else v) for y in flat(x)] if isinstance(v, (dict, list, tuple)) else []
     out += flat(d.get("prof", {}))
     for c in d["cours"]:
         for b in c["blocs"]:
@@ -177,7 +178,8 @@ def manifeste(pretes):
     prete.update(pretes)
     prete["siwis"] = True
     f.write_text(json.dumps({"exemple": EXEMPLE, "voix": [
-        {"id": i, "nom": n, "genre": g, "desc": d, "prete": bool(prete.get(i))} for i, n, g, d, _ in VOIX]},
+        # seulement les voix enregistrées : les autres ne s'affichent pas dans les réglages (sa demande, 2026-10-25)
+        {"id": i, "nom": n, "genre": g, "desc": d, "prete": True} for i, n, g, d, _ in VOIX if prete.get(i)]},
         ensure_ascii=False, indent=1), encoding="utf-8")
 
 def azure(ids, textes):

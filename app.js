@@ -360,9 +360,26 @@
     b.addEventListener("click", async () => {
       if (b.classList.contains("speaking")) return Sons.tais();
       b.classList.add("speaking"); txt.textContent = "Arrêter";
-      try { await Sons.dire(typeof segs === "function" ? segs() : segs, { force: true }); } finally { b.classList.remove("speaking"); txt.textContent = label; }
+      try { await parle(typeof segs === "function" ? segs() : segs); } finally { b.classList.remove("speaking"); txt.textContent = label; }
     });
     return b;
+  }
+  // Une liste de phrases, ou de { t, cible } : pendant chaque phrase, sa partie du cours est mise en avant à l'écran
+  function parle(list) {
+    const L = (Array.isArray(list) ? list : [list]).map(x => (typeof x === "string" ? { t: x } : x)).filter(x => String(x?.t || "").trim());
+    const vise = L.some(x => x.cible != null);
+    return Sons.dire(L.map(x => x.t), { force: true, onSeg: vise ? i => montre(L[i]?.cible) : null }).finally(() => { if (vise) montre(null); });
+  }
+  // la partie dont parle le prof grossit un peu, au centre de l'écran ; l'écran descend doucement vers la suivante
+  function montre(cible) {
+    document.querySelectorAll(".en-parole").forEach(e => e.classList.remove("en-parole"));
+    if (cible == null || state.view !== "cours") return;
+    const body = $("#coursBody");
+    const e = cible === "tete" ? body.querySelector(".hero") : body.querySelectorAll(".bloc")[cible];
+    if (!e) return;
+    e.classList.add("en-parole");
+    const grand = e.getBoundingClientRect().height > window.innerHeight * 0.6;
+    e.scrollIntoView({ behavior: "smooth", block: grand ? "start" : "center" });
   }
 
   // ---------- Schémas (les mêmes que dans le cours du Claude Doc) ----------
@@ -404,7 +421,7 @@
   const NIVEAUX = { 1: "Fondations", 2: "Indépendance", 3: "Liberté", 4: "Bossa nova" };
   const cleMorceau = t => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const analyseDe = x => (DATA.analyses || []).find(a => a.cle === cleMorceau(x.titre));
-  const tousMorceaux = () => [...(DATA.morceaux || []), ...(state.mesPieces || []).map(x => { const a = analyseDe(x); return { ...a, ...x, perso: true, analyse: !!a }; })];
+  const tousMorceaux = () => [...(DATA.morceaux || []), ...(state.mesPieces || []).map(x => { const a = analyseDe(x); return { ...a, ...Object.fromEntries(Object.entries(x).filter(([, v]) => v !== "")), perso: true, analyse: !!a }; })];
   const morceau = id => tousMorceaux().find(x => x.id === id);
   const semaineAtteinte = c => Math.max(c?.semaine || 0, nextCours().semaine);
   const verrou = (pz, sem) => !pz.perso && sem < (pz.des || 1);
@@ -979,13 +996,14 @@
   const profOn = () => { try { return localStorage.getItem("maguitare:prof") !== "0"; } catch { return true; } };
   const exNotes = c => allEx(c).map(a => ({ ...a, x: state.cours[c.id]?.ex[a.key] || {} }));
   function introSegs(c) {
-    const P = DATA.prof, pr = c.prof || {}, S = [...(pr.intro || [])];
+    // l'accueil (en-tête du cours), le mot du prof, ce qui a coincé, puis le plan des 6 blocs (chaque bloc mis en avant)
+    const P = DATA.prof, pr = c.prof || {}, S = (pr.intro || []).map(t => ({ t, cible: "tete" }));
     if (c.mot) S.push(...lignes(c.mot));
     RETOURS.filter(r => r.pour === c.id).forEach(r => S.push(...lignes(r.texte)));
     const prev = DATA.cours[DATA.cours.indexOf(c) - 1];
     const dur = prev ? exNotes(prev).filter(a => a.x.feel === "galere").slice(0, 2) : [];
     if (dur.length) S.push(P.intro_galere, ...dur.map(a => a.e.label), P.intro_galere_fin);
-    return [...S, ...(pr.intro_suite || [])];
+    return [...S, ...(pr.intro_suite || []).map(t => ({ t, cible: "tete" })), ...(pr.plan || []).map(x => ({ t: x.t, cible: x.b })), ...(pr.intro_fin || []).map(t => ({ t, cible: 0 }))];
   }
   function finSegs(c) {
     const P = DATA.prof, pr = c.prof || {}, s = cs(c.id), all = exNotes(c);
@@ -1036,7 +1054,7 @@
   function seanceStart(c) {
     Object.keys(state.cours).forEach(id => { if (id !== c.id) seancePause(id); });
     const s = cs(c.id);
-    if (!s.seance && profOn()) setTimeout(() => Sons.dire(introSegs(c), { force: true }), 700); // première fois : le prof présente le cours
+    if (!s.seance && profOn()) setTimeout(() => parle(introSegs(c)), 700); // première fois : le prof présente le cours
     s.seance ||= { acc: 0, start: null };
     s.seance.start ||= Date.now();
     touch(c); flush(); updateSeance();
@@ -1343,7 +1361,10 @@
       } catch { toast("Ce fichier n'est pas une sauvegarde de Ma gratte."); }
     });
     body.append(pli("donnees", "Mes données", el("span", { class: "muted small", text: "Sauvegarder, restaurer, chercher une mise à jour du cours." }), () => el("div", { class: "pli-pile" },
-      el("p", { class: "muted small", text: "Tes cases, tempos et commentaires restent sur cet appareil. Fais une sauvegarde de temps en temps, ou pour passer du téléphone à l'ordi." }),
+      el("p", { class: "muted small", text: "Tes cases, tempos, commentaires et morceaux restent dans ce navigateur. L'app installée sur ton Mac, Safari, Chrome et ton téléphone ont chacun les leurs : pour les retrouver ailleurs, copie le lien ci-dessous et ouvre-le là-bas." }),
+      el("div", { class: "row-tools" },
+        el("button", { class: "btn primary", type: "button", onclick: lienTransfert }, "Copier le lien de mes données")),
+      el("p", { class: "muted small", text: "Fais aussi une sauvegarde de temps en temps (les photos et PDF de tablatures n'y sont pas)." }),
       el("div", { class: "row-tools" },
         el("button", { class: "btn", type: "button", onclick: exportData }, "Sauvegarder"),
         el("button", { class: "btn", type: "button", onclick: () => fileIn.click() }, "Restaurer"),
@@ -1606,6 +1627,40 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
+  // Chaque navigateur (et l'app installée) garde ses propres données : un lien les emporte vers un autre.
+  // Les données voyagent dans l'ancre du lien (#donnees=…), compressées ; elles ne passent par aucun serveur.
+  const b64 = u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+  const unb64 = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  const zip = async (txt, sens) => {
+    const S = sens ? window.CompressionStream : window.DecompressionStream;
+    const flux = new Blob([txt]).stream().pipeThrough(new S("gzip"));
+    return new Uint8Array(await new Response(flux).arrayBuffer());
+  };
+  async function lienTransfert() {
+    flush();
+    const json = JSON.stringify(state);
+    const code = window.CompressionStream ? "z" + b64(await zip(json, true)) : "j" + b64(new TextEncoder().encode(json));
+    const url = location.origin + location.pathname + "#donnees=" + code;
+    try { await navigator.clipboard.writeText(url); toast("Lien copié : colle-le dans l'autre navigateur, ou envoie-le-toi."); }
+    catch {
+      if (navigator.share) { try { await navigator.share({ title: "Mes données Ma gratte", url }); return; } catch (e) { if (e?.name === "AbortError") return; } }
+      prompt("Copie ce lien, puis ouvre-le dans l'autre navigateur :", url);
+    }
+  }
+  async function recoitTransfert() {
+    const m = location.hash.match(/^#donnees=([zj])([\w-]+)$/); if (!m) return;
+    history.replaceState(null, "", location.pathname + location.search);
+    try {
+      const octets = unb64(m[2]);
+      const data = JSON.parse(m[1] === "z" ? new TextDecoder().decode(await zip(octets, false)) : new TextDecoder().decode(octets));
+      if (!data || typeof data.cours !== "object") throw new Error();
+      if (!confirm("Remplacer les données de ce navigateur par celles du lien (cases, tempos, morceaux, jeux) ?")) return;
+      state = Object.assign(blank(), data); flush();
+      setBpm(state.bpm || 60); setBeats(state.beats || 4);
+      toast("Tes données sont arrivées.");
+    } catch { toast("Ce lien de données est abîmé : refais-le depuis l'autre navigateur."); }
+  }
+
   async function checkUpdate() {
     try {
       const reg = await navigator.serviceWorker?.getRegistration();
@@ -1769,6 +1824,7 @@
       return;
     }
     DATA = cours; RETOURS = retours.retours || []; SCHEMAS = schemas;
+    await recoitTransfert();
     // anciens choix « Je le choisis » (par palier) : ils deviennent « Je le travaille »
     if (state.repertoire) { for (const ids of Object.values(state.repertoire)) for (const id of ids) (state.morceaux ||= {})[id] ||= "travail"; delete state.repertoire; save(); }
     if (!state.current || !byId(state.current)) state.current = nextCours().id;

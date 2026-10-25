@@ -8,8 +8,9 @@
   let sfxOn = read("maguitare:sfx", true);
   let voixOn = read("maguitare:voix", true);
   // la voix choisie dans les réglages : « siwis » (fichiers à la racine de voix/) ou une voix Microsoft (voix/<id>/)
-  let voixNom = "siwis";
-  try { voixNom = localStorage.getItem("maguitare:voixNom") || "siwis"; } catch {}
+  // Rémy par défaut : c'est la voix qu'il a choisie (2026-10-25)
+  let voixNom = "remy";
+  try { voixNom = localStorage.getItem("maguitare:voixNom") || "remy"; } catch {}
 
   // ---------- Contexte audio partagé (métronome, jeux, petits sons, voix) ----------
   let actx = null, triedAt = 0;
@@ -36,13 +37,25 @@
   }
 
   // ---------- Guitare nylon (les mêmes sons que Mon manche) ----------
+  // Le son choisi dans Mon manche (classique, flamenca, folk acier, manouche) vaut partout : cours, jeux, petits sons.
+  // Mêmes enregistrements et mêmes réglages que Mon manche ; manouche par défaut.
+  const SAMPLED = {
+    classique: { set: "ny", eq: [], release: 2.6 },
+    flamenca:  { set: "ny", eq: [["highpass", 90, 0.7, 0], ["peaking", 900, 1.2, -3], ["highshelf", 2800, 0.7, 7]], release: 1.3 },
+    folk:      { set: "ac", eq: [], release: 2.8 },
+    manouche:  { set: "ac", eq: [["highpass", 170, 0.7, 0], ["peaking", 1300, 1.0, 7], ["highshelf", 4500, 0.7, 3]], release: 1.7 },
+  };
+  try { if (!localStorage.getItem("manche:timbreV2")) { localStorage.setItem("manche:timbre", JSON.stringify("manouche")); localStorage.setItem("manche:timbreV2", "true"); } } catch {}
+  const timbre = () => { try { const v = JSON.parse(localStorage.getItem("manche:timbre")); return SAMPLED[v] ? v : "manouche"; } catch { return "manouche"; } };
   const guitare = (() => {
-    let buffers = null, loading = null;
-    function charge() {
-      if (loading) return loading;
-      loading = new Promise(res => {
+    const FICHIER = { ny: ["samples-nylon.js", "NYLON_SAMPLES"], ac: ["samples-acier.js", "ACIER_SAMPLES"] };
+    const sets = {}, loading = {};
+    function chargeSet(name) {
+      if (loading[name]) return loading[name];
+      return (loading[name] = new Promise(res => {
+        const [fichier, glob] = FICHIER[name];
         const go = async () => {
-          const src = window.NYLON_SAMPLES || {}, c = ctx(), out = [];
+          const src = window[glob] || {}, c = ctx(), out = [];
           await Promise.all(Object.entries(src).map(async ([m, b64]) => {
             try {
               const bin = atob(b64), buf = new Uint8Array(bin.length);
@@ -51,26 +64,38 @@
               out.push({ m: +m, buf: decoded });
             } catch {}
           }));
-          buffers = out.sort((a, b) => a.m - b.m); res();
+          sets[name] = out.sort((a, b) => a.m - b.m); res();
         };
-        if (window.NYLON_SAMPLES) go();
-        else { const s = document.createElement("script"); s.src = "samples-nylon.js"; s.onload = go; s.onerror = () => { buffers = []; res(); }; document.head.append(s); }
-      });
-      return loading;
+        if (window[glob]) go();
+        else { const sc = document.createElement("script"); sc.src = fichier; sc.onload = go; sc.onerror = () => { sets[name] = []; res(); }; document.head.append(sc); }
+      }));
     }
+    // charge le son choisi (et le nylon en secours)
+    const charge = () => Promise.all([chargeSet(SAMPLED[timbre()].set), chargeSet("ny")]);
     // une note pincée ; at = moment (contexte audio), dur = durée avant l'étouffement
     function note(midi, { at = 0, gain = 0.9, dur = 1.4 } = {}) {
-      if (!buffers?.length) return false;
+      const cfg = SAMPLED[timbre()];
+      let set = sets[cfg.set];
+      if (!set?.length) { chargeSet(cfg.set); set = sets.ny; }
+      if (!set?.length) return false;
       const c = ctx(), t = Math.max(c.currentTime, at);
-      const near = buffers.reduce((a, b) => (Math.abs(b.m - midi) < Math.abs(a.m - midi) ? b : a));
+      const near = set.reduce((a, b) => (Math.abs(b.m - midi) < Math.abs(a.m - midi) ? b : a));
       const s = c.createBufferSource(), g = c.createGain();
       s.buffer = near.buf; s.playbackRate.value = Math.pow(2, (midi - near.m) / 12);
-      g.gain.setValueAtTime(gain, t);
-      s.connect(g).connect(c.destination); s.start(t);
-      g.gain.setTargetAtTime(0, t + dur, 0.22); s.stop(t + dur + 1.2);
+      g.gain.setValueAtTime(gain * (cfg.set === "ac" ? 0.8 : 1), t);
+      let dest = c.destination;
+      for (const [type, f, q, gn] of [...cfg.eq].reverse()) {
+        const bq = c.createBiquadFilter(); bq.type = type; bq.frequency.value = f; bq.Q.value = q; bq.gain.value = gn;
+        bq.connect(dest); dest = bq;
+      }
+      const fin = Math.min(dur, cfg.release);
+      s.connect(g).connect(dest); s.start(t);
+      g.gain.setTargetAtTime(0, t + fin, 0.22); s.stop(t + fin + 1.2);
       return true;
     }
-    return { charge, note, pret: () => !!buffers?.length };
+    // le son a changé dans Mon manche : on prépare le nouveau
+    window.addEventListener("storage", e => { if (e.key === "manche:timbre") chargeSet(SAMPLED[timbre()].set); });
+    return { charge, note, pret: () => !!(sets[SAMPLED[timbre()].set]?.length || sets.ny?.length) };
   })();
 
   // Repli si les sons de guitare ne sont pas encore chargés : une petite clochette.
@@ -202,7 +227,8 @@
     });
   }
   // texte : une phrase ou une liste de phrases, lues à la suite
-  async function dire(texte, { force = false, nom = voixNom } = {}) {
+  // onSeg(i) : appelé quand la phrase i commence (l'app met sa partie en avant à l'écran)
+  async function dire(texte, { force = false, nom = voixNom, onSeg = null } = {}) {
     const segs = (Array.isArray(texte) ? texte : [texte]).map(t => String(t || "").replace(/\s+/g, " ").trim()).filter(Boolean);
     if (!segs.length || (!voixOn && !force)) return;
     tais();
@@ -215,6 +241,7 @@
       if (segs[i + 1]) charge(segs[i + 1], nom);
       const buf = await charge(segs[i], nom);
       if (moi !== tour) return;
+      try { onSeg?.(i); } catch {}
       if (buf) {
         await new Promise(res => {
           const c = ctx(), s = c.createBufferSource();
@@ -233,7 +260,7 @@
   const parle = () => performance.now() < parleJusqua || !!synth?.speaking;
 
   window.Sons = {
-    ctx, unlock, cling, bloc, fanfare, alarme, gamme, noteCours, musiqueCours, dire, tais, parle, guitare, manque,
+    ctx, unlock, cling, bloc, fanfare, alarme, gamme, noteCours, musiqueCours, timbre, dire, tais, parle, guitare, manque,
     get sfx() { return sfxOn; }, set sfx(v) { sfxOn = !!v; write("maguitare:sfx", sfxOn); },
     get voix() { return voixOn; }, set voix(v) { voixOn = !!v; write("maguitare:voix", voixOn); if (!voixOn) tais(); },
     get voixNom() { return voixNom; }, set voixNom(v) { voixNom = String(v || "siwis"); try { localStorage.setItem("maguitare:voixNom", voixNom); } catch {} tais(); },

@@ -1,5 +1,5 @@
 # Génère data/cours.json à partir du cours (12 semaines, 3 séances par semaine).
-import json, os
+import json, os, re
 
 V = lambda t, u: {"t": t, "u": u}
 
@@ -885,53 +885,50 @@ court = lambda b: b["titre"].split(". ", 1)[-1]
 num_fr = lambda n: {1: "une", 2: "deux", 3: "trois"}.get(n, str(n))
 
 def intro(c, prev):
+    # L'accueil (sa demande du 2026-10-25) : on s'installe, on dit où on en est, sans parler du temps
     p = next(x for x in PALIERS if x["num"] == c["palier"])
     wk = (c["semaine"] - 1) % 4
-    bilan_num = (c["palier"]) * 12
     nouveau = c["seance"] == "A" and wk in (0, 2)
     salut = {"A": "Bonjour Timothée !", "B": "Re-bonjour Timothée !", "C": "Salut Timothée !"}[c["seance"]]
-    I = [f"{salut} Bienvenue au cours {c['num']}, {ORDINAL[c['seance']]} séance de la semaine {c['semaine']}."]
+    I = ["Assieds-toi avec ta guitare, et on commence."]
+    I.append("Bienvenue, Timothée ! C'est ton tout premier cours." if c["num"] == 1 else f"{salut} Bienvenue au cours {c['num']}.")
     if wk == 0 and c["seance"] == "A":
         I.append(f"On attaque le palier {p['num']} : {NOMS[p['num']]}. Le but : {lower1(p['but'])}")
-        I.append(f"Ta mission d'ici la fin du palier, dans quatre semaines : {lower1(p['mission'])}")
+        I.append(f"Ta mission d'ici la fin du palier : {lower1(p['mission'])}")
     elif c.get("bilan"):
         n = len(c["bilan"]["tests"])
-        I.append(f"Aujourd'hui, c'est le jour du bilan du palier {p['num']}, {NOMS[p['num']]} ! {n} tests t'attendent à la fin du cours. Avec {n - 1} tests réussis, tu passes au palier suivant.")
+        I.append(f"Aujourd'hui, c'est le bilan du palier {p['num']}, {NOMS[p['num']]} ! {n} tests t'attendent à la fin du cours. Avec {n - 1} tests réussis, tu passes au palier suivant.")
     elif c["seance"] == "A":
-        I.append(f"On est dans le palier {p['num']}, {NOMS[p['num']]}, semaine {wk + 1} sur 4. Je te rappelle le but : {lower1(p['but'])}")
-        I.append(f"C'est la dernière semaine avant le bilan du palier, au cours {bilan_num}." if wk == 3
-                 else f"Le bilan du palier arrive dans {num_fr(3 - wk)} semaine{'s' if 3 - wk > 1 else ''}, au cours {bilan_num}. Ta mission : {lower1(p['mission'])}")
+        I.append(f"Palier {p['num']}, {NOMS[p['num']]}. Le but : {lower1(p['but'])}")
+        I.append(f"Ta mission : {lower1(p['mission'])}")
     else:
-        I.append(f"On est toujours dans le palier {p['num']}, {NOMS[p['num']]}. Ta mission : {lower1(p['mission'])}")
+        I.append(f"Palier {p['num']}, {NOMS[p['num']]}, toujours avec la même mission : {lower1(p['mission'])}")
     return I, nouveau, wk
 
-def plan(c):
-    parts = [f"{b['duree']} minutes {GENRE[i]}" for i, b in enumerate(c["blocs"])]
-    return "Le déroulé, environ une heure dix : " + ", ".join(parts[:-1]) + ", et " + parts[-1] + "."
+sans_duree = lambda t: re.sub(r"\s*\((?:\d+[^)]*min[^)]*|[^)]*\d+ ?min)\)", "", t).strip()
 
 def voix_prof(c, prev, nxt, avant=None, avant3=None):
     I, nouveau, wk = intro(c, prev)
-    suite = []  # après le mot du prof et les difficultés du dernier cours (ajoutés par l'app)
     # les exercices nouveaux d'un bloc, par rapport au même bloc deux semaines plus tôt
-    def ex1(b, ref):
-        labels = [e["label"] for e in b["exercices"] if not e["label"].lower().startswith("étirements")]
+    def ex1(b, ref, n=2):
+        # ni les étirements, ni le jeu facile, ni les lectures : ce qu'on joue vraiment dans le bloc
+        labels = [sans_duree(e["label"]) for e in b["exercices"] if not re.match(r"(étirements|jeu facile|lire)\b", e["label"].lower())]
+        labels = [l.split(" : ", 1)[1] if " : " in l and l.split(" : ", 1)[0] in court(b) else l for l in labels]
         if ref:
-            old = {e["label"] for rb in ref["blocs"] if rb["id"] == b["id"] for e in rb["exercices"]}
+            old = {sans_duree(e["label"]) for rb in ref["blocs"] if rb["id"] == b["id"] for e in rb["exercices"]}
             labels = [l for l in labels if l not in old] or labels
-        return ", puis ".join(labels[:2])
-    if nouveau and wk == 0:
-        suite.append("Aujourd'hui, il y a du nouveau dans chaque bloc. Voilà ce qu'on travaille, et pourquoi.")
-        suite += [f"{court(b)} : {b['sert']}" for b in c["blocs"]]
-    elif nouveau:
-        suite.append("Aujourd'hui, de nouveaux exercices arrivent dans chaque bloc. Les voici.")
-        suite += [f"{court(b)} : {ex1(b, avant)}." for b in c["blocs"] if ex1(b, avant)]
-    elif c["seance"] == "A":
-        suite.append("Rappel de la semaine dernière : tu as découvert de nouveaux exercices dans chaque bloc. Cette semaine, on les consolide : le même contenu, un peu plus propre et un peu plus vite.")
-        suite.append(f"En gamme : {ex1(c['blocs'][1], avant3)}. En barrés et rythme : {ex1(c['blocs'][4], avant3)}.")
+        return ", puis ".join(labels[:n])
+    # Le plan des 6 blocs, toujours : une explication complète quand le cours change, un rappel court sinon.
+    # Chaque ligne porte le numéro de son bloc : l'app le met en avant à l'écran pendant que le prof en parle.
+    if nouveau:
+        suite = ["Aujourd'hui, du nouveau dans chaque bloc. Voici le plan, et à quoi sert chaque partie." if wk == 0
+                 else "Aujourd'hui, de nouveaux exercices dans chaque bloc. Voici le plan."]
+        plan = [{"b": i, "t": f"{court(b)} : {ex1(b, avant)}. {b['sert']}" if wk else f"{court(b)} : {b['sert']}"} for i, b in enumerate(c["blocs"])]
     else:
-        suite.append("Pas de nouveauté aujourd'hui : on reprend les exercices de la dernière fois, pour qu'ils deviennent automatiques. C'est la répétition qui fait progresser.")
-    suite.append(plan(c))
-    suite.append("Prends ta guitare, vérifie l'accord, et on commence par l'échauffement. Allez, c'est parti !")
+        suite = ["Cette semaine, on consolide ce que tu as découvert : le même plan, en plus propre." if c["seance"] == "A"
+                 else "Même plan que la dernière fois, pour que ça devienne automatique. En bref :"]
+        plan = [{"b": i, "t": f"{court(b)} : {ex1(b, None, 1)}."} for i, b in enumerate(c["blocs"])]
+    fin_intro = ["On commence par l'échauffement. C'est parti !"]
     fin = [f"Cours {c['num']} terminé, bravo !"]
     if c.get("bilan"):
         pn = c["palier"]
@@ -946,7 +943,7 @@ def voix_prof(c, prev, nxt, avant=None, avant3=None):
             suite_fin = f"Au prochain cours, le cours {nxt['num']}, on continue sur la même lancée."
     else:
         suite_fin = ""
-    return {"intro": I, "intro_suite": suite, "fin": fin, "fin_suite": [suite_fin] if suite_fin else []}
+    return {"intro": I, "intro_suite": suite, "plan": plan, "intro_fin": fin_intro, "fin": fin, "fin_suite": [suite_fin] if suite_fin else []}
 
 # morceaux du bilan parlé, assemblés par l'app selon ce que tu as fait (app.js : bilanParle)
 PROF = {

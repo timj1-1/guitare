@@ -416,7 +416,8 @@
       run.essais++; if (!ok) run.erreurs++;
       answers.querySelectorAll("button").forEach(b => { b.disabled = true; if (b.dataset.v === String(Q.bonne)) b.classList.add("good"); else if (b.dataset.v === String(v)) b.classList.add("bad"); });
       if (Q.ask) { board.set(Q.ask[0], Q.ask[1], ok ? "ok" : "bad", nomDe(OPEN[Q.ask[0]] + Q.ask[1])); J.base.play(OPEN[Q.ask[0]] + Q.ask[1]); }
-      if (ok) { setFb(run.help ? "Oui ! (avec un indice, elle reviendra)" : "Oui !", "good"); window.Sons?.cling(); }
+      // la corde jouée suffit : pas de « cling » par-dessus (seulement quand rien ne sonne)
+      if (ok) { setFb(run.help ? "Oui ! (avec un indice, elle reviendra)" : "Oui !", "good"); if (!Q.ask) window.Sons?.cling(); }
       else { run.err = true; setFb(`Non. ${Q.apres || `C'était : ${Q.choix.find(c => String(c.val) === String(Q.bonne))?.label}.`}`, "bad"); }
       fini(ok);
     }
@@ -432,7 +433,6 @@
         const r = reste(Q).length;
         if (r) { setFb(run.err ? `Oui. Encore ${r}.` : `Oui ! Encore ${r}.`, "good"); return; }
         setFb(run.err || run.help ? "Trouvé ! Elle reviendra pour être sûre." : "Parfait !", "good");
-        if (!run.err && !run.help) window.Sons?.cling();
         return fini(true);
       }
       run.err = true; run.erreurs++;

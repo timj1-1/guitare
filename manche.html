@@ -574,7 +574,7 @@ pre.tab { background: var(--surface-2); border-radius: 12px; padding: 12px 14px;
       <button type="button" data-v="off" aria-pressed="true">cachées</button><button type="button" data-v="nat" aria-pressed="false">naturelles</button><button type="button" data-v="all" aria-pressed="false">toutes</button>
     </span></div>
     <div><span class="tool-label">Son</span><span class="seg" id="timbreSeg">
-      <button type="button" data-v="classique" aria-pressed="true">Classique</button><button type="button" data-v="flamenca" aria-pressed="false">Flamenca</button><button type="button" data-v="folk" aria-pressed="false">Folk acier</button><button type="button" data-v="manouche" aria-pressed="false">Manouche</button>
+      <button type="button" data-v="classique" aria-pressed="false">Classique</button><button type="button" data-v="flamenca" aria-pressed="false">Flamenca</button><button type="button" data-v="folk" aria-pressed="false">Folk acier</button><button type="button" data-v="manouche" aria-pressed="false">Manouche</button>
     </span></div>
     <label class="chk"><input type="checkbox" id="soundChk" checked> Son au clic</label>
   </div>
@@ -745,8 +745,10 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   if (!barre || !(barre.fret >= 1 && barre.fret <= FRETS)) barre = null;
   // ce qu'il y avait sous le barré quand on l'a posé, pour le retirer proprement en retouchant au même endroit
   let avantBarre = barre ? store.get("avantBarre", null) : null;
-  let timbre = store.get("timbre", "classique");
-  if (!["classique", "flamenca", "folk", "manouche"].includes(timbre)) timbre = "classique";
+  // manouche par défaut (2026-10-25, sa demande) ; le choix vaut aussi pour toute l'app (sons.js lit la même clé)
+  if (!store.get("timbreV2", false)) { store.set("timbre", "manouche"); store.set("timbreV2", true); }
+  let timbre = store.get("timbre", "manouche");
+  if (!["classique", "flamenca", "folk", "manouche"].includes(timbre)) timbre = "manouche";
   let analysis = null;
 
   const noteName = (pc, ascii) => (naming === "fr" ? (ascii ? FR_ASCII : FR) : (ascii ? EN_ASCII : EN))[pc];
@@ -1445,7 +1447,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     const rms = new Float32Array(nF);
     for (let f = 0; f < nF; f++) { let s = 0; for (let i = f * hop; i < f * hop + hop; i++) s += x[i] * x[i]; rms[f] = Math.sqrt(s / hop); }
     let peak = 0; for (let f = 1; f < nF; f++) if (rms[f] > rms[peak]) peak = f;
-    if (!nF || rms[peak] < 0.003) return { error: "silence" };
+    if (!nF || rms[peak] < 0.0012) return { error: "silence" }; // une note seule jouée doucement reste bien plus faible qu'un accord
     const start = Math.min(nF - 1, peak + Math.round(0.06 * sr / hop));
     let end = start;
     while (end < nF - 1 && rms[end] > rms[peak] * 0.12 && (end - start) * hop < 1.4 * sr) end++;
@@ -1480,7 +1482,8 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     let first = 0;
     for (let it = 0; it < 6; it++) {
       let best = -1, bs = 0;
-      for (let m = 40; m <= 80; m++) { if (found.some(n => n.midi === m)) continue; const s = salience(m); if (s > bs) { bs = s; best = m; } }
+      // de Mi grave à vide jusqu'à la case 24 du Mi aigu
+      for (let m = 40; m <= 88; m++) { if (found.some(n => n.midi === m)) continue; const s = salience(m); if (s > bs) { bs = s; best = m; } }
       if (best < 0) break;
       // une note grave dont on n'entend que les harmoniques : préférer l'octave du dessous si elle tient la route
       for (let lower = best - 12; lower >= 40; lower -= 12) {
@@ -1556,27 +1559,35 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   }
 
   // Ce qui est entendu se pose sur le manche ; pour une note seule, l'écart à la note juste s'écrit sous le nom
+  let mainFret = null; // où joue la main gauche, d'après la dernière note ou le dernier accord entendu
   function showHeard(r) {
     const midis = r.notes.map(n => n.midi);
     const line = document.getElementById("tunerLine");
     line.textContent = "";
     if (midis.length === 1) {
-      const m = midis[0];
-      let best = null;
-      STRINGS.forEach((st, s) => { let f = m - st.midi; if (f === capo) f = 0; else if (f <= capo) return; if (f <= FRETS && (!best || f < best.f)) best = { s, f }; });
+      // Une même note existe à plusieurs endroits : on la pose près de là où joue ta main (la note d'avant),
+      // sinon à la plus petite case. Les autres endroits sont écrits sous le manche.
+      const m = midis[0], places = [];
+      STRINGS.forEach((st, s) => { let f = m - st.midi; if (f === capo) f = 0; else if (f <= capo) return; if (f <= FRETS) places.push({ s, f }); });
+      const ref = mainFret;
+      places.sort((a, b) => (ref == null ? a.f - b.f : Math.abs(a.f - ref) - Math.abs(b.f - ref) || a.f - b.f));
+      const best = places[0];
       const next = [null, null, null, null, null, null];
-      if (best) next[best.s] = best.f;
+      if (best) { next[best.s] = best.f; if (best.f > 0) mainFret = best.f; }
+      const bits = [];
       if (r.freq) {
         const cents = Math.round(1200 * Math.log2(r.freq / hz(m)));
-        const ok = Math.abs(cents) <= 8;
-        line.textContent = ok ? "Corde juste." : Math.abs(cents) + " cents " + (cents > 0 ? "trop haute : détends un peu la corde." : "trop basse : tends un peu la corde.");
+        bits.push(Math.abs(cents) <= 8 ? "Corde juste." : Math.abs(cents) + " cents " + (cents > 0 ? "trop haute : détends un peu la corde." : "trop basse : tends un peu la corde."));
       }
+      if (places.length > 1) bits.push("Aussi : " + places.slice(1).map(p => `${STRINGS[p.s].fr} ${p.f ? "case " + (p.f - capo) : "à vide"}`).join(", ") + ".");
+      line.textContent = bits.join(" ");
       pos = next;
       store.set("pos", pos); render(); syncDock(); return;
     } else {
       const v = findVoicing(midis);
       if (!v) { micStatus.textContent = "Je n'arrive pas à placer cet accord sur le manche."; return; }
       pos = v;
+      const fr = v.filter(f => f > 0); mainFret = fr.length ? Math.min(...fr) : null;
     }
     store.set("pos", pos);
     render();
@@ -1637,7 +1648,8 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
         return;
       }
       // nouvelle attaque : nettement au-dessus du bruit de fond et de ce qui sonnait déjà
-      if (r > Math.max(0.012, floor * 5) && r > peakSince * 1.8) {
+      // (seuil bas : une note seule, pincée doucement, doit aussi déclencher l'analyse)
+      if (r > Math.max(0.004, floor * 5) && r > peakSince * 1.8) {
         capture = new Float32Array(keep);
         for (let i = 0; i < pre; i++) capture[i] = ring[(ringPos + i) % pre];
         capLen = pre;

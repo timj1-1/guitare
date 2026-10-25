@@ -1,8 +1,8 @@
 // Ma gratte : fonctionne hors ligne. Le cours et les retours du prof sont pris en ligne d'abord.
-const VERSION = "v34";
+const VERSION = "v35";
 // la voix : un fichier par phrase, nommé par son empreinte, donc gardé d'une version à l'autre
 const VOIX = "voix-1";
-const SHELL = ["./", "index.html", "style.css", "app.js", "sons.js", "jeux.js", "niveaux.js", "samples-nylon.js", "manche.html", "manifest.webmanifest",
+const SHELL = ["./", "index.html", "style.css", "app.js", "sons.js", "jeux.js", "niveaux.js", "samples-nylon.js", "samples-acier.js", "manche.html", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "data/cours.json", "data/retours.json", "data/schemas.json", "schemas/notes-manche.webp", "voix/voix.json"];
 
 self.addEventListener("install", e => {

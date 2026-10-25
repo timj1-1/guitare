@@ -890,3 +890,7 @@ details.fiche-cours > .piece-corps { margin-top: 10px; border-top: 0; padding-to
 .cherche-tab .btn { text-decoration: none; }
 .piece-diffs ul { margin: 4px 0 0; padding-left: 18px; font-size: .88rem; }
 .piece-diffs li + li { margin-top: 3px; }
+/* Le prof présente le cours : la partie dont il parle grossit un peu et s'entoure de laiton */
+#coursBody .hero, #coursBody .bloc { transition: transform .45s ease, box-shadow .45s ease; transform-origin: center; }
+#coursBody .en-parole { transform: scale(1.025); box-shadow: 0 0 0 2px var(--accent), 0 12px 30px rgba(0, 0, 0, .16); position: relative; z-index: 2; border-radius: 14px; }
+@media (prefers-reduced-motion: reduce) { #coursBody .en-parole { transform: none; } }
