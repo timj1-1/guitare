@@ -13,7 +13,7 @@
    "nom": "Rémy",
    "genre": "Homme",
    "desc": "Une voix claire et enjouée.",
-   "prete": false
+   "prete": true
   },
   {
    "id": "remy-hd",
