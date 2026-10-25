@@ -1306,8 +1306,11 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   let unlocked = false, silentEl = null;
   document.addEventListener("visibilitychange", () => { if (!document.hidden && actx && actx.state !== "running") { try { actx.resume(); } catch {} } });
   const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+  // Safari : en « lecture » (playback), le micro est interdit (InvalidStateError : AudioSession category is not
+  // compatible with audio capture). On passe en « lecture et enregistrement » le temps d'écouter, ici et dans l'app autour.
+  const audioSession = type => { for (const w of new Set([window, window.parent])) { try { const a = w.navigator.audioSession; if (a) a.type = type; } catch {} } };
   function unlockAudio() {
-    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch {}
+    if (!mic) audioSession("playback");
     heal();
     const ctx = getCtx(); if (!ctx) return;
     if (silentEl && silentEl.paused) { try { const pr = silentEl.play(); if (pr && pr.catch) pr.catch(() => {}); } catch {} }
@@ -1594,9 +1597,10 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     // Comme la page test-micro.html, qui marche sur Safari : d'abord le micro, avec la demande la plus simple,
     // et seulement ensuite le son de la page (le réveiller avant faisait échouer Safari, InvalidStateError)
     micStatus.textContent = "J'ouvre le micro…";
+    audioSession("play-and-record");
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (e) { return micDenied(e); }
+    catch (e) { audioSession("playback"); return micDenied(e); }
     // sans les filtres de visioconférence, qui abîment les notes ; si le navigateur refuse, tant pis
     await stream.getAudioTracks()[0]?.applyConstraints({ echoCancellation: false, noiseSuppression: false, autoGainControl: false }).catch(() => {});
     const ctx = getCtx();
@@ -1657,6 +1661,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     if (!mic) return;
     mic.proc.port.onmessage = null; mic.src.disconnect(); mic.proc.disconnect(); mic.mute.disconnect();
     mic.stream.getTracks().forEach(t => t.stop()); mic = null;
+    audioSession("playback");
     micBtn.setAttribute("aria-pressed", "false"); dockMic.setAttribute("aria-pressed", "false"); micBtn.querySelector("span").textContent = "Écouter ma guitare";
     micStatus.textContent = ""; micLevel.style.width = "0";
   }

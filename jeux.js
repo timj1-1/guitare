@@ -160,13 +160,17 @@
   }
   // Chrome pour Mac s'est figé en entier à l'ouverture du micro (2026-10-25) : coupé là, le temps de trouver la cause
   const chromeMac = /Macintosh/.test(navigator.userAgent) && /Chrome\//.test(navigator.userAgent) && !/Edg\//.test(navigator.userAgent);
+  const session = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
   async function startMic(onNote, onLevel, isCurrent) {
     if (chromeMac) throw new Error("chrome-mac");
     if (!navigator.mediaDevices?.getUserMedia) throw new Error("micro");
+    // Safari : le micro est interdit quand la page est en « lecture » (playback) : on passe en lecture et enregistrement
+    session("play-and-record");
     // la demande la plus simple (celle qui marche sur Safari), puis sans les filtres de visioconférence si possible
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { session("playback"); throw e; }
     await stream.getAudioTracks()[0]?.applyConstraints({ echoCancellation: false, noiseSuppression: false, autoGainControl: false }).catch(() => {});
-    if (!isCurrent()) { stream.getTracks().forEach(t => t.stop()); return false; }
+    if (!isCurrent()) { stream.getTracks().forEach(t => t.stop()); if (!mic) session("playback"); return false; }
     stopMic();
     const c = Sons.ctx(); if (c.state === "suspended") await c.resume();
     const src = c.createMediaStreamSource(stream), an = c.createAnalyser(), mute = c.createGain();
@@ -197,6 +201,7 @@
     try { mic.src.disconnect(); mic.an.disconnect(); mic.mute.disconnect(); } catch {}
     mic.stream.getTracks().forEach(t => t.stop());
     mic = null;
+    session("playback");
   }
   let listenOn = false, quiet = false; // quiet : pas de son de guitare pendant que le micro écoute
   try { listenOn = localStorage.getItem("maguitare:ecoute") === "1"; } catch {}
