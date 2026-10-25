@@ -177,6 +177,7 @@
   const withIcon = (node, icon, text) => { node.insertAdjacentHTML("afterbegin", icon); if (text != null) node.append(text); return node; };
 
   const FRET_INLAYS = new Set([3, 5, 7, 9, 12, 15, 17, 19]);
+  const faitsCours = c => c.blocs.reduce((n, b) => n + b.exercices.filter(e => state.cours[c.id]?.ex[exKey(b, e)]?.done).length, 0);
   function progressOf(c) {
     const list = allEx(c), s = state.cours[c.id];
     const done = list.filter(x => s?.ex[x.key]?.done).length;
@@ -316,8 +317,10 @@
     b.exercices.forEach(e => ul.append(renderExo(c, b, e, checked => {
       const now = complete();
       card.classList.toggle("complete", now);
-      if (now && !wasComplete) { Sons.bloc(); toast(`Bloc ${bi + 1} terminé, bravo !`); }
-      else if (checked) Sons.cling();
+      // chaque exercice coché joue la note suivante de la gamme du cours ; la fin d'un bloc, une double note
+      const finBloc = now && !wasComplete;
+      if (checked || finBloc) Sons.noteCours(c.num, Math.max(0, faitsCours(c) - 1), finBloc);
+      if (finBloc) toast(`Bloc ${bi + 1} terminé, bravo !`);
       wasComplete = now; updateProgress();
     })));
     inner.append(ul);
@@ -1009,7 +1012,8 @@
     s.finishedAt = new Date().toISOString();
     flush();
     renderTabs(); renderCours(); updateSeance();
-    Sons.fanfare();
+    const g = Sons.musiqueCours(c.num, c.blocs.map(b => b.exercices.length));
+    toast(`Ta musique du cours, en ${g}.`);
     // un bilan par semaine : il part quand la semaine est finie, ou à la séance C
     const envoi = c.seance === "C" || semaineDe(c.semaine).every(x => isDone(x.id));
     if (envoi) showRecap(c);
@@ -1319,7 +1323,7 @@
       return el("div", { class: "setting" }, el("div", {}, el("strong", { text: label }), el("span", { class: "muted small", text: hint })), b);
     };
     const reglages = el("div", { class: "pli-pile" },
-      toggle("Petits sons", "Un « cling » quand tu coches un exercice, une mélodie quand un bloc ou un cours est fini.", () => Sons.sfx, v => { Sons.sfx = v; if (v) Sons.cling(); }));
+      toggle("Petits sons", "Chaque exercice coché joue la note suivante de la gamme du cours, une double note finit chaque bloc, et une petite musique finit le cours.", () => Sons.sfx, v => { Sons.sfx = v; if (v) Sons.cling(); }));
     reglages.append(toggle("Voix dans les jeux", "Une voix naturelle lit les questions et les réponses des jeux.", () => Sons.voix, v => { Sons.voix = v; if (v) Sons.dire("D'accord, je lis les consignes des jeux."); }));
     reglages.append(toggle("Le prof te parle", "Il présente le cours quand tu lances la séance, et fait le bilan quand tu le termines.", profOn, v => { try { localStorage.setItem("maguitare:prof", v ? "1" : "0"); } catch {} if (!v) Sons.tais(); }));
     reglages.append(choixVoix());

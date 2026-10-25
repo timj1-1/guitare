@@ -97,6 +97,47 @@
   // Cours terminé : accord de Mi gratté, puis l'arpège qui monte
   const fanfare = () => joue([[40, 0, 0.6, 2.4], [47, 0.025, 0.55, 2.4], [52, 0.05, 0.55, 2.4], [56, 0.075, 0.55, 2.4], [59, 0.1, 0.55, 2.4], [64, 0.125, 0.6, 2.4],
     [68, 0.75, 0.7], [71, 0.87, 0.7], [76, 0.99, 0.75], [80, 1.11, 0.8, 2.2]]);
+  // ---------- La musique du cours : une gamme par cours, une note par exercice coché ----------
+  // Les 12 cours d'un palier ont chacun leur gamme ; chaque palier reprend le même ordre.
+  // [nom, tonique (midi), intervalles depuis la tonique]
+  const GAMMES = [
+    ["Do majeur", 60, [0, 2, 4, 5, 7, 9, 11]],
+    ["La mineur", 57, [0, 2, 3, 5, 7, 8, 10]],
+    ["Sol pentatonique majeure", 55, [0, 2, 4, 7, 9]],
+    ["Ré dorien", 62, [0, 2, 3, 5, 7, 9, 10]],
+    ["Fa lydien", 53, [0, 2, 4, 6, 7, 9, 11]],
+    ["Mi mineur harmonique", 52, [0, 2, 3, 5, 7, 8, 11]],
+    ["La pentatonique mineure", 57, [0, 3, 5, 7, 10]],
+    ["Ré majeur", 62, [0, 2, 4, 5, 7, 9, 11]],
+    ["Sol mixolydien", 55, [0, 2, 4, 5, 7, 9, 10]],
+    ["Mi espagnole (phrygien dominant)", 52, [0, 1, 4, 5, 7, 8, 10]],
+    ["Ré blues", 62, [0, 3, 5, 6, 7, 10]],
+    ["La majeur", 57, [0, 2, 4, 5, 7, 9, 11]],
+  ];
+  const gamme = num => { const [nom, t, iv] = GAMMES[(Math.max(1, num) - 1) % GAMMES.length]; return { nom, t, iv }; };
+  // le i-ème exercice : on monte la gamme sur deux octaves, puis on redescend s'il reste des exercices
+  const degre = (g, i) => { const top = 2 * g.iv.length, k = i % (2 * top); return k <= top ? k : 2 * top - k; };
+  const hauteur = (g, d) => g.t + 12 * Math.floor(d / g.iv.length) + g.iv[d % g.iv.length];
+  // fin de bloc : la note, sa tierce dans la gamme, et la tonique en basse
+  const double = (g, d, at) => [[g.t - 12, at, 0.42, 1.8], [hauteur(g, d), at, 0.7, 1.6], [hauteur(g, d + 2), at + 0.06, 0.6, 1.6]];
+  const noteCours = (num, i, finBloc) => {
+    const g = gamme(num), d = degre(g, i);
+    joue(finBloc ? double(g, d, 0) : [[hauteur(g, d), 0, 0.7, 1.3]]);
+  };
+  // fin du cours : toutes ses notes rejouées d'un trait, avec les doubles notes des fins de bloc, puis l'accord de la gamme
+  function musiqueCours(num, blocs) {
+    const g = gamme(num), N = [];
+    let t = 0, i = 0;
+    for (const n of blocs) for (let j = 0; j < n; j++, i++) {
+      const d = degre(g, i);
+      if (j < n - 1) { N.push([hauteur(g, d), t, 0.62, 0.9]); t += 0.17; }
+      else { N.push(...double(g, d, t)); t += 0.36; }
+    }
+    const tierce = g.iv.find(x => x === 4 || x === 3) ?? 7;
+    [g.t - 12, g.t - 5, g.t, g.t + tierce, g.t + 7, g.t + 12].forEach((m, k) => N.push([m, t + 0.2 + k * 0.035, 0.55, 2.6]));
+    joue(N);
+    return g.nom;
+  }
   // Fin d'un minuteur : La, Do dièse, Mi, deux fois (même quand les petits sons sont coupés)
   const alarme = () => joue([[69, 0, 0.8], [73, 0.14, 0.8], [76, 0.28, 0.85, 1.4], [69, 0.95, 0.8], [73, 1.09, 0.8], [76, 1.23, 0.9, 2]], true);
 
@@ -192,7 +233,7 @@
   const parle = () => performance.now() < parleJusqua || !!synth?.speaking;
 
   window.Sons = {
-    ctx, unlock, cling, bloc, fanfare, alarme, dire, tais, parle, guitare, manque,
+    ctx, unlock, cling, bloc, fanfare, alarme, gamme, noteCours, musiqueCours, dire, tais, parle, guitare, manque,
     get sfx() { return sfxOn; }, set sfx(v) { sfxOn = !!v; write("maguitare:sfx", sfxOn); },
     get voix() { return voixOn; }, set voix(v) { voixOn = !!v; write("maguitare:voix", voixOn); if (!voixOn) tais(); },
     get voixNom() { return voixNom; }, set voixNom(v) { voixNom = String(v || "siwis"); try { localStorage.setItem("maguitare:voixNom", voixNom); } catch {} tais(); },
