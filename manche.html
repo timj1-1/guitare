@@ -1588,17 +1588,22 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   let mic = null;
   async function startMic() {
     if (!navigator.mediaDevices?.getUserMedia) return micDenied();
+    // Safari (iPhone, Mac) : le son ne démarre que pendant le toucher, donc on réveille le contexte avant d'attendre le micro
+    const ctx = getCtx(); ctx?.resume?.().catch(() => {});
+    micStatus.textContent = "J'ouvre le micro…";
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-    } catch { return micDenied(); }
-    const ctx = getCtx();
+    } catch (e) { return micDenied(e); }
+    if (ctx.state !== "running") await ctx.resume().catch(() => {});
     const src = ctx.createMediaStreamSource(stream);
     const proc = ctx.createScriptProcessor(2048, 1, 1);
     const sr = ctx.sampleRate, keep = Math.round(1.7 * sr), pre = Math.round(0.08 * sr);
     const ring = new Float32Array(pre); let ringPos = 0;
     let floor = 0.002, capture = null, capLen = 0, peakSince = 0;
+    let recu = false;
     proc.onaudioprocess = e => {
+      recu = true;
       const d = e.inputBuffer.getChannelData(0);
       let sum = 0; for (let i = 0; i < d.length; i++) sum += d[i] * d[i];
       const r = Math.sqrt(sum / d.length);
@@ -1630,6 +1635,8 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     mic = { stream, src, proc };
     micBtn.setAttribute("aria-pressed", "true"); dockMic.setAttribute("aria-pressed", "true"); micBtn.querySelector("span").textContent = "Arrêter l'écoute";
     micStatus.textContent = "J'écoute… joue une note ou un accord.";
+    // si le son du micro n'arrive pas (contexte audio resté endormi), on le dit au lieu de rester muet
+    setTimeout(() => { if (mic?.proc === proc && !recu) { ctx.resume().catch(() => {}); micStatus.textContent = "Le son du micro n'arrive pas. Touche « Arrêter l'écoute », puis de nouveau « Écouter ma guitare »."; } }, 2000);
   }
   function stopMic() {
     if (!mic) return;
@@ -1638,10 +1645,16 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     micBtn.setAttribute("aria-pressed", "false"); dockMic.setAttribute("aria-pressed", "false"); micBtn.querySelector("span").textContent = "Écouter ma guitare";
     micStatus.textContent = ""; micLevel.style.width = "0";
   }
-  function micDenied() {
+  function micDenied(e) {
+    const iOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const nom = e?.name || "";
     micStatus.textContent = window.claude
       ? "Dans Claude, les pages n'ont pas encore accès au micro. Ouvre la version pour ton Mac (le fichier Mon manche.html que je t'ai envoyé) pour écouter en direct."
-      : "Le micro est refusé. Autorise-le pour ce navigateur : clique l'icône à gauche de l'adresse, puis vérifie Réglages Système › Confidentialité et sécurité › Micro.";
+      : !navigator.mediaDevices?.getUserMedia ? "Ce navigateur ne donne pas accès au micro. Ouvre l'app dans Safari ou Chrome."
+      : nom === "NotFoundError" ? "Je ne trouve aucun micro sur cet appareil."
+      : nom === "NotReadableError" ? "Le micro est déjà pris par une autre app (appel, enregistrement). Ferme-la et réessaie."
+      : iOS ? "Le micro est refusé. Sur iPhone : Réglages › Safari › Micro › Autoriser (ou Réglages › Ma gratte si l'app est sur l'écran d'accueil), puis rouvre l'app."
+      : "Le micro est refusé. Sur Mac : Réglages Système › Confidentialité et sécurité › Micro, autorise Safari (ou ton navigateur), puis rouvre l'app." + (nom && nom !== "NotAllowedError" ? ` (${nom})` : "");
   }
   micBtn.addEventListener("click", () => (mic ? stopMic() : startMic()));
   dockMic.addEventListener("click", () => micBtn.click());
