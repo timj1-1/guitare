@@ -1667,7 +1667,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
       : nom === "NotFoundError" ? "Je ne trouve aucun micro sur cet appareil."
       : nom === "NotReadableError" ? "Le micro est déjà pris par une autre app (appel, enregistrement). Ferme-la et réessaie."
       : iOS ? "Le micro est refusé. Sur iPhone : Réglages › Safari › Micro › Autoriser (ou Réglages › Ma gratte si l'app est sur l'écran d'accueil), puis rouvre l'app."
-      : "Le micro est refusé. Sur Mac : Réglages Système › Confidentialité et sécurité › Micro, autorise Safari (ou ton navigateur), puis rouvre l'app." + (nom && nom !== "NotAllowedError" ? ` (${nom})` : "");
+      : "Le micro est refusé. Sur Mac : Réglages Système › Confidentialité et sécurité › Micro, autorise Safari (ou ton navigateur), puis rouvre l'app." + (nom && nom !== "NotAllowedError" ? ` (${nom}${e?.message ? " : " + e.message : ""})` : "");
   }
   micBtn.addEventListener("click", () => (mic ? stopMic() : startMic()));
   dockMic.addEventListener("click", () => micBtn.click());

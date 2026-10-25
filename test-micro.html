@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test du micro</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f6f3ec; --ink: #1d1b18; --line: #d8d2c4; --accent: #b0782a; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #161513; --ink: #eee9df; --line: #3a372f; --accent: #e3ad5b; } }
+  body { margin: 0; padding: 20px 16px; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, sans-serif; max-width: 640px; }
+  button { font: inherit; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--accent); color: #1d1b18; font-weight: 600; margin: 4px 0; }
+  ol { padding-left: 20px; }
+  pre { white-space: pre-wrap; border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>Test du micro</h1>
+<p>Une page toute simple, sans le reste de l'app, pour trouver ce qui bloque. Touche les boutons dans l'ordre, puis envoie une capture du cadre du bas.</p>
+<ol>
+  <li><button id="b1" type="button">1. Ouvrir le micro</button></li>
+  <li><button id="b2" type="button">2. Écouter le niveau</button></li>
+</ol>
+<pre id="log">Navigateur : </pre>
+<script>
+  const log = t => { document.getElementById("log").textContent += "\n" + t; };
+  log(navigator.userAgent);
+  log("Page sécurisée : " + window.isSecureContext + " · dans un cadre : " + (window.top !== window));
+  let stream = null;
+  document.getElementById("b1").addEventListener("click", async () => {
+    log("1. Je demande le micro…");
+    try {
+      // la demande la plus simple possible, sans réglage particulier
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const t = stream.getAudioTracks()[0];
+      log("1. OK : micro ouvert (" + (t?.label || "sans nom") + ", " + t?.readyState + ")");
+    } catch (e) { log("1. Erreur : " + e.name + " · " + e.message); }
+  });
+  document.getElementById("b2").addEventListener("click", async () => {
+    if (!stream) { log("2. Touche d'abord le bouton 1."); return; }
+    try {
+      const C = window.AudioContext || window.webkitAudioContext, c = new C();
+      await c.resume();
+      const an = c.createAnalyser(); an.fftSize = 2048;
+      c.createMediaStreamSource(stream).connect(an);
+      const buf = new Float32Array(an.fftSize); let max = 0, n = 0;
+      log("2. Son : " + c.state + ", " + c.sampleRate + " Hz. Joue une note pendant 3 secondes…");
+      const id = setInterval(() => {
+        an.getFloatTimeDomainData(buf);
+        let s = 0; for (const v of buf) s += v * v;
+        max = Math.max(max, Math.sqrt(s / buf.length));
+        if (++n === 30) { clearInterval(id); log("2. Niveau le plus fort : " + max.toFixed(4) + (max > 0.002 ? " (le micro entend bien)" : " (rien entendu)")); stream.getTracks().forEach(t => t.stop()); c.close(); }
+      }, 100);
+    } catch (e) { log("2. Erreur : " + e.name + " · " + e.message); }
+  });
+</script>
+</body>
+</html>
