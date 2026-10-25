@@ -1586,7 +1586,10 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   const micStatus = { set textContent(t) { micStatusEl.textContent = t; dockStatus.textContent = t; dockStatus.hidden = !t; } };
   const micLevel = { style: { set width(w) { micLevelEl.style.width = w; dockLevel.style.width = w; } } };
   let mic = null;
+  // Chrome pour Mac s'est figé en entier à l'ouverture du micro (2026-10-25) : coupé là, le temps de trouver la cause
+  const chromeMac = /Macintosh/.test(navigator.userAgent) && /Chrome\//.test(navigator.userAgent) && !/Edg\//.test(navigator.userAgent);
   async function startMic() {
+    if (chromeMac) { micStatus.textContent = "Sur Chrome pour Mac, l'écoute du micro est coupée pour l'instant : elle a figé Chrome. Utilise Safari pour écouter ta guitare."; return; }
     if (!navigator.mediaDevices?.getUserMedia) return micDenied();
     // Safari (iPhone, Mac) : le son ne démarre que pendant le toucher, donc on réveille le contexte avant d'attendre le micro
     const ctx = getCtx(); ctx?.resume?.().catch(() => {});

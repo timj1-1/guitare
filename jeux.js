@@ -158,7 +158,10 @@
     const m = 69 + 12 * Math.log2(f / 440);
     return { rms, f, midi: Math.round(m), cents: (m - Math.round(m)) * 100 };
   }
+  // Chrome pour Mac s'est figé en entier à l'ouverture du micro (2026-10-25) : coupé là, le temps de trouver la cause
+  const chromeMac = /Macintosh/.test(navigator.userAgent) && /Chrome\//.test(navigator.userAgent) && !/Edg\//.test(navigator.userAgent);
   async function startMic(onNote, onLevel, isCurrent) {
+    if (chromeMac) throw new Error("chrome-mac");
     if (!navigator.mediaDevices?.getUserMedia) throw new Error("micro");
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     if (!isCurrent()) { stream.getTracks().forEach(t => t.stop()); return false; }
@@ -494,7 +497,7 @@
       const me = run;
       startMic(m => { if (run === me) heard(m); }, rms => { level.style.width = Math.min(100, Math.round(Math.sqrt(rms) * 260)) + "%"; }, () => run === me)
         .then(ok => { if (ok) heardTxt.textContent = "J'écoute… joue la note sur ta guitare."; })
-        .catch(() => { if (run !== me) return; heardTxt.textContent = "Le micro est refusé. Autorise-le dans les réglages de Safari (aA › Réglages du site web › Micro), ou touche les cases à la place."; listenBar.classList.add("off"); });
+        .catch(e => { if (run !== me) return; heardTxt.textContent = e?.message === "chrome-mac" ? "Sur Chrome pour Mac, l'écoute du micro est coupée pour l'instant : elle a figé Chrome. Utilise Safari pour écouter ta guitare. Ou touche les cases à la place." : "Le micro est refusé. Autorise-le dans les réglages de Safari (aA › Réglages du site web › Micro), ou touche les cases à la place."; listenBar.classList.add("off"); });
     }
   }
 
