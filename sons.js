@@ -101,18 +101,18 @@
   // Les 12 cours d'un palier ont chacun leur gamme ; chaque palier reprend le même ordre.
   // [nom, tonique (midi), intervalles depuis la tonique]
   const GAMMES = [
-    ["Do majeur", 60, [0, 2, 4, 5, 7, 9, 11]],
-    ["La mineur", 57, [0, 2, 3, 5, 7, 8, 10]],
-    ["Sol pentatonique majeure", 55, [0, 2, 4, 7, 9]],
+    ["Mi espagnole (phrygien dominant)", 52, [0, 1, 4, 5, 7, 8, 10]],
     ["Ré dorien", 62, [0, 2, 3, 5, 7, 9, 10]],
     ["Fa lydien", 53, [0, 2, 4, 6, 7, 9, 11]],
-    ["Mi mineur harmonique", 52, [0, 2, 3, 5, 7, 8, 11]],
-    ["La pentatonique mineure", 57, [0, 3, 5, 7, 10]],
-    ["Ré majeur", 62, [0, 2, 4, 5, 7, 9, 11]],
+    ["La tzigane (mineure hongroise)", 57, [0, 2, 3, 6, 7, 8, 11]],
     ["Sol mixolydien", 55, [0, 2, 4, 5, 7, 9, 10]],
-    ["Mi espagnole (phrygien dominant)", 52, [0, 1, 4, 5, 7, 8, 10]],
+    ["Do hirajoshi (japonaise)", 60, [0, 2, 3, 7, 8]],
+    ["Mi phrygien", 52, [0, 1, 3, 5, 7, 8, 10]],
     ["Ré blues", 62, [0, 3, 5, 6, 7, 10]],
-    ["La majeur", 57, [0, 2, 4, 5, 7, 9, 11]],
+    ["La mineure mélodique", 57, [0, 2, 3, 5, 7, 9, 11]],
+    ["Si mineure harmonique", 59, [0, 2, 3, 5, 7, 8, 11]],
+    ["Do par tons", 60, [0, 2, 4, 6, 8, 10]],
+    ["Fa double harmonique (orientale)", 53, [0, 1, 4, 5, 7, 8, 11]],
   ];
   const gamme = num => { const [nom, t, iv] = GAMMES[(Math.max(1, num) - 1) % GAMMES.length]; return { nom, t, iv }; };
   // le i-ème exercice : on monte la gamme sur deux octaves, puis on redescend s'il reste des exercices
@@ -133,8 +133,8 @@
       if (j < n - 1) { N.push([hauteur(g, d), t, 0.62, 0.9]); t += 0.17; }
       else { N.push(...double(g, d, t)); t += 0.36; }
     }
-    const tierce = g.iv.find(x => x === 4 || x === 3) ?? 7;
-    [g.t - 12, g.t - 5, g.t, g.t + tierce, g.t + 7, g.t + 12].forEach((m, k) => N.push([m, t + 0.2 + k * 0.035, 0.55, 2.6]));
+    const tierce = g.iv.find(x => x === 4 || x === 3) ?? 7, quinte = [7, 8, 6].find(x => g.iv.includes(x)) ?? 7;
+    [g.t - 12, g.t - 12 + quinte, g.t, g.t + tierce, g.t + quinte, g.t + 12].forEach((m, k) => N.push([m, t + 0.2 + k * 0.035, 0.55, 2.6]));
     joue(N);
     return g.nom;
   }
