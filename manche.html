@@ -1596,15 +1596,24 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     } catch (e) { return micDenied(e); }
     if (ctx.state !== "running") await ctx.resume().catch(() => {});
+    // le micro est lu dans un AudioWorklet (hors de la page), pas dans l'ancien ScriptProcessor qui travaille dans la page
+    let proc;
+    try {
+      const code = `class P extends AudioWorkletProcessor { constructor() { super(); this.b = new Float32Array(2048); this.n = 0; }
+        process(inp) { const c = inp[0] && inp[0][0]; if (c) for (let i = 0; i < c.length; i++) { this.b[this.n++] = c[i]; if (this.n === 2048) { this.port.postMessage(this.b.slice()); this.n = 0; } } return true; } }
+        registerProcessor("micro-gratte", P);`;
+      const url = URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
+      await ctx.audioWorklet.addModule(url); URL.revokeObjectURL(url);
+      proc = new AudioWorkletNode(ctx, "micro-gratte", { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 1 });
+    } catch { stream.getTracks().forEach(t => t.stop()); micStatus.textContent = "Ce navigateur ne sait pas lire le micro ici. Ouvre l'app dans Safari ou Chrome à jour."; return; }
     const src = ctx.createMediaStreamSource(stream);
-    const proc = ctx.createScriptProcessor(2048, 1, 1);
     const sr = ctx.sampleRate, keep = Math.round(1.7 * sr), pre = Math.round(0.08 * sr);
     const ring = new Float32Array(pre); let ringPos = 0;
     let floor = 0.002, capture = null, capLen = 0, peakSince = 0;
     let recu = false;
-    proc.onaudioprocess = e => {
+    proc.port.onmessage = e => {
       recu = true;
-      const d = e.inputBuffer.getChannelData(0);
+      const d = e.data;
       let sum = 0; for (let i = 0; i < d.length; i++) sum += d[i] * d[i];
       const r = Math.sqrt(sum / d.length);
       micLevel.style.width = Math.min(100, Math.round(Math.sqrt(r) * 220)) + "%";
@@ -1631,8 +1640,9 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
       if (r < floor * 3) { floor = floor * 0.95 + r * 0.05; }
       for (let i = 0; i < d.length; i++) { ring[ringPos] = d[i]; ringPos = (ringPos + 1) % pre; }
     };
-    src.connect(proc); proc.connect(ctx.destination); // le processeur ne produit que du silence
-    mic = { stream, src, proc };
+    const mute = ctx.createGain(); mute.gain.value = 0;
+    src.connect(proc); proc.connect(mute); mute.connect(ctx.destination); // rien ne ressort : seulement lu
+    mic = { stream, src, proc, mute };
     micBtn.setAttribute("aria-pressed", "true"); dockMic.setAttribute("aria-pressed", "true"); micBtn.querySelector("span").textContent = "Arrêter l'écoute";
     micStatus.textContent = "J'écoute… joue une note ou un accord.";
     // si le son du micro n'arrive pas (contexte audio resté endormi), on le dit au lieu de rester muet
@@ -1640,7 +1650,7 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
   }
   function stopMic() {
     if (!mic) return;
-    mic.proc.onaudioprocess = null; mic.src.disconnect(); mic.proc.disconnect();
+    mic.proc.port.onmessage = null; mic.src.disconnect(); mic.proc.disconnect(); mic.mute.disconnect();
     mic.stream.getTracks().forEach(t => t.stop()); mic = null;
     micBtn.setAttribute("aria-pressed", "false"); dockMic.setAttribute("aria-pressed", "false"); micBtn.querySelector("span").textContent = "Écouter ma guitare";
     micStatus.textContent = ""; micLevel.style.width = "0";
