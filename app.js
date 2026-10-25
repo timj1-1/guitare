@@ -631,13 +631,13 @@
       pz.perso ? chercheTab(pz) : null,
       formAjout(pz, onChange));
   }
-  // une recherche toute prête sur les deux grandes banques de tablatures
+  // une recherche toute prête sur les deux grandes banques de tablatures ; Songsterr d'abord, celle qu'il préfère
   function chercheTab(pz) {
     const q = encodeURIComponent([pz.titre, pz.artiste].filter(Boolean).join(" "));
     const lien = (href, text) => el("a", { class: "btn small", href, target: "_blank", rel: "noopener", text });
     return el("div", { class: "cherche-tab" }, el("span", { class: "muted small", text: "Chercher la tablature :" }),
-      lien(`https://www.ultimate-guitar.com/search.php?search_type=title&value=${q}`, "Ultimate Guitar"),
-      lien(`https://www.songsterr.com/?pattern=${q}`, "Songsterr"));
+      lien(`https://www.songsterr.com/?pattern=${q}`, "Songsterr"),
+      lien(`https://www.ultimate-guitar.com/search.php?search_type=title&value=${q}`, "Ultimate Guitar"));
   }
 
   // « Pour le maîtriser » : les notions du morceau et les jeux qui t'y préparent, repliés dans la fiche
