@@ -891,14 +891,17 @@ details.fiche-cours > .piece-corps { margin-top: 10px; border-top: 0; padding-to
 .piece-diffs ul { margin: 4px 0 0; padding-left: 18px; font-size: .88rem; }
 .piece-diffs li + li { margin-top: 3px; }
 /* Le prof présente le cours : la partie dont il parle grossit un peu et s'entoure de laiton */
-#coursBody .hero, #coursBody .bloc { transition: transform .45s ease, box-shadow .45s ease; transform-origin: center; }
-#coursBody .en-parole { transform: scale(1.025); box-shadow: 0 0 0 2px var(--accent), 0 12px 30px rgba(0, 0, 0, .16); position: relative; z-index: 2; border-radius: 14px; }
-@media (prefers-reduced-motion: reduce) { #coursBody .en-parole { transform: none; } }
+#coursBody .hero, #coursBody .prof-card, #coursBody .palier-card, #coursBody .bloc { transition: transform .45s ease, box-shadow .45s ease; transform-origin: center; }
+/* la partie annoncée grossit le plus, ses voisines un peu moins (--zoom, posé par montre() dans app.js) */
+#coursBody .pres-parole { transform: scale(var(--zoom, 1)); position: relative; z-index: 1; }
+#coursBody .en-parole { box-shadow: 0 0 0 3px var(--accent), 0 14px 34px rgba(0, 0, 0, .2); z-index: 2; border-radius: 14px; }
+html, body { overflow-x: clip; }
+@media (prefers-reduced-motion: reduce) { #coursBody .pres-parole { transform: none; } }
 
 /* Réglages (reglages.js) : taille du texte, gaucher, animation */
 html { font-size: calc(100% * var(--txt, 1)); }
 input, select, textarea { font-size: max(16px, 1rem) !important; }
-.sans-anim #coursBody .en-parole { transform: none; box-shadow: none; }
+.sans-anim #coursBody .pres-parole, .sans-anim #coursBody .en-parole { transform: none; box-shadow: none; }
 .gaucher .jeu-board { scale: -1 1; }
 .gaucher .jeu-board text { transform-box: fill-box; transform-origin: center; scale: -1 1; }
 .reglages { gap: 14px; }
@@ -910,3 +913,18 @@ input, select, textarea { font-size: max(16px, 1rem) !important; }
 .reglage-val { min-width: 4.2em; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
 .seg.jours button { padding: 9px 2px; font-size: .9rem; }
 .reglages input[type="time"] { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); padding: 8px 10px; font: inherit; }
+
+/* bouton discret « le prof explique ce bloc », en haut du bloc, même replié */
+.bloc-top { display: flex; align-items: center; }
+.bloc-top .bloc-head { flex: 1; min-width: 0; padding-right: 6px; }
+.bloc-ecoute { flex: none; display: grid; place-items: center; width: 34px; height: 34px; margin-right: 12px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
+.bloc-ecoute .ic { width: 17px; height: 17px; }
+.bloc-ecoute:hover { color: var(--ink); border-color: var(--accent); }
+.bloc-ecoute.speaking { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+/* les positions d'un exercice (Do, Sol7…), sous son nom */
+.exo-pos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.exo-pos .pos-btn { padding: 4px 10px; font-size: .82rem; }
+/* vidéos d'un bloc : une par ligne */
+.vids-liste { flex-direction: column; align-items: stretch; }
+.vids-liste .btn { width: 100%; justify-content: flex-start; text-align: left; white-space: normal; }

@@ -98,7 +98,7 @@
   const frame = $("#mancheFrame");
   let mancheLoaded = false;
   function openManche(pos) {
-    const hash = pos ? "#pos-" + pos : "";
+    const hash = !pos ? "" : pos.startsWith("gamme-") ? "#" + pos : "#pos-" + pos; // une position, ou une gamme (#gamme-la-penta-mineure-z5)
     if (!mancheLoaded) {
       mancheLoaded = true;
       frame.src = "manche.html" + hash;
@@ -219,6 +219,7 @@
     // Le mot du prof (retours écrits après tes bilans)
     const mots = RETOURS.filter(r => r.pour === c.id);
     if (c.mot) mots.unshift({ titre: "Le mot du prof", texte: c.mot });
+    // (introSegs lit les mots dans ce même ordre : c.mot, puis les retours)
     for (const m of mots) {
       const card = el("div", { class: "card prof-card" }, el("span", { class: "eyebrow", text: m.titre || "Le mot du prof" }));
       String(m.texte).split(/\n+/).forEach(t => card.append(el("p", { text: t })));
@@ -228,11 +229,11 @@
       body.append(el("div", { class: "card prof-card" },
         el("span", { class: "eyebrow", text: "Comment ça marche" }),
         el("p", { text: "Coche chaque exercice fait, dis si c'était facile, correct ou une galère, note ton tempo et un commentaire si besoin." }),
-        el("p", { text: "À la fin, touche « Terminer le cours ». Après la séance C, envoie-moi ton bilan de la semaine : j'adapte la semaine suivante." }),
+        el("p", { text: "À la fin, touche « Terminer le cours ». Après le cours 3, le dernier de la semaine, envoie-moi ton bilan : j'adapte la semaine suivante." }),
       ));
     }
     if (p.num && c.num === (p.num - 1) * 12 + 1) {
-      body.append(el("div", { class: "card" },
+      body.append(el("div", { class: "card palier-card" },
         el("span", { class: "eyebrow", text: "Ce palier" }),
         el("p", {}, el("strong", { text: "Le but : " }), p.but),
         el("p", {}, el("strong", { text: "Ta mission : " }), p.mission),
@@ -279,7 +280,16 @@
       head.setAttribute("aria-expanded", String(open));
       state.open[openKey] = open; save();
     });
-    card.append(head, inner);
+    // le prof explique le bloc : visible même bloc replié, et il l'ouvre
+    const consigne = b.voix?.consigne || [`${b.titre.replace(/^\d+\.\s*/, "")}.`, b.sert, `À faire : ${b.faire}`];
+    const ecoute = withIcon(el("button", { class: "bloc-ecoute", type: "button", title: "Le prof explique ce bloc", "aria-label": `Le prof explique le bloc ${bi + 1}` }), ICON_SPEAK);
+    ecoute.addEventListener("click", async () => {
+      if (ecoute.classList.contains("speaking")) return Sons.tais();
+      if (inner.hidden) head.click();
+      ecoute.classList.add("speaking");
+      try { await parle(consigne.map(t => ({ t, cible: bi }))); } finally { ecoute.classList.remove("speaking"); }
+    });
+    card.append(el("div", { class: "bloc-top" }, head, ecoute), inner);
 
     inner.append(el("blockquote", { class: "sert", text: b.sert }));
     if (b.quand?.length) {
@@ -302,19 +312,23 @@
 
     const tools = el("div", { class: "row-tools" });
     tools.append(withIcon(el("button", { class: "btn small", type: "button", onclick: () => startTimer(b.duree, b.titre.replace(/^\d+\.\s*/, "")) }), ICON_TIMER, `Minuteur ${b.duree} min`));
-    tools.append(speakBtn(b.voix?.consigne || [`${b.titre.replace(/^\d+\.\s*/, "")}.`, b.sert, `À faire : ${b.faire}`], "Écouter", "Écouter la consigne"));
+    // chaque position (Do, Sol7…) va dans les exercices qui la nomment ; une position qu'aucun exercice ne nomme reste ici
+    const posEx = new Map(), libres = [];
     (b.positions || []).forEach(pz => {
-      const btn = el("button", { class: "btn small pos-btn", type: "button", title: "Voir sur le manche", onclick: () => go("manche", { pos: pz.code }) });
-      btn.innerHTML = ICON_POS; btn.append(pz.label);
-      tools.append(btn);
+      const nom = (pz.motif || pz.label.replace(/\s*\(.*\)$/, "")).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`(^|[^\\p{L}])${nom}(?![\\p{L}\\d♯♭#])`, "u");
+      const vises = b.exercices.filter(e => re.test(e.label));
+      if (!vises.length) libres.push(pz);
+      vises.forEach(e => { if (!posEx.has(e)) posEx.set(e, []); posEx.get(e).push(pz); });
     });
+    libres.forEach(pz => tools.append(posBtn(pz)));
     inner.append(tools);
 
     if (c.num > 1 && [1, 3, 4].includes(bi)) { const rv = revisionCard(c, bi); if (rv) inner.append(rv); }
     if (bi === 5) { const sm = semaineCard(c); if (sm) inner.append(sm); }
     const ul = el("ul", { class: "exos" });
     let wasComplete = complete();
-    b.exercices.forEach(e => ul.append(renderExo(c, b, e, checked => {
+    b.exercices.forEach(e => ul.append(renderExo(c, b, e, posEx.get(e), checked => {
       const now = complete();
       card.classList.toggle("complete", now);
       // chaque exercice coché joue la note suivante de la gamme du cours ; la fin d'un bloc, une double note
@@ -326,7 +340,9 @@
     inner.append(ul);
     const jb = jeuBloc(c, bi); if (jb) inner.append(jb);
 
-    const more = el("details", { class: "more" }, el("summary", { text: "Explication et vidéos" }));
+    const moreKey = openKey + "/more";
+    const more = el("details", { class: "more", open: state.open[moreKey] ?? true }, el("summary", { text: "Explication et vidéos" }));
+    more.addEventListener("toggle", () => { if (state.open[moreKey] !== more.open) { state.open[moreKey] = more.open; save(); } });
     const mi = el("div", { class: "more-in" });
     if (b.voix?.explication?.length) mi.append(el("div", { class: "row-tools" }, speakBtn(b.voix.explication, "Écouter l'explication", "Écouter l'explication")));
     b.explication.forEach(t => {
@@ -342,11 +358,7 @@
     });
     // ouvert tant qu'un exercice demande de lire l'explication (« Lire « Comprendre les barrés… » »)
     if (b.exercices.some(e => /^Lire\b/.test(e.label) && !s.ex[exKey(b, e)]?.done)) more.open = true;
-    if (b.videos?.length) {
-      const vl = el("ul", { class: "videos" });
-      b.videos.forEach(v => vl.append(el("li", {}, el("a", { href: v.u, target: "_blank", rel: "noopener" }, el("span", { class: "play", "aria-hidden": "true" }), v.t))));
-      mi.append(vl);
-    }
+    if (b.videos?.length) mi.append(el("p", { class: "eyebrow", text: "Vidéos" }), lecteur(b.videos, b.titre, { liste: true }));
     more.append(mi);
     inner.append(more);
     return card;
@@ -372,11 +384,17 @@
   }
   // la partie dont parle le prof grossit un peu, au centre de l'écran ; l'écran descend doucement vers la suivante
   function montre(cible) {
-    document.querySelectorAll(".en-parole").forEach(e => e.classList.remove("en-parole"));
+    document.querySelectorAll(".en-parole, .pres-parole").forEach(e => { e.classList.remove("en-parole", "pres-parole"); e.style.removeProperty("--zoom"); });
     if (cible == null || state.view !== "cours" || !Reglages.get("animation")) return;
     const body = $("#coursBody");
-    const e = cible === "tete" ? body.querySelector(".hero") : body.querySelectorAll(".bloc")[cible];
+    // l'en-tête, les mots du prof, puis les 6 blocs : plus une partie est proche de celle annoncée, plus elle grossit
+    const suite = [body.querySelector(".hero"), ...body.querySelectorAll(".prof-card, .palier-card"), ...body.querySelectorAll(".bloc")].filter(Boolean);
+    const e = cible === "tete" ? body.querySelector(".hero") : cible === "palier" ? body.querySelector(".palier-card")
+      : String(cible).startsWith("mot:") ? body.querySelectorAll(".prof-card")[+String(cible).slice(4)]
+      : body.querySelectorAll(".bloc")[cible];
     if (!e) return;
+    const i = suite.indexOf(e);
+    suite.forEach((x, j) => { const d = Math.abs(j - i); if (d <= 2) { x.classList.add("pres-parole"); x.style.setProperty("--zoom", [1.05, 1.022, 1.008][d]); } });
     e.classList.add("en-parole");
     const grand = e.getBoundingClientRect().height > window.innerHeight * 0.6;
     e.scrollIntoView({ behavior: "smooth", block: grand ? "start" : "center" });
@@ -533,10 +551,21 @@
 
   // Les boutons vidéo ; un touché lit la vidéo juste en dessous, un autre la ferme. Une vidéo qui ne se lit pas ici reste ouverte sur YouTube.
   function lecteurVideos(pz, onChange) {
+    const vids = videosDe(pz);
+    const wrap = lecteur(vids, pz.titre, { apres: (v, bar) => {
+      if (v.a) bar.append(el("button", { class: "link-btn x", type: "button", "aria-label": `Retirer la vidéo ${v.t}`, text: "✕", onclick: () => {
+        const a = ajoutsDe(pz); a.videos = a.videos.filter(x => x !== a.videos.find(y => y.u === v.u && y.t === v.t)); sansAjouts(pz); save(); onChange();
+      } }));
+    } });
+    if (!vids.length) wrap.querySelector(".row-tools").append(el("span", { class: "muted small", text: "Pas encore de vidéo : ajoute-en une ci-dessous." }));
+    return wrap;
+  }
+  // Des boutons vidéo : un touché lit la vidéo juste en dessous (dans l'app, aussi sur Mac), un autre la ferme.
+  // liste : un bouton par ligne (les vidéos des blocs ont de longs titres)
+  function lecteur(vids, titre, { apres = null, liste = false } = {}) {
     const wrap = el("div", { class: "lecteur" }), slot = el("div", { class: "lecteur-slot", hidden: true });
     let ouverte = null;
-    const bar = el("div", { class: "row-tools" });
-    const vids = videosDe(pz);
+    const bar = el("div", { class: "row-tools" + (liste ? " vids-liste" : "") });
     vids.forEach(v => {
       const id = ytId(v.u), nom = (v.t === "Écouter" ? "▶ Écouter" : v.t === "Tuto" ? "▶ Tuto" : "▶ " + v.t);
       if (!id) { bar.append(el("a", { class: "btn small ghost", href: v.u, target: "_blank", rel: "noopener" }, nom + " ↗")); return; }
@@ -549,17 +578,14 @@
         ouverte = id; b.setAttribute("aria-pressed", "true");
         slot.replaceChildren(
           el("div", { class: "yt" }, el("iframe", {
-            src: `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`, title: `${pz.titre} : ${v.t}`, loading: "lazy", allowfullscreen: true,
+            src: `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`, title: `${titre} : ${v.t}`, loading: "lazy", allowfullscreen: true,
             allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share", referrerpolicy: "strict-origin-when-cross-origin" })),
           el("a", { class: "link-btn small", href: `https://www.youtube.com/watch?v=${id}`, target: "_blank", rel: "noopener" }, "Elle ne se lit pas ? Ouvrir sur YouTube ↗"));
         slot.hidden = false;
       });
       bar.append(b);
-      if (v.a) bar.append(el("button", { class: "link-btn x", type: "button", "aria-label": `Retirer la vidéo ${v.t}`, text: "✕", onclick: () => {
-        const a = ajoutsDe(pz); a.videos = a.videos.filter(x => x !== a.videos.find(y => y.u === v.u && y.t === v.t)); sansAjouts(pz); save(); onChange();
-      } }));
+      apres?.(v, bar);
     });
-    if (!vids.length) bar.append(el("span", { class: "muted small", text: "Pas encore de vidéo : ajoute-en une ci-dessous." }));
     wrap.append(bar, slot);
     return wrap;
   }
@@ -707,7 +733,7 @@
       if (pz.techniques?.length) corps.append(el("div", { class: "tech" }, el("ul", {}, pz.techniques.map(t => el("li", { text: t })))));
       if (pz.difficultes?.length) corps.append(el("div", { class: "piece-diffs" }, el("span", { class: "eyebrow", text: "Les passages difficiles" }), el("ul", {}, pz.difficultes.map(t => el("li", { text: t })))));
       if (!pz.perso && lock) corps.append(el("p", { class: "muted small quand-pz", text: `${quandTxt(pz)} : tu peux l'écouter, et le travailler quand le cours t'aura donné sa technique.` }));
-      else if (pz.mission && pz.id === "fragile" && sem > 4) corps.append(el("p", { class: "muted small quand-pz", text: "En entretien : une fois en entier à la séance A." }));
+      else if (pz.mission && pz.id === "fragile" && sem > 4) corps.append(el("p", { class: "muted small quand-pz", text: "En entretien : une fois en entier au premier cours de chaque semaine." }));
       corps.append(ficheMorceau(pz, () => { const o = corps.querySelector(".ajout")?.open; draw(); if (o) corps.querySelector(".ajout").open = true; }));
       const mt = maitriserBox(pz); if (mt) corps.append(mt);
     };
@@ -846,7 +872,13 @@
     return card;
   }
 
-  function renderExo(c, b, e, onChange) {
+  // un bouton qui ouvre la position sur Mon manche
+  function posBtn(pz) {
+    const btn = el("button", { class: "btn small pos-btn", type: "button", title: "Voir sur le manche", onclick: () => go("manche", { pos: pz.code }) });
+    btn.innerHTML = ICON_POS; btn.append(pz.label);
+    return btn;
+  }
+  function renderExo(c, b, e, positions, onChange) {
     const key = exKey(b, e);
     const x = exState(c.id, key);
     const id = "x-" + c.id + "-" + key.replace(/\W/g, "-");
@@ -855,6 +887,7 @@
     box.addEventListener("change", () => { x.done = box.checked; li.classList.toggle("is-done", x.done); touch(c); save(); onChange(x.done); });
     const label = el("label", { class: "exo-label", for: id }, e.label, e.aide ? el("span", { class: "aide", text: e.aide }) : null);
     const main = el("div", { class: "exo-main" }, box, label);
+    if (positions?.length) label.append(el("span", { class: "exo-pos" }, positions.map(posBtn)));
     // Tempo qui progresse : on part un peu sous la cible, +4 bpm après 3 passages propres d'affilée, jusqu'à la cible
     const depart = e.tempo ? Math.max(40, e.tempo - 10) : 0;
     const bpmNow = () => x.bpm ?? depart;
@@ -997,9 +1030,12 @@
   const exNotes = c => allEx(c).map(a => ({ ...a, x: state.cours[c.id]?.ex[a.key] || {} }));
   function introSegs(c) {
     // l'accueil (en-tête du cours), le mot du prof, ce qui a coincé, puis le plan des 6 blocs (chaque bloc mis en avant)
-    const P = DATA.prof, pr = c.prof || {}, S = (pr.intro || []).map(t => ({ t, cible: "tete" }));
-    if (c.mot) S.push(...lignes(c.mot));
-    RETOURS.filter(r => r.pour === c.id).forEach(r => S.push(...lignes(r.texte)));
+    const P = DATA.prof, pr = c.prof || {};
+    // le but et la mission du palier : leur carte s'il y en a une (premier cours du palier), sinon l'en-tête
+    const S = (pr.intro || []).map(t => ({ t, cible: /^(On attaque le palier|Ta mission)/.test(t) && c.num % 12 === 1 ? "palier" : "tete" }));
+    // le mot du prof : sa carte est mise en avant pendant qu'il le lit (même ordre que l'affichage)
+    const mots = [...(c.mot ? [c.mot] : []), ...RETOURS.filter(r => r.pour === c.id).map(r => r.texte)];
+    mots.forEach((m, k) => S.push(...lignes(m).map(t => ({ t, cible: "mot:" + k }))));
     const prev = DATA.cours[DATA.cours.indexOf(c) - 1];
     const dur = prev ? exNotes(prev).filter(a => a.x.feel === "galere").slice(0, 2) : [];
     if (dur.length) S.push(P.intro_galere, ...dur.map(a => a.e.label), P.intro_galere_fin);
@@ -1035,7 +1071,7 @@
     // un bilan par semaine : il part quand la semaine est finie, ou à la séance C
     const envoi = c.seance === "C" || semaineDe(c.semaine).every(x => isDone(x.id));
     if (envoi) showRecap(c);
-    else toast(`Cours ${c.num} terminé ! Ton bilan partira à la fin de la semaine, après la séance C.`);
+    else toast(`Cours ${c.num} terminé ! Ton bilan partira à la fin de la semaine, après le cours ${c.semaine * 3}.`);
     if (profOn()) setTimeout(() => { if (!envoi || recapSheet.open) Sons.dire(finSegs(c), { force: true }); }, 1600);
   }
 
@@ -1394,7 +1430,7 @@
       ligne("Volume des sons", "La guitare, les petits sons, les jeux et Mon manche.", curseur("volSons", 0, 100, 5, pct, () => Sons.cling())),
       ligne("Volume du métronome", null, curseur("volMetro", 0, 100, 5, pct, () => { const c = Sons.ctx(); Sons.unlock(); click(c.currentTime + 0.05, true); })),
       titreR("Voix du prof"),
-      ligne("Vitesse de la voix", "Elle garde sa hauteur, plus lente ou plus rapide.", curseur("vitesseVoix", 0.8, 1.3, 0.05, v => "× " + (+v).toFixed(2).replace(/0$/, "").replace(".", ","), () => { Sons.unlock(); Sons.dire("Assieds-toi avec ta guitare, et on commence.", { force: true }); })),
+      ligne("Vitesse de la voix", "Elle garde sa hauteur, plus lente ou plus rapide.", curseur("vitesseVoix", 0.8, 1.3, 0.05, v => "× " + (+v).toFixed(2).replace(/0$/, "").replace(".", ","), () => { Sons.unlock(); fetch("voix/voix.json").then(r => r.json()).then(v => Sons.dire(v.exemple, { force: true })).catch(() => {}); })),
       ligne("Présentation du cours", "Le prof présente le cours dès que tu le lances. Le bouton « Écouter » reste là.", oui("introAuto")),
       titreR("Affichage"),
       ligne("Animation pendant la voix", "La partie annoncée grossit et l'écran la suit.", oui("animation", v => { if (!v) montre(null); })),
@@ -1642,7 +1678,7 @@
       out.push(mini("Un bilan de tests à la fin de chaque palier",
         `Les cours ${DATA.cours.filter(c => c.bilan).map(c => c.num).join(", ").replace(/, (\d+)$/, " et $1")} finissent chaque palier par un bilan de tests. Avec tous les tests réussis sauf un au plus, tu passes au palier suivant. Sinon, on ajoute une semaine sur ce qui manque.`));
       out.push(mini("Ton bilan de la semaine adapte la suite",
-        "Après la séance C, tu m'envoies ton bilan de la semaine : il regroupe tes 3 séances, et je m'en sers pour adapter la semaine suivante."));
+        "Après le 3e cours de la semaine, tu m'envoies ton bilan : il regroupe tes 3 cours, et je m'en sers pour adapter la semaine suivante."));
       const ici = nextCours().palier;
       for (const p of DATA.paliers) {
         const pc = DATA.cours.filter(c => c.palier === p.num);

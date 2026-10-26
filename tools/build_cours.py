@@ -1,5 +1,7 @@
 # Génère data/cours.json à partir du cours (12 semaines, 3 séances par semaine).
-import json, os, re
+import json, os, re, sys
+sys.path.insert(0, os.path.dirname(__file__))
+from explications import EXPL, PLUS, GARDE, POSITIONS
 
 V = lambda t, u: {"t": t, "u": u}
 
@@ -9,6 +11,15 @@ ETIREMENTS = {
 }
 # Séance de 1 h 30 : chaque échauffement commence par 4 minutes de jeu facile, les mains chauffent avant l'effort
 FACILE = {"id": "facile", "label": "Jeu facile : arpèges lents ou gamme lente, sans forcer (4 min)"}
+# ce que « jeu facile » veut dire selon ce que tu sais déjà jouer (2026-10-26 : au début, pas encore de gamme)
+FACILE_LABEL = {
+    (1, 0): "Jeu facile : tes accords ouverts en arpèges lents (Do, La mineur, Mi mineur), ou l'intro de Fragile (4 min)",
+    (1, 1): "Jeu facile : Do, La mineur, Mi mineur en arpèges lents, ou la gamme de Do majeur, lentement (4 min)",
+    (2, 0): "Jeu facile : arpèges lents sur tes accords, ou la gamme de Do majeur, lentement (4 min)",
+    (2, 1): "Jeu facile : arpèges lents sur tes accords, ou la gamme de Do majeur, lentement (4 min)",
+    (3, 0): "Jeu facile : arpèges lents, ou Do majeur ou Sol majeur en position fixe, lentement (4 min)",
+    (3, 1): "Jeu facile : arpèges lents, ou Do majeur ou Sol majeur en position fixe, lentement (4 min)",
+}
 
 # Chaque palier : 6 blocs, chacun avec deux moitiés (semaines 1-2 / 3-4 du palier).
 # noms courts des paliers (navigation de l'app) : une progression vers l'autonomie
@@ -183,7 +194,7 @@ PALIERS = [
           {"faire": "Les positions 1, 2 et 3 à la suite (6 min). Puis le glissando (4 min) : sur la corde de Sol, case 5 → 7 et retour avec l'index, puis avec le majeur et l'annulaire ; ensuite les 2 glissandos qui relient les positions 1 et 2 (5 → 7 sur le Sol, 8 → 10 sur le Si). Enfin 5 min de mini-impro sur la position 1, sur la grille de Bamboleo (la suite d'accords qui tourne en boucle dans le morceau), avec un glissando par phrase, enregistrée sur ton téléphone.",
            "ex": [{"id": "penta123", "label": "Positions 1, 2 et 3 à la suite (6 min)", "tempo": 70},
                   {"id": "glissando", "label": "Glissando : 5 → 7 sur le Sol, puis entre les positions 1 et 2 (4 min)", "tempo": 60},
-                  {"id": "impro", "label": "Mini-impro sur la grille de Bamboleo, un glissando par phrase (5 min)"}],
+                  {"id": "impro", "label": "Mini-impro sur la position 1, sur la grille de Bamboleo, un glissando par phrase (5 min)"}],
            "plus": {
              "explication": [{"titre": "Semaines 7-8 : le glissando", "liste": [
                "Le mot : glissando (on dit aussi « slide »), c'est glisser le doigt sur la corde d'une case à une autre sans le relever. La main droite ne joue que la 1re note : la 2e sonne grâce au glissé.",
@@ -222,7 +233,7 @@ PALIERS = [
         "videos": [V("Réussir le Si et les barrés en position de La", "https://www.youtube.com/watch?v=xrh3k039BKg"), V("Rumba flamenca, la rythmique de base", "https://www.youtube.com/watch?v=REuLvk_UW1o"), V("Apprendre la rumba flamenca en 10 min", "https://www.youtube.com/watch?v=kwKt4t7OPNs")],
         "moities": [
           {"faire": "Sib (Si bémol, une case sous Si) et Si mineur forme La (relis « Comprendre les barrés » au palier 1), enchaînement Fa → Sib → Fa (7 min), puis la rumba sans golpe sur La mineur à 70 bpm (8 min).",
-           "positions": [{"label": "Sib", "code": "x13331"}, {"label": "Si mineur", "code": "x24432"}, {"label": "Fa barré", "code": "133211"}],
+           "positions": [{"label": "Sib", "code": "x13331"}, {"label": "Si mineur", "code": "x24432"}, {"label": "Fa barré", "code": "133211", "motif": "Fa"}],
            "ex": [{"id": "barres", "label": "Sib et Si mineur forme La"}, {"id": "enchainement", "label": "Enchaînement Fa → Sib → Fa"}, {"id": "rumba", "label": "Rumba sans golpe sur La mineur", "tempo": 70}]},
           {"faire": "La rumba avec golpe sur la grille La mineur → Sol → Fa → Mi, à 80 bpm.",
            "positions": [{"label": "La mineur", "code": "x02210"}, {"label": "Sol", "code": "320003"}, {"label": "Fa", "code": "133211"}, {"label": "Mi", "code": "022100"}],
@@ -239,9 +250,9 @@ PALIERS = [
         "positions": [{"label": "La mineur", "code": "x02210"}, {"label": "Sol", "code": "320003"}, {"label": "Fa", "code": "133211"}, {"label": "Mi", "code": "022100"}],
         "moities": [
           {"faire": "Bamboleo, d'abord la grille puis le morceau, de plus en plus vite (de 70 à 90 bpm).",
-           "ex": [{"id": "grille", "label": "Bamboleo : la grille", "tempo": 70}, {"id": "morceau", "label": "Bamboleo : le morceau", "tempo": 70}]},
+           "ex": [{"id": "grille", "label": "Bamboleo : la grille La mineur → Sol → Fa → Mi", "tempo": 70}, {"id": "morceau", "label": "Bamboleo : le morceau", "tempo": 70}]},
           {"faire": "Bamboleo, d'abord la grille puis le morceau, de plus en plus vite (de 70 à 90 bpm).",
-           "ex": [{"id": "grille", "label": "Bamboleo : la grille", "tempo": 80}, {"id": "morceau", "label": "Bamboleo : le morceau", "tempo": 80}]},
+           "ex": [{"id": "grille", "label": "Bamboleo : la grille La mineur → Sol → Fa → Mi", "tempo": 80}, {"id": "morceau", "label": "Bamboleo : le morceau", "tempo": 80}]},
         ],
       },
     ],
@@ -368,10 +379,10 @@ PALIERS = [
         "positions": [{"label": "La mineur", "code": "x02210"}],
         "moities": [
           {"faire": "Rasgueado en 3 doigts (a, m, i) sur La mineur, lentement (7 min), puis la rumba sur la grille (8 min).",
-           "ex": [{"id": "rasgueado", "label": "Rasgueado a-m-i sur La mineur (7 min)"}, {"id": "rumba", "label": "Rumba sur la grille (8 min)", "tempo": 80}]},
+           "ex": [{"id": "rasgueado", "label": "Rasgueado a-m-i sur La mineur (7 min)"}, {"id": "rumba", "label": "Rumba sur la grille La mineur → Sol → Fa → Mi (8 min)", "tempo": 80}]},
           {"faire": "Rasgueado en 4 doigts, c-a-m-i (7 min). Puis l'apagado : La mineur à 70 bpm, un coup puis l'arrêt net sur les temps 2 et 4 (2 min). Enfin la rumba, avec un rasgueado et un apagado à la fin de chaque tour de grille (6 min).",
            "ex": [{"id": "rasgueado", "label": "Rasgueado c-a-m-i (7 min)"}, {"id": "apagado", "label": "Apagado : La mineur, un coup puis l'arrêt net sur 2 et 4", "tempo": 70},
-                  {"id": "rumba", "label": "Rumba avec un rasgueado et un apagado à chaque fin de tour", "tempo": 80}],
+                  {"id": "rumba", "label": "Rumba sur la grille La mineur → Sol → Fa → Mi, un rasgueado et un apagado à chaque fin de tour", "tempo": 80}],
            "plus": {
              "explication": [{"titre": "Semaines 11-12 : l'apagado", "liste": [
                "Le mot : apagado veut dire « éteint » en espagnol. C'est arrêter net le son juste après un accord, pour un accent sec.",
@@ -396,9 +407,9 @@ PALIERS = [
         "positions": [{"label": "La mineur", "code": "x02210"}, {"label": "Sol", "code": "320003"}, {"label": "Fa", "code": "133211"}, {"label": "Mi", "code": "022100"}],
         "moities": [
           {"faire": "Bamboleo en rumba à 90 bpm avec un rasgueado à la fin de chaque tour, puis 1 minute d'impro.",
-           "ex": [{"id": "morceau", "label": "Bamboleo avec rasgueados", "tempo": 90}, {"id": "impro", "label": "1 min d'impro sur la grille"}]},
+           "ex": [{"id": "morceau", "label": "Bamboleo avec rasgueados (La mineur → Sol → Fa → Mi)", "tempo": 90}, {"id": "impro", "label": "1 min d'impro sur la grille"}]},
           {"faire": "Bamboleo en rumba à 90 bpm avec un rasgueado à la fin de chaque tour, puis 1 minute d'impro, enregistré.",
-           "ex": [{"id": "morceau", "label": "Bamboleo avec rasgueados", "tempo": 90}, {"id": "impro", "label": "1 min d'impro sur la grille"}, {"id": "enregistre", "label": "M'enregistrer"}]},
+           "ex": [{"id": "morceau", "label": "Bamboleo avec rasgueados (La mineur → Sol → Fa → Mi)", "tempo": 90}, {"id": "impro", "label": "1 min d'impro sur la grille"}, {"id": "enregistre", "label": "M'enregistrer"}]},
         ],
       },
     ],
@@ -618,8 +629,14 @@ def bloc_for(palier, b, bi, moitie, seance):
     m = b["moities"][moitie]
     # « plus » : la nouveauté de ces 2 semaines (explication, vidéos, schéma, pourquoi), montrée seulement quand elle arrive
     plus = m.get("plus", {})
-    b = {**b, "explication": b["explication"] + plus.get("explication", []), "videos": b["videos"] + plus.get("videos", [])}
+    # les explications : une partie par principe et par exercice (tools/explications.py), puis les nouveautés de ces 2 semaines
+    k = (palier["num"], bi + 1)
+    base = (EXPL[k] + (b["explication"] if k in GARDE else [])) if k in EXPL else b["explication"]
+    expl = base + PLUS.get((*k, moitie), []) + plus.get("explication", [])
+    b = {**b, "explication": expl, "videos": b["videos"] + plus.get("videos", [])}
     ex = [dict(e) for e in m["ex"]]
+    for e in ex:
+        if e["id"] == "facile": e["label"] = FACILE_LABEL[(palier["num"], moitie)]
     for e in ex:
         j = jeux_for(palier, moitie, e)
         if j: e["jeux"] = j
@@ -640,7 +657,7 @@ def bloc_for(palier, b, bi, moitie, seance):
     return {
         "id": f"b{bi + 1}", "titre": f"{bi + 1}. {titre}", "duree": b["duree"],
         "sert": b["sert"], "quand": quand, "faire": faire, "explication": b["explication"],
-        "videos": b["videos"], "positions": m.get("positions", b.get("positions", [])),
+        "videos": b["videos"], "positions": m.get("positions", b.get("positions", [])) + POSITIONS.get((*k, moitie), []),
         "schemas": SCHEMAS[palier["num"]][bi] + plus.get("schemas", []),
         "exercices": ex,
         "voix": {
@@ -661,7 +678,7 @@ for p in PALIERS:
             num += 1
             c = {
                 "id": f"c{num}", "num": num, "semaine": semaine, "palier": p["num"], "seance": seance,
-                "titre": f"Semaine {semaine} · Séance {seance}",
+                "titre": f"Semaine {semaine} · {'1er' if seance == 'A' else '2e' if seance == 'B' else '3e'} cours de la semaine",
                 "blocs": [bloc_for(p, b, i, moitie, seance) for i, b in enumerate(p["blocs"])],
             }
             if wk == 3 and seance == "C":
@@ -884,6 +901,13 @@ lower1 = lambda t: t[:1].lower() + t[1:]
 court = lambda b: b["titre"].split(". ", 1)[-1]
 num_fr = lambda n: {1: "une", 2: "deux", 3: "trois"}.get(n, str(n))
 
+# le nom des blocs dans la voix du prof, par palier
+NOM_BLOC = {
+    1: ["l'échauffement", "la gamme de Do majeur", "la pentatonique de La mineur", "les notes du manche", "les barrés", "le morceau, Fragile"],
+    2: ["l'échauffement", "la gamme majeure en position fixe", "la pentatonique", "les notes du manche", "les barrés forme La et la rumba", "le morceau, Bamboleo"],
+    3: ["l'échauffement", "la gamme de La mineur", "la pentatonique et l'impro", "les notes du manche", "le rasgueado et la rumba", "les morceaux, Bamboleo et Fragile"],
+}
+
 def intro(c, prev):
     # L'accueil (sa demande du 2026-10-25) : on s'installe, on dit où on en est, sans parler du temps
     p = next(x for x in PALIERS if x["num"] == c["palier"])
@@ -909,25 +933,20 @@ sans_duree = lambda t: re.sub(r"\s*\((?:\d+[^)]*min[^)]*|[^)]*\d+ ?min)\)", "", 
 
 def voix_prof(c, prev, nxt, avant=None, avant3=None):
     I, nouveau, wk = intro(c, prev)
-    # les exercices nouveaux d'un bloc, par rapport au même bloc deux semaines plus tôt
-    def ex1(b, ref, n=2):
-        # ni les étirements, ni le jeu facile, ni les lectures : ce qu'on joue vraiment dans le bloc
-        labels = [sans_duree(e["label"]) for e in b["exercices"] if not re.match(r"(étirements|jeu facile|lire)\b", e["label"].lower())]
-        labels = [l.split(" : ", 1)[1] if " : " in l and l.split(" : ", 1)[0] in court(b) else l for l in labels]
-        if ref:
-            old = {sans_duree(e["label"]) for rb in ref["blocs"] if rb["id"] == b["id"] for e in rb["exercices"]}
-            labels = [l for l in labels if l not in old] or labels
-        return ", puis ".join(labels[:n])
-    # Le plan des 6 blocs, toujours : une explication complète quand le cours change, un rappel court sinon.
+    # Le plan des 6 blocs, toujours, et seulement ça (2026-10-26) : le nom de chaque bloc et à quoi il sert, sans les exercices.
     # Chaque ligne porte le numéro de son bloc : l'app le met en avant à l'écran pendant que le prof en parle.
     if nouveau:
         suite = ["Aujourd'hui, du nouveau dans chaque bloc. Voici le plan, et à quoi sert chaque partie." if wk == 0
                  else "Aujourd'hui, de nouveaux exercices dans chaque bloc. Voici le plan."]
-        plan = [{"b": i, "t": f"{court(b)} : {ex1(b, avant)}. {b['sert']}" if wk else f"{court(b)} : {b['sert']}"} for i, b in enumerate(c["blocs"])]
     else:
-        suite = ["Cette semaine, on consolide ce que tu as découvert : le même plan, en plus propre." if c["seance"] == "A"
-                 else "Même plan que la dernière fois, pour que ça devienne automatique. En bref :"]
-        plan = [{"b": i, "t": f"{court(b)} : {ex1(b, None, 1)}."} for i, b in enumerate(c["blocs"])]
+        suite = ["Même plan que la dernière fois, en plus propre. En bref :"]
+    noms = NOM_BLOC[c["palier"]]
+    premiere = lambda t: re.split(r"(?<=[.!?])\s", t, maxsplit=1)[0].rstrip(".")
+    if nouveau:
+        plan = [{"b": i, "t": f"Bloc {i + 1}, {noms[i]} : {lower1(premiere(b['sert']))}."} for i, b in enumerate(c["blocs"])]
+    else:
+        # deux cours qui se suivent et se ressemblent : juste le nom des blocs
+        plan = [{"b": i, "t": f"Bloc {i + 1}, {noms[i]}."} for i in range(len(c["blocs"]))]
     fin_intro = ["On commence par l'échauffement. C'est parti !"]
     fin = [f"Cours {c['num']} terminé, bravo !"]
     if c.get("bilan"):
@@ -958,7 +977,7 @@ PROF = {
     "rien_galere": "Rien ne t'a vraiment posé de problème : c'est bon signe, on pourra bientôt monter le tempo.",
     "tempo": {str(k): f"Ton tempo a monté sur {k} exercice{'s' if k > 1 else ''}." for k in range(1, 13)},
     "envoie": "Dernière chose : copie ton bilan de la semaine et envoie-le-moi. Je lis tout, et j'adapte la semaine suivante.",
-    "envoie_plus_tard": "Pas besoin de m'envoyer de bilan aujourd'hui : il partira à la fin de la semaine, après la séance C.",
+    "envoie_plus_tard": "Pas besoin de m'envoyer de bilan aujourd'hui : il partira à la fin de la semaine, après ton 3e cours.",
     "intro_galere": "Au dernier cours, ce qui t'a donné du mal :",
     "intro_galere_fin": "On y va doucement aujourd'hui, au tempo de départ, en visant un son propre.",
 }

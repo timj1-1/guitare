@@ -1709,12 +1709,14 @@ const GUITAR_SAMPLES = {"ny":{"40":"SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEw
     const m = Math.min(...fr);
     return p[from] === m && p[5] === m ? { fret: Math.min(FRETS, m + capo), from } : null;
   };
-  const fromHash = () => { const m = location.hash.match(/^#pos-([x0-9-]+)$/i); const p = m && parsePosition(m[1]); if (p) { pos = toAbs(p); barre = barreOf(p); avantBarre = null; store.set("pos", pos); store.set("barre", barre); render(); } };
+  const fromHash = () => { const m = location.hash.match(/^#pos-([x0-9-]+)$/i); const p = m && parsePosition(m[1]); if (p) { if (scale) { scale = null; store.set("scale", null); scaleSel.value = ""; } pos = toAbs(p); barre = barreOf(p); avantBarre = null; store.set("pos", pos); store.set("barre", barre); render(); } }; // une position du cours : la gamme affichée s'efface
   window.addEventListener("hashchange", fromHash);
   const scaleFromHash = () => {
     const m = location.hash.match(/^#gamme-([a-z]+)-([a-z-]+?)(?:-z(\d+))?$/i);
     if (!m || !SCALE_BY[m[2]] || !TONICS.some(t => t[0] === m[1])) return;
     zone = m[3] != null && +m[3] <= FRETS - 4 ? m[3] : "all"; store.set("zone", zone);
+    // une gamme du cours : le manche se vide, pour ne voir qu'elle
+    pos = [null, null, null, null, null, null]; barre = null; avantBarre = null; store.set("pos", pos); store.set("barre", barre);
     setScale({ id: m[2], t: m[1] });
     document.getElementById("toolsScale").open = true;
   };
