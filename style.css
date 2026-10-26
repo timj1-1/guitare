@@ -14,7 +14,7 @@
   --ok-soft: #dcebe1;
   --warn: #a23a2c;
   --warn-soft: #f5dfda;
-  --mid: #7a6a1f;
+  --mid: #72631c;
   --mid-soft: #efe9c9;
   --shadow: 0 1px 2px rgba(22, 30, 26, .05), 0 10px 30px -12px rgba(22, 30, 26, .18);
   --nacre: #f1e8d6;
@@ -131,7 +131,7 @@ main { flex: 1; }
   font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; overflow: hidden;
 }
 .pal-btn[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
-.pal-num { flex: none; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: .7rem; background: var(--line); color: var(--ink); }
+.pal-num { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: .75rem; background: var(--line); color: var(--ink); }
 .pal-btn[aria-selected="true"] .pal-num { background: var(--tab-on); color: var(--tab-on-ink); }
 .pal-nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pal-bar { position: absolute; left: 10px; right: 10px; bottom: 3px; height: 3px; border-radius: 2px; background: var(--line); }
@@ -360,7 +360,7 @@ details.more .more-in { display: flex; flex-direction: column; gap: 10px; paddin
 }
 .tabbar button {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  border: 0; background: none; color: var(--muted); font: inherit; font-size: .72rem; font-weight: 600; cursor: pointer;
+  border: 0; background: none; color: var(--muted); font: inherit; font-size: .75rem; font-weight: 600; cursor: pointer;
 }
 .tabbar svg { width: 24px; height: 24px; }
 .tabbar button[aria-current="page"] { color: var(--accent); }
@@ -401,7 +401,10 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 }
 .empty { text-align: center; padding: 40px 0; color: var(--muted); }
 
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+/* sans animation, la case à trouver ne clignote pas : un point plus gros et un contour épais la signalent */
+@media (prefers-reduced-motion: reduce) { .jb-cell[data-state="ask"] .jb-dot { r: 17; stroke-width: 4; } }
+.sans-anim .jb-cell[data-state="ask"] .jb-dot { animation: none; r: 17; stroke-width: 4; }
 
 /* Jeux du manche */
 .exo-jeux { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-left: 40px; }
@@ -716,7 +719,7 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .piece-titres { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .piece-titre { font-family: var(--f-display); font-size: 1.35rem; line-height: 1.15; }
 .piece-artiste { font-size: .88rem; color: var(--muted); }
-.piece-tag { align-self: flex-start; font-size: .72rem; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+.piece-tag { align-self: flex-start; font-size: .75rem; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
 .piece-tag.mission { color: var(--ok); }
 .piece.ouvert .pli-chev::after { top: 55%; transform: translate(-50%, -50%) rotate(-135deg); border-color: var(--accent); }
 .piece-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
@@ -731,7 +734,7 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .pick-btn[aria-pressed="true"] { background: var(--ok); color: #fff; border-color: var(--ok); }
 .piece.locked { opacity: .62; }
 .piece.locked .pick-btn { font-weight: 500; }
-.niveau { font-size: .72rem; color: var(--muted); white-space: nowrap; }
+.niveau { font-size: .75rem; color: var(--muted); white-space: nowrap; }
 .niveau.n3 { color: var(--accent); }
 
 /* Mes morceaux */
@@ -753,8 +756,8 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .morceau-semaine.swapped { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .swap-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .tabbar button span { white-space: nowrap; }
-@media (max-width: 440px) { .tabbar { padding-left: max(2px, env(safe-area-inset-left, 0px)); padding-right: max(2px, env(safe-area-inset-right, 0px)); } .tabbar button { font-size: .66rem; letter-spacing: -.01em; } }
-@media (max-width: 370px) { .tabbar button { font-size: .6rem; } }
+@media (max-width: 440px) { .tabbar { padding-left: max(2px, env(safe-area-inset-left, 0px)); padding-right: max(2px, env(safe-area-inset-right, 0px)); } .tabbar button { font-size: .7rem; letter-spacing: -.01em; } }
+@media (max-width: 370px) { .tabbar button { font-size: .66rem; } }
 
 /* Fiche d'un morceau : vidéo dans l'app, tablatures, ajouts */
 .piece-corps { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
@@ -829,7 +832,7 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .jeu-answers.deux { grid-template-columns: repeat(2, 1fr); max-width: 520px; }
 @media (max-width: 420px) { .jeu-answers.douze { grid-template-columns: repeat(4, 1fr); } }
 .jeu-answers .btn { flex-direction: column; gap: 0; line-height: 1.15; }
-.jeu-answers .btn small { font-size: .7rem; font-weight: 600; opacity: .75; }
+.jeu-answers .btn small { font-size: .75rem; font-weight: 600; opacity: .75; }
 .niv-ecoute { align-self: center; min-width: 220px; }
 
 /* L'onglet Jeux */
