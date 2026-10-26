@@ -1151,6 +1151,7 @@
     const any = DATA?.cours.some(x => state.cours[x.id]?.seance?.start);
     if (any && !seanceTick) seanceTick = setInterval(updateSeance, 1000);
     if (!any && seanceTick) { clearInterval(seanceTick); seanceTick = null; }
+    ecran();
   }
   seanceChip.addEventListener("click", () => openTimers());
   function renderSeance(c) {
@@ -1833,12 +1834,12 @@
     stopTimer();
     blocT = { label, min, end: Date.now() + min * 60000, left: 0, id: setInterval(blocTick, 250) };
     mini.hidden = false; mini.title = `Minuteur « ${label} » : touche pour le mettre en pause, le recommencer ou l'arrêter`;
-    blocTick(); unlockAudio();
+    blocTick(); unlockAudio(); ecran();
     toast(`Minuteur lancé : ${min} min.`);
   }
   const pauseTimer = () => { if (blocT?.end) { blocT.left = blocLeft(); blocT.end = 0; blocTick(); } };
   const resumeTimer = () => { if (blocT && !blocT.end) { blocT.end = Date.now() + blocT.left; blocTick(); } };
-  function stopTimer() { if (blocT) clearInterval(blocT.id); blocT = null; mini.hidden = true; updateTimers(); }
+  function stopTimer() { if (blocT) clearInterval(blocT.id); blocT = null; mini.hidden = true; updateTimers(); ecran(); }
   mini.addEventListener("click", () => openTimers());
 
   // ---------- Les minuteurs : la feuille ouverte depuis le haut de l'écran ----------
@@ -1923,12 +1924,13 @@
     unlockAudio();
     metro.on = true; metro.beat = 0; metro.ctx = getCtx(); metro.next = metro.ctx.currentTime + 0.06;
     metro.id = setInterval(schedule, 25); schedule();
-    $("#metroToggle").textContent = "Arrêter"; badge.hidden = false;
+    $("#metroToggle").textContent = "Arrêter"; badge.hidden = false; ecran();
   }
   function stopMetro() {
     metro.on = false; clearInterval(metro.id);
     $("#metroToggle").textContent = "Démarrer"; badge.hidden = true;
     dots.querySelectorAll("i").forEach(d => d.classList.remove("on", "accent"));
+    ecran();
   }
   function openMetro(bpm) { if (bpm) setBpm(bpm); openSheet($("#metroSheet")); }
   $("#metroBtn").addEventListener("click", () => openMetro());
@@ -1937,6 +1939,22 @@
   range.addEventListener("input", () => setBpm(+range.value));
   document.querySelectorAll("#metroBeats button").forEach(b => b.addEventListener("click", () => setBeats(+b.dataset.beats)));
   setBpm(metro.bpm); setBeats(metro.beats);
+
+  // ---------- Écran allumé ----------
+  // Pendant la séance, le métronome, un minuteur ou un jeu, l'écran ne s'éteint pas : un iPhone verrouillé arrête tout.
+  let veille = null, veillePrise = false;
+  const besoinEcran = () => !document.hidden && !!(seanceTick || blocT || metro.on || document.querySelector("dialog.jeu-sheet[open]"));
+  async function ecran() {
+    if (!navigator.wakeLock) return;
+    if (besoinEcran() && !veille && !veillePrise) {
+      veillePrise = true;
+      try { veille = await navigator.wakeLock.request("screen"); veille.addEventListener("release", () => { veille = null; }); } catch { veille = null; }
+      veillePrise = false;
+    }
+    if (!besoinEcran() && veille) { const v = veille; veille = null; v.release().catch(() => {}); }
+  }
+  document.addEventListener("visibilitychange", ecran);
+  new MutationObserver(ecran).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["open"] });
 
   // ---------- Feuilles et messages ----------
   function openSheet(d) { if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", ""); }
