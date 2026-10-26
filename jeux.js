@@ -8,6 +8,9 @@
   const PC = { Do: 0, "Ré": 2, Mi: 4, Fa: 5, Sol: 7, La: 9, Si: 11 };
   // Cordes numérotées comme en cours : 6 = Mi grave … 1 = Mi aigu
   const OPEN = { 6: 40, 5: 45, 4: 50, 3: 55, 2: 59, 1: 64 };
+  // le nom affiché d'une note : Do Ré Mi, ou C D E si c'est le réglage (la voix et les phrases restent en Do Ré Mi)
+  const EN_DE = { Do: "C", "Ré": "D", Mi: "E", Fa: "F", Sol: "G", La: "A", Si: "B" };
+  const aff = n => (window.Reglages?.get("notation") === "en" ? String(n).replace(/^(Do|Ré|Mi|Fa|Sol|La|Si)(?=$|[♯♭#\s\dm(])/, x => EN_DE[x]) : n);
   const NOM_CORDE = { 6: "Mi grave", 5: "La", 4: "Ré", 3: "Sol", 2: "Si", 1: "Mi aigu" };
   const FRETS = 12;
   const pcOf = (s, f) => (OPEN[s] + f) % 12;
@@ -44,7 +47,7 @@
   const appliqueNoms = () => document.documentElement.classList.toggle("sans-noms", !nomsOn);
   appliqueNoms();
   function nomsBtn() {
-    const b = el("button", { class: "icon-btn noms-btn", type: "button", title: "Noms des cordes sur le manche", "aria-label": "Noms des cordes sur le manche", "aria-pressed": String(nomsOn), text: "Mi" });
+    const b = el("button", { class: "icon-btn noms-btn", type: "button", title: "Noms des cordes sur le manche", "aria-label": "Noms des cordes sur le manche", "aria-pressed": String(nomsOn), text: aff("Mi") });
     b.addEventListener("click", () => {
       nomsOn = !nomsOn; appliqueNoms(); b.setAttribute("aria-pressed", String(nomsOn));
       try { localStorage.setItem("maguitare:nomsCordes", nomsOn ? "1" : "0"); } catch {}
@@ -91,7 +94,7 @@
     }
     strings.forEach(s => {
       const [x, y] = vertical ? [cross(s), 14] : [14, cross(s) + 5];
-      root.append(Object.assign(svg("text", { x, y, class: "jb-sname", "text-anchor": "middle" }), { textContent: { 6: "Mi", 5: "La", 4: "Ré", 3: "Sol", 2: "Si", 1: "mi" }[s] }));
+      root.append(Object.assign(svg("text", { x, y, class: "jb-sname", "text-anchor": "middle" }), { textContent: s === 1 ? (aff("Mi") === "E" ? "e" : "mi") : aff({ 6: "Mi", 5: "La", 4: "Ré", 3: "Sol", 2: "Si" }[s]) }));
     });
     // cases cliquables
     const layer = svg("g");
@@ -114,7 +117,7 @@
       root,
       set(s, f, state, label = "") {
         const c = cells.get(s + ":" + f); if (!c) return;
-        c.g.setAttribute("data-state", state || ""); c.txt.textContent = label;
+        c.g.setAttribute("data-state", state || ""); c.txt.textContent = aff(label);
       },
       clear() { cells.forEach(c => { c.g.setAttribute("data-state", ""); c.txt.textContent = ""; }); },
       clearState(st) { cells.forEach(c => { if (c.g.getAttribute("data-state") === st) { c.g.setAttribute("data-state", ""); c.txt.textContent = ""; } }); },
@@ -330,7 +333,7 @@
       answers.hidden = !r.ask;
       if (r.ask) {
         board.set(r.ask[0], r.ask[1], "ask", "?");
-        answers.replaceChildren(...NATURALS.map(n => el("button", { type: "button", class: "btn", text: n, onclick: () => answer(n) })));
+        answers.replaceChildren(...NATURALS.map(n => el("button", { type: "button", class: "btn", "data-v": n, text: aff(n), onclick: () => answer(n) })));
       }
       if (r.src) { board.set(r.src[0], r.src[1], "src", r.note); play(OPEN[r.src[0]] + r.src[1]); }
       say(q.textContent);
@@ -351,7 +354,7 @@
       const r = R(), [s, f] = r.ask, ms = performance.now() - run.t0;
       run.locked = true;
       play(OPEN[s] + f);
-      answers.querySelectorAll("button").forEach(b => { b.disabled = true; if (b.textContent === r.answer) b.classList.add("good"); else if (b.textContent === n) b.classList.add("bad"); });
+      answers.querySelectorAll("button").forEach(b => { b.disabled = true; if (b.dataset.v === r.answer) b.classList.add("good"); else if (b.dataset.v === n) b.classList.add("bad"); });
       if (n === r.answer) {
         run.correct++; if (!run.roundHelp) run.perfect++; run.times.push(ms); board.set(s, f, "ok", r.answer);
         setFb(ms < 3000 ? `Oui, ${r.answer} ! (${(ms / 1000).toFixed(1).replace(".", ",")} s)` : `Oui, ${r.answer}. ${(ms / 1000).toFixed(1).replace(".", ",")} s : vise moins de 3 s.`, "good", false);
@@ -433,7 +436,7 @@
         if (lvl === 0) setFb(`Repère : à vide, ${corde(s)} donne un ${NOM_CORDE[s].replace(" grave", "").replace(" aigu", "")}. Cette case est la case ${f}.`, "hint");
         else {
           const keep = new Set([r.answer, ...shuffle(NATURALS.filter(n => n !== r.answer)).slice(0, 2)]);
-          answers.querySelectorAll("button").forEach(b => { if (!keep.has(b.textContent)) b.disabled = true; });
+          answers.querySelectorAll("button").forEach(b => { if (!keep.has(b.dataset.v)) b.disabled = true; });
           setFb("Il ne reste que trois choix.", "hint"); hintBtn.disabled = true;
         }
         return;
@@ -459,7 +462,7 @@
       if (r.ask) {
         const [s, f] = r.ask;
         board.set(s, f, "sol", r.answer); play(OPEN[s] + f);
-        answers.querySelectorAll("button").forEach(b => { b.disabled = true; if (b.textContent === r.answer) b.classList.add("good"); });
+        answers.querySelectorAll("button").forEach(b => { b.disabled = true; if (b.dataset.v === r.answer) b.classList.add("good"); });
         setFb(`C'était un ${r.answer}, case ${f} de ${corde(s).replace("la corde de ", "la corde ")}.`, "hint");
       } else {
         board.dim(null);
@@ -513,5 +516,5 @@
     + `${r.ms ? `, ${(r.ms / 1000).toFixed(1).replace(".", ",")} s par note` : ""}`;
   window.Jeux = { open, resume, MODES, NOM_CORDE, ecouteEnCours: () => !!mic,
     // pour les jeux à niveaux (niveaux.js)
-    base: { Board, el, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, nameOf, shuffle, pick, play, nomsBtn, son: { get: () => soundOn, set: v => { soundOn = !!v; try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} } } } };
+    base: { Board, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, nameOf, shuffle, pick, play, nomsBtn, son: { get: () => soundOn, set: v => { soundOn = !!v; try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} } } } };
 })();

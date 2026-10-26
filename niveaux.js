@@ -7,7 +7,7 @@
 (() => {
   "use strict";
   const J = window.Jeux; if (!J?.base) return;
-  const { Board, el, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, shuffle, pick, son, nomsBtn } = J.base;
+  const { Board, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, shuffle, pick, son, nomsBtn } = J.base;
   const corde = s => "la corde de " + NOM_CORDE[s];
   const BEMOL = { 1: "Ré♭", 3: "Mi♭", 6: "Sol♭", 8: "La♭", 10: "Si♭" };
   // noms usuels des tonalités et des accords
@@ -354,7 +354,7 @@
       answers.hidden = Q.type !== "choix";
       answers.classList.toggle("douze", Q.choix?.length === 12);
       answers.classList.toggle("deux", Q.choix?.length <= 4);
-      if (Q.type === "choix") answers.replaceChildren(...Q.choix.map(c => el("button", { type: "button", class: "btn", "data-v": String(c.val), onclick: () => repond(c.val) }, c.label, c.sub ? el("small", { text: c.sub }) : null)));
+      if (Q.type === "choix") answers.replaceChildren(...Q.choix.map(c => el("button", { type: "button", class: "btn", "data-v": String(c.val), onclick: () => repond(c.val) }, aff(c.label), c.sub ? el("small", { text: aff(c.sub) }) : null)));
       q.textContent = Q.texte;
       prog.textContent = sansFin ? `Série ${run.serie} · ${"♥".repeat(run.vies)}${"♡".repeat(3 - run.vies)}` : `${run.i + 1} / ${queue.length}`;
       setFb(rev ? `${FAMILLES[item.f].titre} · niveau ${item.lvl}` : "");

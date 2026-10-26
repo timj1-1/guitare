@@ -373,7 +373,7 @@
   // la partie dont parle le prof grossit un peu, au centre de l'écran ; l'écran descend doucement vers la suivante
   function montre(cible) {
     document.querySelectorAll(".en-parole").forEach(e => e.classList.remove("en-parole"));
-    if (cible == null || state.view !== "cours") return;
+    if (cible == null || state.view !== "cours" || !Reglages.get("animation")) return;
     const body = $("#coursBody");
     const e = cible === "tete" ? body.querySelector(".hero") : body.querySelectorAll(".bloc")[cible];
     if (!e) return;
@@ -1054,7 +1054,7 @@
   function seanceStart(c) {
     Object.keys(state.cours).forEach(id => { if (id !== c.id) seancePause(id); });
     const s = cs(c.id);
-    if (!s.seance && profOn()) setTimeout(() => parle(introSegs(c)), 700); // première fois : le prof présente le cours
+    if (!s.seance && profOn() && Reglages.get("introAuto")) setTimeout(() => parle(introSegs(c)), 700); // première fois : le prof présente le cours
     s.seance ||= { acc: 0, start: null };
     s.seance.start ||= Date.now();
     touch(c); flush(); updateSeance();
@@ -1348,6 +1348,64 @@
     reglages.append(el("p", { class: "muted small", text: "Dans chaque bloc, les boutons « Écouter » lisent la consigne, le « pourquoi » et l'explication. Les phrases sont enregistrées d'avance : une phrase toute neuve (après une adaptation du cours) est lue par la voix de ton appareil, le temps que je l'enregistre." }));
     body.append(pli("sons", "Sons et voix", el("span", { class: "muted small", text: "Les petits sons, la voix des jeux, et la voix du prof." }), () => reglages));
 
+    // Réglages : volumes, voix du prof, affichage, rappel de séance (reglages.js les garde et les applique partout)
+    const R = window.Reglages;
+    const ligne = (label, hint, ctrl) => el("div", { class: "reglage" }, el("div", {}, el("strong", { text: label }), hint ? el("span", { class: "muted small", text: hint }) : null), ctrl);
+    const curseur = (k, min, max, step, txt, apres) => {
+      const out = el("span", { class: "reglage-val", text: txt(R.get(k)) });
+      const r = el("input", { type: "range", min, max, step, value: R.get(k), "aria-label": txt(R.get(k)) });
+      r.addEventListener("input", () => { const v = +r.value; R.set(k, v); out.textContent = txt(v); r.setAttribute("aria-label", txt(v)); });
+      if (apres) r.addEventListener("change", () => apres(+r.value));
+      return el("div", { class: "reglage-curseur" }, r, out);
+    };
+    const choix = (k, opts, apres) => {
+      const g = el("div", { class: "seg", role: "group" });
+      const sync = () => g.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === String(R.get(k)))));
+      opts.forEach(([v, t]) => g.append(el("button", { type: "button", "data-v": String(v), text: t, onclick: () => { R.set(k, v); sync(); apres?.(v); } })));
+      sync(); return g;
+    };
+    const oui = (k, apres) => {
+      const b = el("button", { class: "switch", type: "button", role: "switch", "aria-checked": String(!!R.get(k)) });
+      b.addEventListener("click", () => { R.set(k, !R.get(k)); b.setAttribute("aria-checked", String(!!R.get(k))); apres?.(R.get(k)); });
+      return b;
+    };
+    const pct = v => Math.round(v) + " %";
+    const titreR = t => el("p", { class: "eyebrow reglage-titre", text: t });
+    const JOURS = [["MO", "Lun"], ["TU", "Mar"], ["WE", "Mer"], ["TH", "Jeu"], ["FR", "Ven"], ["SA", "Sam"], ["SU", "Dim"]];
+    function blocRappel() {
+      const rp = R.get("rappel"), jours = new Set(rp.jours);
+      const g = el("div", { class: "seg jours", role: "group", "aria-label": "Jours de séance" });
+      JOURS.forEach(([v, t]) => {
+        const b = el("button", { type: "button", "data-v": v, text: t, "aria-pressed": String(jours.has(v)) });
+        b.addEventListener("click", () => { jours.has(v) ? jours.delete(v) : jours.add(v); b.setAttribute("aria-pressed", String(jours.has(v))); R.set("rappel", { ...R.get("rappel"), jours: JOURS.map(j => j[0]).filter(j => jours.has(j)) }); });
+        g.append(b);
+      });
+      const h = el("input", { type: "time", value: rp.heure, "aria-label": "Heure de la séance" });
+      h.addEventListener("change", () => { if (h.value) R.set("rappel", { ...R.get("rappel"), heure: h.value }); });
+      const go = el("button", { class: "btn primary", type: "button", text: "Ajouter à mon calendrier", onclick: () => {
+        const r = R.get("rappel"); if (!r.jours.length) { toast("Choisis au moins un jour."); return; }
+        calendrier(r);
+      } });
+      return el("div", { class: "pli-pile" }, g, el("div", { class: "row-tools" }, h, go),
+        el("p", { class: "muted small", text: "L'app prépare un rappel qui revient chaque semaine. Ouvre le fichier : ton Calendrier (Mac ou iPhone) l'ajoute et te prévient à l'heure de la séance." }));
+    }
+    const panneau = () => el("div", { class: "pli-pile reglages" },
+      titreR("Sons"),
+      ligne("Volume des sons", "La guitare, les petits sons, les jeux et Mon manche.", curseur("volSons", 0, 100, 5, pct, () => Sons.cling())),
+      ligne("Volume du métronome", null, curseur("volMetro", 0, 100, 5, pct, () => { const c = Sons.ctx(); Sons.unlock(); click(c.currentTime + 0.05, true); })),
+      titreR("Voix du prof"),
+      ligne("Vitesse de la voix", "Elle garde sa hauteur, plus lente ou plus rapide.", curseur("vitesseVoix", 0.8, 1.3, 0.05, v => "× " + (+v).toFixed(2).replace(/0$/, "").replace(".", ","), () => { Sons.unlock(); Sons.dire("Assieds-toi avec ta guitare, et on commence.", { force: true }); })),
+      ligne("Présentation du cours", "Le prof présente le cours dès que tu le lances. Le bouton « Écouter » reste là.", oui("introAuto")),
+      titreR("Affichage"),
+      ligne("Animation pendant la voix", "La partie annoncée grossit et l'écran la suit.", oui("animation", v => { if (!v) montre(null); })),
+      ligne("Noms des notes", "Dans les jeux et Mon manche. La voix et les textes du cours restent en Do Ré Mi.", choix("notation", [["fr", "Do Ré Mi"], ["en", "C D E"]])),
+      ligne("Manche pour gaucher", "Les manches des jeux et de Mon manche sont dessinés à l'envers.", oui("gaucher")),
+      ligne("Thème", null, choix("theme", [["auto", "Auto"], ["light", "Clair"], ["dark", "Sombre"]])),
+      ligne("Taille du texte", null, choix("texte", [[0.9, "Petit"], [1, "Normal"], [1.15, "Grand"], [1.3, "Très grand"]])),
+      titreR("Rappel de séance"),
+      blocRappel());
+    body.append(pli("reglages", "Réglages", el("span", { class: "muted small", text: "Volumes, vitesse de la voix, affichage, rappel de séance." }), panneau));
+
     // Sauvegarde
     const fileIn = el("input", { type: "file", accept: "application/json,.json", hidden: true });
     fileIn.addEventListener("change", async () => {
@@ -1615,6 +1673,27 @@
     }, { cls: "construction" });
   }
 
+  // Un rappel qui revient chaque semaine, en fichier .ics : le Calendrier du Mac ou de l'iPhone l'ajoute et prévient à l'heure.
+  function calendrier({ jours, heure }) {
+    const [h, m] = heure.split(":").map(Number), N = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+    const d = new Date(); d.setHours(h, m, 0, 0);
+    for (let i = 0; i < 8 && !(jours.some(j => N[j] === d.getDay()) && d > new Date()); i++) d.setDate(d.getDate() + 1);
+    const p2 = n => String(n).padStart(2, "0");
+    const loc = x => `${x.getFullYear()}${p2(x.getMonth() + 1)}${p2(x.getDate())}T${p2(x.getHours())}${p2(x.getMinutes())}00`;
+    const fin = new Date(d.getTime() + 90 * 60000), now = new Date();
+    const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+    const app = location.origin + location.pathname;
+    const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Ma gratte//FR", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
+      "UID:seance-" + now.getTime() + "@ma-gratte", "DTSTAMP:" + stamp, "DTSTART:" + loc(d), "DTEND:" + loc(fin),
+      "RRULE:FREQ=WEEKLY;BYDAY=" + jours.join(","), "SUMMARY:Séance de guitare 🎸", "DESCRIPTION:Assieds-toi avec ta guitare et ouvre Ma gratte : " + app, "URL:" + app,
+      "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Séance de guitare", "TRIGGER:PT0M", "END:VALARM",
+      "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    const a = el("a", { href: URL.createObjectURL(new Blob([ics], { type: "text/calendar" })), download: "seance-guitare.ics" });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast("Rappel prêt : ouvre le fichier pour l'ajouter à ton Calendrier.");
+  }
+
   async function exportData() {
     flush();
     const json = JSON.stringify(state, null, 1);
@@ -1754,7 +1833,7 @@
     g.gain.setValueAtTime(0.0001, time);
     g.gain.exponentialRampToValueAtTime(accent ? 0.9 : 0.55, time + 0.002);
     g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
-    o.connect(g).connect(ctx.destination); o.start(time); o.stop(time + 0.06);
+    o.connect(g).connect(Sons.sortie("metro")); o.start(time); o.stop(time + 0.06);
   }
   const metro = { bpm: state.bpm || 60, beats: state.beats || 4, on: false, next: 0, beat: 0, id: null };
   const out = $("#metroOut"), range = $("#metroRange"), dots = $("#metroDots"), badge = $("#metroBadge");

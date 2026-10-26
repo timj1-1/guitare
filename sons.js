@@ -24,6 +24,16 @@
       actx = null; triedAt = 0;
     } else if (!triedAt) triedAt = Date.now();
   }
+  // Deux sorties réglables (Mon bilan › Réglages) : « sons » (guitare, petits sons, jeux) et « metro » (métronome).
+  // La voix du prof garde son volume.
+  const VOL = { sons: "volSons", metro: "volMetro" }, bus = {};
+  const niveau = nom => Math.max(0, Math.min(100, +(window.Reglages?.get(VOL[nom]) ?? 100))) / 100;
+  function sortie(nom = "sons") {
+    const c = ctx();
+    if (!bus[nom] || bus[nom].context !== c) { const g = c.createGain(); g.gain.value = niveau(nom); g.connect(c.destination); bus[nom] = g; }
+    return bus[nom];
+  }
+  window.Reglages?.on(k => { for (const nom in VOL) if (k === VOL[nom] && bus[nom]) bus[nom].gain.value = niveau(nom); });
   ["pointerdown", "touchend"].forEach(ev => document.addEventListener(ev, () => { heal(); if (actx && actx.state !== "running") actx.resume()?.catch?.(() => {}); }, { capture: true, passive: true }));
   document.addEventListener("visibilitychange", () => { if (!document.hidden && actx && actx.state !== "running") actx.resume()?.catch?.(() => {}); });
   function unlock() {
@@ -34,6 +44,7 @@
     // sur iPhone : jouer même quand le bouton silencieux est activé
     try { if (navigator.audioSession && navigator.audioSession.type !== "play-and-record") navigator.audioSession.type = "playback"; } catch {}
     guitare.charge();
+    prepareLecteur();
   }
 
   // ---------- Guitare nylon (les mêmes sons que Mon manche) ----------
@@ -83,7 +94,7 @@
       const s = c.createBufferSource(), g = c.createGain();
       s.buffer = near.buf; s.playbackRate.value = Math.pow(2, (midi - near.m) / 12);
       g.gain.setValueAtTime(gain * (cfg.set === "ac" ? 0.8 : 1), t);
-      let dest = c.destination;
+      let dest = sortie("sons");
       for (const [type, f, q, gn] of [...cfg.eq].reverse()) {
         const bq = c.createBiquadFilter(); bq.type = type; bq.frequency.value = f; bq.Q.value = q; bq.gain.value = gn;
         bq.connect(dest); dest = bq;
@@ -102,7 +113,7 @@
   function bell(freq, at, gain = 0.25, decay = 0.6) {
     const c = ctx(), out = c.createGain();
     out.gain.setValueAtTime(0.0001, at); out.gain.exponentialRampToValueAtTime(gain, at + 0.006); out.gain.exponentialRampToValueAtTime(0.0001, at + decay);
-    out.connect(c.destination);
+    out.connect(sortie("sons"));
     const o = c.createOscillator(); o.frequency.value = freq; o.connect(out); o.start(at); o.stop(at + decay + 0.05);
   }
   // notes : [midi, décalage en s, gain, durée]
@@ -199,8 +210,10 @@
           // phrase pas encore enregistrée avec cette voix : la voix d'origine
           if (!r.ok && nom !== "siwis") r = await fetch(dossier("siwis") + id + ".mp3");
           if (!r.ok) return null;
-          const data = await r.arrayBuffer();
-          return await new Promise((ok, ko) => { const p = ctx().decodeAudioData(data, ok, ko); if (p?.then) p.then(ok, ko); });
+          const data = await r.arrayBuffer(), mp3 = new Blob([data.slice(0)], { type: "audio/mpeg" });
+          const buf = await new Promise((ok, ko) => { const p = ctx().decodeAudioData(data, ok, ko); if (p?.then) p.then(ok, ko); });
+          if (buf) buf.mp3 = mp3;
+          return buf;
         } catch { return null; }
       })().then(buf => { if (!buf) cache.delete(k); return buf; })); // raté (hors ligne…) : on réessaiera la prochaine fois
       if (cache.size > 80) cache.delete(cache.keys().next().value);
@@ -208,6 +221,17 @@
     return cache.get(k);
   }
 
+  // la vitesse de la voix (Mon bilan › Réglages) : un lecteur audio garde la hauteur de la voix quand elle va plus vite ou moins vite
+  const vitesse = () => Math.max(0.8, Math.min(1.3, +(window.Reglages?.get("vitesseVoix") ?? 1) || 1));
+  let lecteur = null;
+  const SILENCE = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+  // sur iPhone, un lecteur ne joue hors d'un toucher que s'il a déjà joué pendant un toucher
+  function prepareLecteur() {
+    if (lecteur || vitesse() === 1 || typeof Audio === "undefined") return;
+    lecteur = new Audio(); lecteur.preservesPitch = true; lecteur.webkitPreservesPitch = true;
+    lecteur.src = SILENCE; lecteur.play()?.catch?.(() => {});
+  }
+  ["pointerdown", "touchend"].forEach(ev => document.addEventListener(ev, prepareLecteur, { capture: true, passive: true }));
   let tour = 0, source = null, parleJusqua = 0;
   const manque = new Set();
   function tais() {
@@ -221,7 +245,7 @@
     return new Promise(res => {
       if (!synth) return res();
       const u = new SpeechSynthesisUtterance(propre(text));
-      u.lang = "fr-FR"; if (voice) u.voice = voice; u.rate = 1;
+      u.lang = "fr-FR"; if (voice) u.voice = voice; u.rate = vitesse();
       u.onend = u.onerror = () => res();
       synth.speak(u);
     });
@@ -243,11 +267,20 @@
       if (moi !== tour) return;
       try { onSeg?.(i); } catch {}
       if (buf) {
+        const v = vitesse();
         await new Promise(res => {
-          const c = ctx(), s = c.createBufferSource();
-          s.buffer = buf; s.connect(c.destination); s.onended = res; source = s; s.start();
+          const tampon = () => {
+            const c = ctx(), s = c.createBufferSource();
+            s.buffer = buf; s.connect(c.destination); s.onended = res; source = s; s.start();
+          };
           // si le son reste bloqué (contexte audio suspendu), on n'attend pas indéfiniment : le micro des jeux resterait sourd
-          setTimeout(res, buf.duration * 1000 + 1500);
+          setTimeout(res, buf.duration / v * 1000 + 1500);
+          if (v === 1 || !lecteur || !buf.mp3) return tampon();
+          const url = URL.createObjectURL(buf.mp3), fin = () => { URL.revokeObjectURL(url); res(); };
+          lecteur.onended = fin; lecteur.onerror = () => { URL.revokeObjectURL(url); tampon(); };
+          lecteur.src = url; lecteur.defaultPlaybackRate = lecteur.playbackRate = v;
+          source = { stop: () => { lecteur.pause(); fin(); } };
+          lecteur.play()?.catch?.(() => { URL.revokeObjectURL(url); tampon(); });
         });
       } else {
         manque.add(segs[i]);
@@ -260,7 +293,7 @@
   const parle = () => performance.now() < parleJusqua || !!synth?.speaking;
 
   window.Sons = {
-    ctx, unlock, cling, bloc, fanfare, alarme, gamme, noteCours, musiqueCours, timbre, dire, tais, parle, guitare, manque,
+    ctx, sortie, unlock, cling, bloc, fanfare, alarme, gamme, noteCours, musiqueCours, timbre, dire, tais, parle, guitare, manque,
     get sfx() { return sfxOn; }, set sfx(v) { sfxOn = !!v; write("maguitare:sfx", sfxOn); },
     get voix() { return voixOn; }, set voix(v) { voixOn = !!v; write("maguitare:voix", voixOn); if (!voixOn) tais(); },
     get voixNom() { return voixNom; }, set voixNom(v) { voixNom = String(v || "siwis"); try { localStorage.setItem("maguitare:voixNom", voixNom); } catch {} tais(); },

@@ -50,7 +50,7 @@
 html, body { margin: 0; height: 100%; }
 body {
   background: var(--bg); color: var(--ink);
-  font-family: var(--f-body); font-size: 16px; line-height: 1.5;
+  font-family: var(--f-body); font-size: 1rem; line-height: 1.5;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
 }
@@ -894,3 +894,19 @@ details.fiche-cours > .piece-corps { margin-top: 10px; border-top: 0; padding-to
 #coursBody .hero, #coursBody .bloc { transition: transform .45s ease, box-shadow .45s ease; transform-origin: center; }
 #coursBody .en-parole { transform: scale(1.025); box-shadow: 0 0 0 2px var(--accent), 0 12px 30px rgba(0, 0, 0, .16); position: relative; z-index: 2; border-radius: 14px; }
 @media (prefers-reduced-motion: reduce) { #coursBody .en-parole { transform: none; } }
+
+/* Réglages (reglages.js) : taille du texte, gaucher, animation */
+html { font-size: calc(100% * var(--txt, 1)); }
+input, select, textarea { font-size: max(16px, 1rem) !important; }
+.sans-anim #coursBody .en-parole { transform: none; box-shadow: none; }
+.gaucher .jeu-board { scale: -1 1; }
+.gaucher .jeu-board text { transform-box: fill-box; transform-origin: center; scale: -1 1; }
+.reglages { gap: 14px; }
+.reglage-titre { margin: 8px 0 -4px; }
+.reglage { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+.reglage > div:first-child { display: flex; flex-direction: column; gap: 2px; flex: 1 1 220px; }
+.reglage .seg { flex: 1 1 240px; max-width: 360px; }
+.reglage-curseur { display: flex; align-items: center; gap: 10px; flex: 1 1 200px; max-width: 320px; }
+.reglage-val { min-width: 4.2em; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.seg.jours button { padding: 9px 2px; font-size: .9rem; }
+.reglages input[type="time"] { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); padding: 8px 10px; font: inherit; }
