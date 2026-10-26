@@ -212,9 +212,10 @@
           // phrase pas encore enregistrée avec cette voix : la voix d'origine
           if (!r.ok && nom !== "siwis") r = await fetch(dossier("siwis") + id + ".mp3");
           if (!r.ok) return null;
-          const data = await r.arrayBuffer(), mp3 = new Blob([data.slice(0)], { type: "audio/mpeg" });
+          const data = await r.arrayBuffer();
           const buf = await new Promise((ok, ko) => { const p = ctx().decodeAudioData(data, ok, ko); if (p?.then) p.then(ok, ko); });
-          if (buf) buf.mp3 = mp3;
+          // pour le lecteur à vitesse réglée : on garde l'adresse du fichier (il est en cache), pas une deuxième copie en mémoire
+          if (buf) buf.url = r.url;
           return buf;
         } catch { return null; }
       })().then(buf => { if (!buf) cache.delete(k); return buf; })); // raté (hors ligne…) : on réessaiera la prochaine fois
@@ -270,6 +271,12 @@
       try { onSeg?.(i); } catch {}
       if (buf) {
         const v = vitesse();
+        // Safari ne lit pas un mp3 servi par le service worker dans un lecteur : on lui passe le fichier lui-même, pris en cache
+        let url = null;
+        if (v !== 1 && lecteur && buf.url) {
+          try { url = URL.createObjectURL(await (await fetch(buf.url)).blob()); } catch {}
+          if (moi !== tour) { if (url) URL.revokeObjectURL(url); return; }
+        }
         await new Promise(res => {
           let parti = false; // l'erreur du lecteur et le refus de play() arrivent tous les deux : une seule relève
           const tampon = () => {
@@ -279,12 +286,12 @@
           };
           // si le son reste bloqué (contexte audio suspendu), on n'attend pas indéfiniment : le micro des jeux resterait sourd
           setTimeout(res, buf.duration / v * 1000 + 1500);
-          if (v === 1 || !lecteur || !buf.mp3) return tampon();
-          const url = URL.createObjectURL(buf.mp3), fin = () => { URL.revokeObjectURL(url); res(); };
-          lecteur.onended = fin; lecteur.onerror = () => { URL.revokeObjectURL(url); tampon(); };
+          if (!url) return tampon();
+          const fin = () => { URL.revokeObjectURL(url); res(); }, relai = () => { URL.revokeObjectURL(url); tampon(); };
+          lecteur.onended = fin; lecteur.onerror = relai;
           lecteur.src = url; lecteur.defaultPlaybackRate = lecteur.playbackRate = v;
           source = { stop: () => { lecteur.pause(); fin(); } };
-          lecteur.play()?.catch?.(() => { URL.revokeObjectURL(url); tampon(); });
+          lecteur.play()?.catch?.(relai);
         });
       } else {
         manque.add(segs[i]);
