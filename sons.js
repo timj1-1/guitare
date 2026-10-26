@@ -161,7 +161,9 @@
     joue(finBloc ? double(g, d, 0) : [[hauteur(g, d), 0, 0.7, 1.3]]);
   };
   // fin du cours : toutes ses notes rejouées d'un trait, avec les doubles notes des fins de bloc, puis l'accord de la gamme
+  // rend { nom de la gamme, durée en s }, ou null quand les petits sons sont coupés
   function musiqueCours(num, blocs) {
+    if (!sfxOn) return null;
     const g = gamme(num), N = [];
     let t = 0, i = 0;
     for (const n of blocs) for (let j = 0; j < n; j++, i++) {
@@ -172,7 +174,7 @@
     const tierce = g.iv.find(x => x === 4 || x === 3) ?? 7, quinte = [7, 8, 6].find(x => g.iv.includes(x)) ?? 7;
     [g.t - 12, g.t - 12 + quinte, g.t, g.t + tierce, g.t + quinte, g.t + 12].forEach((m, k) => N.push([m, t + 0.2 + k * 0.035, 0.55, 2.6]));
     joue(N);
-    return g.nom;
+    return { nom: g.nom, duree: t + 2.8 };
   }
   // Fin d'un minuteur : La, Do dièse, Mi, deux fois (même quand les petits sons sont coupés)
   const alarme = () => joue([[69, 0, 0.8], [73, 0.14, 0.8], [76, 0.28, 0.85, 1.4], [69, 0.95, 0.8], [73, 1.09, 0.8], [76, 1.23, 0.9, 2]], true);
@@ -269,7 +271,9 @@
       if (buf) {
         const v = vitesse();
         await new Promise(res => {
+          let parti = false; // l'erreur du lecteur et le refus de play() arrivent tous les deux : une seule relève
           const tampon = () => {
+            if (parti) return; parti = true;
             const c = ctx(), s = c.createBufferSource();
             s.buffer = buf; s.connect(c.destination); s.onended = res; source = s; s.start();
           };

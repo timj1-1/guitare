@@ -164,17 +164,21 @@
   // Chrome pour Mac s'est figé en entier à l'ouverture du micro (2026-10-25) : coupé là, le temps de trouver la cause
   const chromeMac = /Macintosh/.test(navigator.userAgent) && /Chrome\//.test(navigator.userAgent) && !/Edg\//.test(navigator.userAgent);
   const session = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
+  // demandes de micro en cours : tant qu'il en reste une, on ne repasse pas en « playback » (sinon la nouvelle écoute est sourde)
+  let attente = 0;
   async function startMic(onNote, onLevel, isCurrent) {
     if (chromeMac) throw new Error("chrome-mac");
     if (!navigator.mediaDevices?.getUserMedia) throw new Error("micro");
     // Safari : le micro est interdit quand la page est en « lecture » (playback) : on passe en lecture et enregistrement
     session("play-and-record");
+    attente++;
     // la demande la plus simple (celle qui marche sur Safari), puis sans les filtres de visioconférence si possible
     let stream;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { session("playback"); throw e; }
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { attente--; if (!mic && !attente) session("playback"); throw e; }
     await stream.getAudioTracks()[0]?.applyConstraints({ echoCancellation: false, noiseSuppression: false, autoGainControl: false }).catch(() => {});
-    if (!isCurrent()) { stream.getTracks().forEach(t => t.stop()); if (!mic) session("playback"); return false; }
-    stopMic();
+    attente--;
+    if (!isCurrent()) { stream.getTracks().forEach(t => t.stop()); if (!mic && !attente) session("playback"); return false; }
+    stopMic(true);
     const c = Sons.ctx(); if (c.state === "suspended") await c.resume();
     const src = c.createMediaStreamSource(stream), an = c.createAnalyser(), mute = c.createGain();
     an.fftSize = 4096; mute.gain.value = 0;
@@ -198,13 +202,13 @@
     mic = { stream, src, an, mute, id };
     return true;
   }
-  function stopMic() {
+  function stopMic(garde) {
     if (!mic) return;
     clearInterval(mic.id);
     try { mic.src.disconnect(); mic.an.disconnect(); mic.mute.disconnect(); } catch {}
     mic.stream.getTracks().forEach(t => t.stop());
     mic = null;
-    session("playback");
+    if (!garde && !attente) session("playback");
   }
   let listenOn = false, quiet = false; // quiet : pas de son de guitare pendant que le micro écoute
   try { listenOn = localStorage.getItem("maguitare:ecoute") === "1"; } catch {}

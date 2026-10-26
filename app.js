@@ -314,10 +314,17 @@
     tools.append(withIcon(el("button", { class: "btn small", type: "button", onclick: () => startTimer(b.duree, b.titre.replace(/^\d+\.\s*/, "")) }), ICON_TIMER, `Minuteur ${b.duree} min`));
     // chaque position (Do, Sol7…) va dans les exercices qui la nomment ; une position qu'aucun exercice ne nomme reste ici
     const posEx = new Map(), libres = [];
+    // « Fa, Sol, La mineurs » se lit « Fa mineur, Sol mineur, La mineur »
+    const NOTE = "(?:Do|Ré|Mi|Fa|Sol|La|Si)[♯♭#b]?";
+    const liste = new RegExp(`${NOTE}(?:\\s*(?:,|et)\\s*${NOTE})+(?=\\s+mineure?s(?![\\p{L}]))`, "gu");
+    const lu = new Map(b.exercices.map(e => [e, e.label.replace(liste, l => l.replace(new RegExp(NOTE, "gu"), n => n + " mineur")).replace(/(mineur)\s+mineure?s(?![\p{L}])/gu, "$1")]));
     (b.positions || []).forEach(pz => {
-      const nom = (pz.motif || pz.label.replace(/\s*\(.*\)$/, "")).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const re = new RegExp(`(^|[^\\p{L}])${nom}(?![\\p{L}\\d♯♭#])`, "u");
-      const vises = b.exercices.filter(e => re.test(e.label));
+      const brut = pz.motif || pz.label.replace(/\s*\(.*\)$/, "");
+      const nom = brut.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      // un accord majeur (« Sol ») ne va pas dans « Sol mineur »
+      const pasMineur = /^\S+$/.test(brut) ? "(?!\\s+mineur)" : "";
+      const re = new RegExp(`(^|[^\\p{L}])${nom}(?![\\p{L}\\d♯♭#])${pasMineur}`, "u");
+      const vises = b.exercices.filter(e => re.test(lu.get(e)));
       if (!vises.length) libres.push(pz);
       vises.forEach(e => { if (!posEx.has(e)) posEx.set(e, []); posEx.get(e).push(pz); });
     });
@@ -377,10 +384,12 @@
     return b;
   }
   // Une liste de phrases, ou de { t, cible } : pendant chaque phrase, sa partie du cours est mise en avant à l'écran
+  let parleN = 0;
   function parle(list) {
+    const n = ++parleN;
     const L = (Array.isArray(list) ? list : [list]).map(x => (typeof x === "string" ? { t: x } : x)).filter(x => String(x?.t || "").trim());
     const vise = L.some(x => x.cible != null);
-    return Sons.dire(L.map(x => x.t), { force: true, onSeg: vise ? i => montre(L[i]?.cible) : null }).finally(() => { if (vise) montre(null); });
+    return Sons.dire(L.map(x => x.t), { force: true, onSeg: vise ? i => montre(L[i]?.cible) : null }).finally(() => { if (vise && n === parleN) montre(null); });
   }
   // la partie dont parle le prof grossit un peu, au centre de l'écran ; l'écran descend doucement vers la suivante
   function montre(cible) {
@@ -1067,12 +1076,13 @@
     flush();
     renderTabs(); renderCours(); updateSeance();
     const g = Sons.musiqueCours(c.num, c.blocs.map(b => b.exercices.length));
-    toast(`Ta musique du cours, en ${g}.`);
+    const musique = g ? ` Ta musique du cours, en ${g.nom}.` : "";
     // un bilan par semaine : il part quand la semaine est finie, ou à la séance C
     const envoi = c.seance === "C" || semaineDe(c.semaine).every(x => isDone(x.id));
-    if (envoi) showRecap(c);
-    else toast(`Cours ${c.num} terminé ! Ton bilan partira à la fin de la semaine, après le cours ${c.semaine * 3}.`);
-    if (profOn()) setTimeout(() => { if (!envoi || recapSheet.open) Sons.dire(finSegs(c), { force: true }); }, 1600);
+    if (envoi) { showRecap(c); if (musique) toast(musique.trim()); }
+    else toast(`Cours ${c.num} terminé !${musique} Ton bilan partira à la fin de la semaine, après le cours ${c.semaine * 3}.`);
+    // le prof parle quand la musique est finie
+    if (profOn()) setTimeout(() => { if (!envoi || recapSheet.open) Sons.dire(finSegs(c), { force: true }); }, Math.max(1600, (g?.duree || 0) * 1000));
   }
 
   // ---------- Minuteur de séance : de « Démarrer » à « Terminer le cours » ----------
@@ -1449,9 +1459,7 @@
       try {
         const data = JSON.parse(await f.text());
         if (!data || typeof data.cours !== "object") throw new Error();
-        state = Object.assign(blank(), data); flush();
-        setBpm(state.bpm || 60); setBeats(state.beats || 4);
-        toast("Sauvegarde restaurée."); renderTabs(); renderCours(); updateSeance(); renderBilan();
+        restaure(data, "Sauvegarde restaurée.");
       } catch { toast("Ce fichier n'est pas une sauvegarde de Ma gratte."); }
     });
     body.append(pli("donnees", "Mes données", el("span", { class: "muted small", text: "Sauvegarder, restaurer, chercher une mise à jour du cours." }), () => el("div", { class: "pli-pile" },
@@ -1754,15 +1762,32 @@
   async function lienTransfert() {
     flush();
     const json = JSON.stringify(state);
-    const code = window.CompressionStream ? "z" + b64(await zip(json, true)) : "j" + b64(new TextEncoder().encode(json));
-    const url = location.origin + location.pathname + "#donnees=" + code;
-    try { await navigator.clipboard.writeText(url); toast("Lien copié : colle-le dans l'autre navigateur, ou envoie-le-toi."); }
-    catch {
-      if (navigator.share) { try { await navigator.share({ title: "Mes données Ma gratte", url }); return; } catch (e) { if (e?.name === "AbortError") return; } }
-      prompt("Copie ce lien, puis ouvre-le dans l'autre navigateur :", url);
+    const fait = (async () => {
+      const code = window.CompressionStream ? "z" + b64(await zip(json, true)) : "j" + b64(new TextEncoder().encode(json));
+      return location.origin + location.pathname + "#donnees=" + code;
+    })();
+    const copie = () => toast("Lien copié : colle-le dans l'autre navigateur, ou envoie-le-toi.");
+    // Safari n'autorise la copie que pendant le geste : on la lance tout de suite, avec le lien « à venir »
+    try {
+      if (!window.ClipboardItem) throw new Error();
+      await navigator.clipboard.write([new ClipboardItem({ "text/plain": fait.then(u => new Blob([u], { type: "text/plain" })) })]);
+      return copie();
+    } catch {}
+    const url = await fait;
+    try { await navigator.clipboard.writeText(url); copie(); }
+    catch { prompt("Copie ce lien, puis ouvre-le dans l'autre navigateur :", url); }
+  }
+  // les mêmes étapes pour une sauvegarde (fichier) et pour un lien de données
+  function restaure(data, msg, rendu = true) {
+    state = Object.assign(blank(), data); flush();
+    setBpm(state.bpm || 60); setBeats(state.beats || 4);
+    toast(msg);
+    if (rendu) {
+      if (!state.current || !byId(state.current)) state.current = nextCours().id;
+      renderTabs(); renderCours(); updateSeance(); renderBilan();
     }
   }
-  async function recoitTransfert() {
+  async function recoitTransfert(rendu) {
     const m = location.hash.match(/^#donnees=([zj])([\w-]+)$/); if (!m) return;
     history.replaceState(null, "", location.pathname + location.search);
     try {
@@ -1770,9 +1795,7 @@
       const data = JSON.parse(m[1] === "z" ? new TextDecoder().decode(await zip(octets, false)) : new TextDecoder().decode(octets));
       if (!data || typeof data.cours !== "object") throw new Error();
       if (!confirm("Remplacer les données de ce navigateur par celles du lien (cases, tempos, morceaux, jeux) ?")) return;
-      state = Object.assign(blank(), data); flush();
-      setBpm(state.bpm || 60); setBeats(state.beats || 4);
-      toast("Tes données sont arrivées.");
+      restaure(data, "Tes données sont arrivées.", rendu);
     } catch { toast("Ce lien de données est abîmé : refais-le depuis l'autre navigateur."); }
   }
 
@@ -1939,7 +1962,9 @@
       return;
     }
     DATA = cours; RETOURS = retours.retours || []; SCHEMAS = schemas;
-    await recoitTransfert();
+    await recoitTransfert(false);
+    // lien de données ouvert dans un onglet où l'app est déjà là : seule l'ancre change
+    window.addEventListener("hashchange", () => recoitTransfert(true));
     // anciens choix « Je le choisis » (par palier) : ils deviennent « Je le travaille »
     if (state.repertoire) { for (const ids of Object.values(state.repertoire)) for (const id of ids) (state.morceaux ||= {})[id] ||= "travail"; delete state.repertoire; save(); }
     if (!state.current || !byId(state.current)) state.current = nextCours().id;
