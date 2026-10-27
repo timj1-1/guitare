@@ -61,7 +61,7 @@
     const cells = new Map();
     const strings = [6, 5, 4, 3, 2, 1];
     const W = vertical ? 330 : 760, H = vertical ? 600 : 250;
-    const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, class: "jeu-board", role: "img", "aria-label": "Manche de guitare" });
+    const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, class: "jeu-board", role: "group", "aria-label": "Manche de guitare : flèches pour choisir une case, Entrée pour la jouer" });
     // géométrie
     const padA = vertical ? 30 : 34; // côté numéros de case
     const openSpan = vertical ? 46 : 54;
@@ -102,35 +102,52 @@
     strings.forEach(s => {
       for (let f = 0; f <= FRETS; f++) {
         const [x, y] = P(s, f);
-        const g = svg("g", { class: "jb-cell", "data-s": s, "data-f": f });
+        // au clavier (Mac) : une seule case dans l'ordre de Tab, les flèches passent aux autres
+        const nom = `Corde ${s}, ${f ? "case " + f : "à vide"}`;
+        const g = svg("g", { class: "jb-cell", "data-s": s, "data-f": f, role: "button", tabindex: s === 6 && f === 1 ? 0 : -1, "aria-label": nom });
         const hw = vertical ? gap / 2 : fretLen / 2, hh = vertical ? fretLen / 2 : gap / 2;
         g.append(svg("rect", { x: x - (vertical ? hw : (f === 0 ? openSpan / 2 : hw)), y: y - (vertical ? (f === 0 ? openSpan / 2 : hh) : hh), width: vertical ? gap : (f === 0 ? openSpan : fretLen), height: vertical ? (f === 0 ? openSpan : fretLen) : gap, class: "jb-hit" }));
         const dot = svg("circle", { cx: x, cy: y, r, class: "jb-dot" });
         const txt = Object.assign(svg("text", { x, y: y + 5, "text-anchor": "middle", class: "jb-label" }), { textContent: "" });
         g.append(dot, txt);
         layer.append(g);
-        cells.set(s + ":" + f, { g, txt });
+        cells.set(s + ":" + f, { g, txt, nom });
       }
     });
     host.replaceChildren(root);
+    const clics = [];
+    const vise = g => { if (!g || g.classList.contains("dimmed")) return; clics.forEach(fn => fn(+g.dataset.s, +g.dataset.f)); };
+    root.addEventListener("click", e => vise(e.target.closest(".jb-cell")));
+    root.addEventListener("keydown", e => {
+      const g = e.target.closest?.(".jb-cell"); if (!g) return;
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); return vise(g); }
+      // le long de la corde : la case suivante ; en travers : la corde voisine (aiguë en haut, grave à gauche en vertical)
+      let s = +g.dataset.s, f = +g.dataset.f;
+      const pas = { ArrowRight: vertical ? [-1, 0] : [0, 1], ArrowLeft: vertical ? [1, 0] : [0, -1], ArrowDown: vertical ? [0, 1] : [1, 0], ArrowUp: vertical ? [0, -1] : [-1, 0] }[e.key];
+      if (!pas) return;
+      e.preventDefault();
+      s = Math.min(6, Math.max(1, s + pas[0])); f = Math.min(FRETS, Math.max(0, f + pas[1]));
+      const c = cells.get(s + ":" + f); if (!c) return;
+      cells.forEach(x => x.g.setAttribute("tabindex", "-1"));
+      c.g.setAttribute("tabindex", "0"); c.g.focus();
+    });
     return {
       root,
       set(s, f, state, label = "") {
         const c = cells.get(s + ":" + f); if (!c) return;
         c.g.setAttribute("data-state", state || ""); c.txt.textContent = aff(label);
+        c.g.setAttribute("aria-label", label ? `${c.nom} : ${aff(label)}` : c.nom);
       },
-      clear() { cells.forEach(c => { c.g.setAttribute("data-state", ""); c.txt.textContent = ""; }); },
-      clearState(st) { cells.forEach(c => { if (c.g.getAttribute("data-state") === st) { c.g.setAttribute("data-state", ""); c.txt.textContent = ""; } }); },
+      clear() { cells.forEach(c => { c.g.setAttribute("data-state", ""); c.txt.textContent = ""; c.g.setAttribute("aria-label", c.nom); }); },
+      clearState(st) { cells.forEach(c => { if (c.g.getAttribute("data-state") === st) { c.g.setAttribute("data-state", ""); c.txt.textContent = ""; c.g.setAttribute("aria-label", c.nom); } }); },
       // win : [première case, dernière case] ; les cases en dehors sont grisées
       dim(onlyStrings, win) {
-        cells.forEach((c, k) => { const [s, f] = k.split(":").map(Number); c.g.classList.toggle("dimmed", (!!onlyStrings && !onlyStrings.includes(s)) || (!!win && (f < win[0] || f > win[1]))); });
-      },
-      onClick(fn) {
-        root.addEventListener("click", e => {
-          const g = e.target.closest(".jb-cell"); if (!g || g.classList.contains("dimmed")) return;
-          fn(+g.dataset.s, +g.dataset.f);
+        cells.forEach((c, k) => {
+          const [s, f] = k.split(":").map(Number), off = (!!onlyStrings && !onlyStrings.includes(s)) || (!!win && (f < win[0] || f > win[1]));
+          c.g.classList.toggle("dimmed", off); c.g.setAttribute("aria-disabled", String(off));
         });
       },
+      onClick(fn) { clics.push(fn); },
     };
   }
 

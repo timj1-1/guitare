@@ -48,16 +48,6 @@
   --f-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #111513; --surface: #191e1b; --surface-2: #212723; --ink: #e9ece7; --muted: #9ba49e; --line: #2d3430;
-    --accent: #e2ac55; --accent-ink: #1e1407; --accent-soft: #3a2d17;
-    --wood: #2a1914; --wood-2: #36211a; --fret: #a4a8a1;
-    --mute: #e07a68; --ok: #6cc193;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .6);
-    color-scheme: dark;
-  }
-}
 :root[data-theme="dark"] {
   --bg: #111513; --surface: #191e1b; --surface-2: #212723; --ink: #e9ece7; --muted: #9ba49e; --line: #2d3430;
   --accent: #e2ac55; --accent-ink: #1e1407; --accent-soft: #3a2d17;
@@ -1623,7 +1613,7 @@ pre.tab { background: var(--surface-2); border-radius: 12px; padding: 12px 14px;
   async function startMic() {
     if (chromeMac) { micStatus.textContent = "Sur Chrome pour Mac, l'écoute du micro est coupée pour l'instant : elle a figé Chrome. Utilise Safari pour écouter ta guitare."; return; }
     if (!navigator.mediaDevices?.getUserMedia) return micDenied();
-    // Comme la page test-micro.html, qui marche sur Safari : d'abord le micro, avec la demande la plus simple,
+    // Comme la page tools/test-micro.html, qui marche sur Safari : d'abord le micro, avec la demande la plus simple,
     // et seulement ensuite le son de la page (le réveiller avant faisait échouer Safari, InvalidStateError)
     micStatus.textContent = "J'ouvre le micro…";
     audioSession("play-and-record");

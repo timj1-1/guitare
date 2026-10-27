@@ -22,12 +22,14 @@
   const blank = () => ({ cours: {}, current: null, view: "cours", open: {} });
   let state = blank();
   try { state = Object.assign(blank(), JSON.parse(localStorage.getItem(KEY) || "{}")); } catch {}
-  let saveTimer = null;
-  const save = () => {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }, 250);
+  let saveTimer = null, saveRate = false;
+  // si le navigateur refuse d'enregistrer (navigation privée, mémoire pleine), on le dit une fois
+  const ecrit = () => {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); saveRate = false; }
+    catch { if (!saveRate) { saveRate = true; toast("Je n'arrive pas à enregistrer tes progrès : fais une sauvegarde (Mon bilan › Mes données)."); } }
   };
-  const flush = () => { clearTimeout(saveTimer); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+  const save = () => { clearTimeout(saveTimer); saveTimer = setTimeout(ecrit, 250); };
+  const flush = () => { clearTimeout(saveTimer); ecrit(); };
   window.addEventListener("pagehide", flush);
   document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); });
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
@@ -70,9 +72,14 @@
     if (view === "jeux") renderJeux();
     if (view !== "cours") window.scrollTo({ top: 0 });
     else if (from !== "cours" || opts.restore) window.scrollTo({ top: coursScroll });
+    // lecteur d'écran : le focus va sur le titre de la nouvelle section, qui est alors annoncée
+    if (opts.focus) {
+      const sec = $("#view-" + view), h = sec.querySelector("h1, h2") || sec;
+      h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true });
+    }
   }
   let coursScroll = 0;
-  document.querySelectorAll(".tabbar button").forEach(b => b.addEventListener("click", () => go(b.dataset.go)));
+  document.querySelectorAll(".tabbar button").forEach(b => b.addEventListener("click", () => go(b.dataset.go, { focus: true })));
 
   // Balayer de droite à gauche : section suivante ; de gauche à droite : section précédente.
   function swipe(target, { edgeOnly = false } = {}) {
@@ -1962,9 +1969,10 @@
     d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-close]")) d.close(); });
   });
   let toastT = null;
+  // la zone reste toujours là (VoiceOver lit ce qui y change) : seuls son texte et sa visibilité changent
   function toast(msg) {
-    const t = $("#toast"); t.textContent = msg; t.hidden = false;
-    clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 3200);
+    const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+    clearTimeout(toastT); toastT = setTimeout(() => { t.classList.remove("on"); t.textContent = ""; }, 3200);
   }
 
   // ---------- Démarrage ----------

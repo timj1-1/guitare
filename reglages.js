@@ -20,10 +20,13 @@
     try { const v = localStorage.getItem(cle); if (v == null) return d; const x = JSON.parse(v); return typeof x === typeof d ? x : d; } catch { return d; }
   };
   const ecoute = new Set();
+  const sombre = window.matchMedia?.("(prefers-color-scheme: dark)");
+  sombre?.addEventListener?.("change", () => applique());
   function applique() {
     const r = document.documentElement;
+    // « auto » : le thème du téléphone ; le style n'a ainsi qu'une seule liste de couleurs sombres
     const t = get("theme");
-    if (t === "light" || t === "dark") r.setAttribute("data-theme", t); else r.removeAttribute("data-theme");
+    r.setAttribute("data-theme", t === "light" || t === "dark" ? t : sombre?.matches ? "dark" : "light");
     r.style.setProperty("--txt", String(Math.min(1.3, Math.max(0.85, +get("texte") || 1))));
     r.classList.toggle("gaucher", !!get("gaucher"));
     r.classList.toggle("sans-anim", !get("animation"));

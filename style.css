@@ -26,16 +26,7 @@
   --tabbar-h: 58px;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #111513; --surface: #191e1b; --surface-2: #212723; --ink: #e9ece7; --muted: #9ba49e; --line: #2d3430;
-    --accent: #e2ac55; --accent-ink: #1e1407; --accent-soft: #3a2d17; --wood: #2a1914;
-    --ok: #6cc193; --ok-soft: #1d3327; --warn: #e07a68; --warn-soft: #3d221d; --mid: #d8c46a; --mid-soft: #35301a;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 30px -12px rgba(0, 0, 0, .6);
-    --tab-on: var(--accent); --tab-on-ink: var(--accent-ink);
-    color-scheme: dark;
-  }
-}
+/* le thème sombre, une seule fois : reglages.js met toujours data-theme (« auto » suit le téléphone) */
 :root[data-theme="dark"] {
   --bg: #111513; --surface: #191e1b; --surface-2: #212723; --ink: #e9ece7; --muted: #9ba49e; --line: #2d3430;
   --accent: #e2ac55; --accent-ink: #1e1407; --accent-soft: #3a2d17; --wood: #2a1914;
@@ -399,6 +390,11 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: .9rem; font-weight: 600;
   box-shadow: var(--shadow); max-width: calc(100vw - 32px);
 }
+.jb-cell:focus { outline: none; }
+.jb-cell:focus-visible .jb-hit { fill: none; stroke: var(--accent); stroke-width: 3; }
+.toast:not(.on) { opacity: 0; pointer-events: none; padding: 0; }
+/* le titre qui reçoit le focus quand on change de section : pas de cadre */
+.view [tabindex="-1"]:focus { outline: none; }
 .empty { text-align: center; padding: 40px 0; color: var(--muted); }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
@@ -473,9 +469,6 @@ html.sans-noms .jb-cell[data-state="rep"] .jb-dot, html.sans-noms .jb-cell[data-
   --cds-chart-categorical-1: var(--accent); --cds-chart-categorical-2: #2f6f8f; --cds-chart-reference-tint: var(--accent-soft);
 }
 :root[data-theme="dark"] .schema, :root[data-theme="dark"] .sv-fig { --cds-chart-axis: #8a938d; --cds-chart-grid: #3d4540; --cds-chart-categorical-2: #6fb3d2; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .schema, :root:not([data-theme="light"]) .sv-fig { --cds-chart-axis: #8a938d; --cds-chart-grid: #3d4540; --cds-chart-categorical-2: #6fb3d2; }
-}
 .schema { margin: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
 .schema figcaption, .sv-fig figcaption { padding: 10px 12px 0; display: flex; flex-direction: column; gap: 2px; }
 .schema figcaption strong, .sv-fig figcaption strong { font-size: .92rem; line-height: 1.3; }
