@@ -732,8 +732,7 @@ pre.tab { background: var(--surface-2); border-radius: 12px; padding: 12px 14px;
   if (!barre || !(barre.fret >= 1 && barre.fret <= FRETS)) barre = null;
   // ce qu'il y avait sous le barré quand on l'a posé, pour le retirer proprement en retouchant au même endroit
   let avantBarre = barre ? store.get("avantBarre", null) : null;
-  // manouche par défaut (2026-10-25, sa demande) ; le choix vaut aussi pour toute l'app (sons.js lit la même clé)
-  if (!store.get("timbreV2", false)) { store.set("timbre", "manouche"); store.set("timbreV2", true); }
+  // manouche par défaut (reglages.js) ; le choix vaut aussi pour toute l'app (sons.js lit la même clé)
   let timbre = store.get("timbre", "manouche");
   if (!["classique", "flamenca", "folk", "manouche"].includes(timbre)) timbre = "manouche";
   let analysis = null;
@@ -1352,12 +1351,8 @@ pre.tab { background: var(--surface-2); border-radius: 12px; padding: 12px 14px;
   }
   // Vrais enregistrements : la note la plus proche est transposée de 2 demi-tons au plus.
   // Flamenca et Manouche sont des réglages (égaliseur, durée) des enregistrements nylon et acier.
-  const SAMPLED = {
-    classique: { set: "ny", eq: [], release: 2.6 },
-    flamenca:  { set: "ny", eq: [["highpass", 90, 0.7, 0], ["peaking", 900, 1.2, -3], ["highshelf", 2800, 0.7, 7]], release: 1.3 },
-    folk:      { set: "ac", eq: [], release: 2.8 },
-    manouche:  { set: "ac", eq: [["highpass", 170, 0.7, 0], ["peaking", 1300, 1.0, 7], ["highshelf", 4500, 0.7, 3]], release: 1.7 },
-  };
+  // le même tableau que l'app (reglages.js) ; sans lui (ancienne copie en cache), le nylon simple
+  const SAMPLED = window.Reglages?.TIMBRES || { manouche: { set: "ny", eq: [], release: 2.6 } };
   const decoded = { ny: null, ac: null }, decoding = {};
   function b64ToBuf(b64) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; }
   // Échantillons de vraies guitares (mp3 96 kbit/s, 3 s) : nylon de quartertone (Freesound), acier des studios de musique électronique de l'université de l'Iowa, via tonejs-instruments.

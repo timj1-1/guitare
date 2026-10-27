@@ -895,11 +895,8 @@ MORCEAUX = [dict(pz, maitriser=MAITRISER[pz["id"]]) if pz["id"] in MAITRISER els
             for pz in MISSIONS + [dict(pz, palier=n) for n, lst in REPERTOIRE.items() for pz in lst] + [dict(pz, palier=4) for pz in BOSSA]]
 
 # ---------- Le prof qui parle : intro au démarrage de la séance, bilan à « Terminer le cours » ----------
-GENRE = ["d'échauffement", "de gamme", "de pentatonique", "de notes du manche", "de barrés et de rythme", "de morceau"]
-ORDINAL = {"A": "la première", "B": "la deuxième", "C": "la dernière"}
 lower1 = lambda t: t[:1].lower() + t[1:]
 court = lambda b: b["titre"].split(". ", 1)[-1]
-num_fr = lambda n: {1: "une", 2: "deux", 3: "trois"}.get(n, str(n))
 
 # le nom des blocs dans la voix du prof, par palier
 NOM_BLOC = {
@@ -929,9 +926,7 @@ def intro(c, prev):
         I.append(f"Palier {p['num']}, {NOMS[p['num']]}, toujours avec la même mission : {lower1(p['mission'])}")
     return I, nouveau, wk
 
-sans_duree = lambda t: re.sub(r"\s*\((?:\d+[^)]*min[^)]*|[^)]*\d+ ?min)\)", "", t).strip()
-
-def voix_prof(c, prev, nxt, avant=None, avant3=None):
+def voix_prof(c, prev, nxt):
     I, nouveau, wk = intro(c, prev)
     # Le plan des 6 blocs, toujours, et seulement ça (2026-10-26) : le nom de chaque bloc et à quoi il sert, sans les exercices.
     # Chaque ligne porte le numéro de son bloc : l'app le met en avant à l'écran pendant que le prof en parle.
@@ -1001,8 +996,7 @@ if os.path.exists(ADAPT):
                 c[k] = v
 
 for i, c in enumerate(cours):
-    same_pal = lambda j: cours[j] if j >= 0 and cours[j]["palier"] == c["palier"] else None
-    c["prof"] = voix_prof(c, cours[i - 1] if i else None, cours[i + 1] if i + 1 < len(cours) else None, same_pal(i - 6), same_pal(i - 9))
+    c["prof"] = voix_prof(c, cours[i - 1] if i else None, cours[i + 1] if i + 1 < len(cours) else None)
 
 out = {
     "version": 1,

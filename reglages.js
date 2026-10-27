@@ -41,6 +41,16 @@
     const k = Object.keys(DEF).find(x => DEF[x][0] === e.key); if (!k) return;
     applique(); ecoute.forEach(fn => { try { fn(k, get(k)); } catch {} });
   });
+  // Les sons de guitare (Mon manche › Son, valable dans toute l'app) : Flamenca et Manouche sont des réglages
+  // (égaliseur, durée) des enregistrements nylon (ny) et acier (ac). Lus par sons.js et par Mon manche.
+  // manouche par défaut (2026-10-25, sa demande), une seule fois
+  try { if (!localStorage.getItem("manche:timbreV2")) { localStorage.setItem("manche:timbre", JSON.stringify("manouche")); localStorage.setItem("manche:timbreV2", "true"); } } catch {}
+  const TIMBRES = {
+    classique: { set: "ny", eq: [], release: 2.6 },
+    flamenca:  { set: "ny", eq: [["highpass", 90, 0.7, 0], ["peaking", 900, 1.2, -3], ["highshelf", 2800, 0.7, 7]], release: 1.3 },
+    folk:      { set: "ac", eq: [], release: 2.8 },
+    manouche:  { set: "ac", eq: [["highpass", 170, 0.7, 0], ["peaking", 1300, 1.0, 7], ["highshelf", 4500, 0.7, 3]], release: 1.7 },
+  };
   applique();
-  window.Reglages = { get, set, on: fn => ecoute.add(fn), DEF };
+  window.Reglages = { get, set, on: fn => ecoute.add(fn), DEF, TIMBRES };
 })();

@@ -50,13 +50,8 @@
   // ---------- Guitare nylon (les mêmes sons que Mon manche) ----------
   // Le son choisi dans Mon manche (classique, flamenca, folk acier, manouche) vaut partout : cours, jeux, petits sons.
   // Mêmes enregistrements et mêmes réglages que Mon manche ; manouche par défaut.
-  const SAMPLED = {
-    classique: { set: "ny", eq: [], release: 2.6 },
-    flamenca:  { set: "ny", eq: [["highpass", 90, 0.7, 0], ["peaking", 900, 1.2, -3], ["highshelf", 2800, 0.7, 7]], release: 1.3 },
-    folk:      { set: "ac", eq: [], release: 2.8 },
-    manouche:  { set: "ac", eq: [["highpass", 170, 0.7, 0], ["peaking", 1300, 1.0, 7], ["highshelf", 4500, 0.7, 3]], release: 1.7 },
-  };
-  try { if (!localStorage.getItem("manche:timbreV2")) { localStorage.setItem("manche:timbre", JSON.stringify("manouche")); localStorage.setItem("manche:timbreV2", "true"); } } catch {}
+  // un seul tableau pour l'app et Mon manche (reglages.js) ; sans lui (ancienne copie en cache), le nylon simple
+  const SAMPLED = window.Reglages?.TIMBRES || { manouche: { set: "ny", eq: [], release: 2.6 } };
   const timbre = () => { try { const v = JSON.parse(localStorage.getItem("manche:timbre")); return SAMPLED[v] ? v : "manouche"; } catch { return "manouche"; } };
   const guitare = (() => {
     const FICHIER = { ny: ["samples-nylon.js", "NYLON_SAMPLES"], ac: ["samples-acier.js", "ACIER_SAMPLES"] };

@@ -184,7 +184,6 @@
   const withIcon = (node, icon, text) => { node.insertAdjacentHTML("afterbegin", icon); if (text != null) node.append(text); return node; };
 
   const FRET_INLAYS = new Set([3, 5, 7, 9, 12, 15, 17, 19]);
-  const faitsCours = c => c.blocs.reduce((n, b) => n + b.exercices.filter(e => state.cours[c.id]?.ex[exKey(b, e)]?.done).length, 0);
   function progressOf(c) {
     const list = allEx(c), s = state.cours[c.id];
     const done = list.filter(x => s?.ex[x.key]?.done).length;
@@ -347,7 +346,7 @@
       card.classList.toggle("complete", now);
       // chaque exercice coché joue la note suivante de la gamme du cours ; la fin d'un bloc, une double note
       const finBloc = now && !wasComplete;
-      if (checked || finBloc) Sons.noteCours(c.num, Math.max(0, faitsCours(c) - 1), finBloc);
+      if (checked || finBloc) Sons.noteCours(c.num, Math.max(0, progressOf(c).done - 1), finBloc);
       if (finBloc) toast(`Bloc ${bi + 1} terminé, bravo !`);
       wasComplete = now; updateProgress();
     })));
@@ -1366,6 +1365,17 @@
       body.append(el("section", { class: "card" }, el("h2", { text: "Mes semaines" }), el("div", { style: "height:8px" }), ul));
     }
 
+    body.append(pliSons(), pliReglages(), pliDonnees());
+  }
+
+  // un interrupteur (Sons et voix, Réglages)
+  function interrupteur(get, set) {
+    const b = el("button", { class: "switch", type: "button", role: "switch", "aria-checked": String(!!get()) });
+    b.addEventListener("click", () => { set(!get()); b.setAttribute("aria-checked", String(!!get())); });
+    return b;
+  }
+  // Mon bilan › Sons et voix
+  function pliSons() {
     // Choix de la voix : la liste vient de voix/voix.json (une voix « prete » a toutes ses phrases enregistrées)
     function choixVoix() {
       const list = el("div", { class: "voix-list", role: "radiogroup", "aria-label": "Voix du prof" });
@@ -1389,19 +1399,18 @@
     }
 
     // Sons et voix
-    const toggle = (label, hint, get, set) => {
-      const b = el("button", { class: "switch", type: "button", role: "switch", "aria-checked": String(get()) });
-      b.addEventListener("click", () => { set(!get()); b.setAttribute("aria-checked", String(get())); });
-      return el("div", { class: "setting" }, el("div", {}, el("strong", { text: label }), el("span", { class: "muted small", text: hint })), b);
-    };
+    const toggle = (label, hint, get, set) =>
+      el("div", { class: "setting" }, el("div", {}, el("strong", { text: label }), el("span", { class: "muted small", text: hint })), interrupteur(get, set));
     const reglages = el("div", { class: "pli-pile" },
       toggle("Petits sons", "Chaque exercice coché joue la note suivante de la gamme du cours, une double note finit chaque bloc, et une petite musique finit le cours.", () => Sons.sfx, v => { Sons.sfx = v; if (v) Sons.cling(); }));
     reglages.append(toggle("Voix dans les jeux", "Une voix naturelle lit les questions et les réponses des jeux.", () => Sons.voix, v => { Sons.voix = v; if (v) Sons.dire("D'accord, je lis les consignes des jeux."); }));
     reglages.append(toggle("Le prof te parle", "Il présente le cours quand tu lances la séance, et fait le bilan quand tu le termines.", profOn, v => { try { localStorage.setItem("maguitare:prof", v ? "1" : "0"); } catch {} if (!v) Sons.tais(); }));
     reglages.append(choixVoix());
     reglages.append(el("p", { class: "muted small", text: "Dans chaque bloc, les boutons « Écouter » lisent la consigne, le « pourquoi » et l'explication. Les phrases sont enregistrées d'avance : une phrase toute neuve (après une adaptation du cours) est lue par la voix de ton appareil, le temps que je l'enregistre." }));
-    body.append(pli("sons", "Sons et voix", el("span", { class: "muted small", text: "Les petits sons, la voix des jeux, et la voix du prof." }), () => reglages));
-
+    return pli("sons", "Sons et voix", el("span", { class: "muted small", text: "Les petits sons, la voix des jeux, et la voix du prof." }), () => reglages);
+  }
+  // Mon bilan › Réglages
+  function pliReglages() {
     // Réglages : volumes, voix du prof, affichage, rappel de séance (reglages.js les garde et les applique partout)
     const R = window.Reglages;
     const ligne = (label, hint, ctrl) => el("div", { class: "reglage" }, el("div", {}, el("strong", { text: label }), hint ? el("span", { class: "muted small", text: hint }) : null), ctrl);
@@ -1418,11 +1427,7 @@
       opts.forEach(([v, t]) => g.append(el("button", { type: "button", "data-v": String(v), text: t, onclick: () => { R.set(k, v); sync(); apres?.(v); } })));
       sync(); return g;
     };
-    const oui = (k, apres) => {
-      const b = el("button", { class: "switch", type: "button", role: "switch", "aria-checked": String(!!R.get(k)) });
-      b.addEventListener("click", () => { R.set(k, !R.get(k)); b.setAttribute("aria-checked", String(!!R.get(k))); apres?.(R.get(k)); });
-      return b;
-    };
+    const oui = (k, apres) => interrupteur(() => R.get(k), v => { R.set(k, v); apres?.(R.get(k)); });
     const pct = v => Math.round(v) + " %";
     const titreR = t => el("p", { class: "eyebrow reglage-titre", text: t });
     const JOURS = [["MO", "Lun"], ["TU", "Mar"], ["WE", "Mer"], ["TH", "Jeu"], ["FR", "Ven"], ["SA", "Sam"], ["SU", "Dim"]];
@@ -1458,8 +1463,10 @@
       ligne("Taille du texte", null, choix("texte", [[0.9, "Petit"], [1, "Normal"], [1.15, "Grand"], [1.3, "Très grand"]])),
       titreR("Rappel de séance"),
       blocRappel());
-    body.append(pli("reglages", "Réglages", el("span", { class: "muted small", text: "Volumes, vitesse de la voix, affichage, rappel de séance." }), panneau));
-
+    return pli("reglages", "Réglages", el("span", { class: "muted small", text: "Volumes, vitesse de la voix, affichage, rappel de séance." }), panneau);
+  }
+  // Mon bilan › Mes données
+  function pliDonnees() {
     // Sauvegarde
     const fileIn = el("input", { type: "file", accept: "application/json,.json", hidden: true });
     fileIn.addEventListener("change", async () => {
@@ -1470,7 +1477,7 @@
         restaure(data, "Sauvegarde restaurée.");
       } catch { toast("Ce fichier n'est pas une sauvegarde de Ma gratte."); }
     });
-    body.append(pli("donnees", "Mes données", el("span", { class: "muted small", text: "Sauvegarder, restaurer, chercher une mise à jour du cours." }), () => el("div", { class: "pli-pile" },
+    return pli("donnees", "Mes données", el("span", { class: "muted small", text: "Sauvegarder, restaurer, chercher une mise à jour du cours." }), () => el("div", { class: "pli-pile" },
       el("p", { class: "muted small", text: "Tes cases, tempos, commentaires et morceaux restent dans ce navigateur. L'app installée sur ton Mac, Safari, Chrome et ton téléphone ont chacun les leurs : pour les retrouver ailleurs, copie le lien ci-dessous et ouvre-le là-bas." }),
       el("div", { class: "row-tools" },
         el("button", { class: "btn primary", type: "button", onclick: lienTransfert }, "Copier le lien de mes données")),
@@ -1480,7 +1487,7 @@
         el("button", { class: "btn", type: "button", onclick: () => fileIn.click() }, "Restaurer"),
         el("button", { class: "btn", type: "button", onclick: checkUpdate }, "Chercher une mise à jour du cours")),
       fileIn,
-      el("p", { class: "muted small", text: `Cours mis à jour le ${new Date(DATA.maj).toLocaleDateString("fr-FR")}.` }))));
+      el("p", { class: "muted small", text: `Cours mis à jour le ${new Date(DATA.maj).toLocaleDateString("fr-FR")}.` })));
   }
 
   // ---------- Jeux à niveaux (niveaux.js) ----------
