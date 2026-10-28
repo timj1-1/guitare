@@ -1,5 +1,5 @@
 /* Jeux à niveaux : Notes du manche, Gammes, Pentatonique, Accords. Le même moteur pour les quatre :
-   - une manche = 10 questions ; 8 justes ouvrent le niveau suivant, et tous les niveaux restent rejouables ;
+   - une manche = 10 questions ; 10 sur 10 ouvrent le niveau suivant (sa demande, 2026-10-28), et tous les niveaux restent rejouables ;
    - ce que tu rates revient plus souvent (boîtes de Leitner), et 3 questions sur 10 reprennent les niveaux d'avant ;
    - chrono dès le niveau 5 (8 s, puis 3 s au niveau 10) ;
    - le niveau 10 sert à l'entretien : sans fin, 3 vies, il garde ton record.
@@ -7,7 +7,7 @@
 (() => {
   "use strict";
   const J = window.Jeux; if (!J?.base) return;
-  const { Board, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, shuffle, pick, son, nomsBtn } = J.base;
+  const { Board, cadre, grille, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, shuffle, pick, son, nomsBtn } = J.base;
   const corde = s => "la corde de " + NOM_CORDE[s];
   const BEMOL = { 1: "Ré♭", 3: "Mi♭", 6: "Sol♭", 8: "La♭", 10: "Si♭" };
   // noms usuels des tonalités et des accords
@@ -281,6 +281,7 @@
     return a;
   }
 
+  const PASSE = 10; // bonnes réponses du premier coup, sur 10, pour ouvrir le niveau suivant
   // ---------- La feuille du jeu ----------
   let dlg = null, run = null;
   const stop = () => { if (run) { clearTimeout(run.timer); clearTimeout(run.chrono); run = null; } window.Sons?.tais(); };
@@ -315,12 +316,11 @@
     const boardHost = el("div", { class: "jeu-board-wrap" + (vertical ? " vertical" : "") });
     const answers = el("div", { class: "jeu-answers", hidden: true });
     const titre = rev ? "Révision du jour" : L.txt;
-    const eyebrow = rev ? "Ce que tu as raté ces derniers jours" : `${FAMILLES[f].titre} · niveau ${lvl}${sansFin ? " · entretien" : ""}`;
-    d.replaceChildren(el("div", { class: "sheet-in jeu-in" },
-      el("div", { class: "sheet-head" }, el("div", {}, el("span", { class: "eyebrow", text: eyebrow }), el("h2", { id: "nivTitre", text: titre })), el("div", { class: "jeu-tools" }, nomsBtn?.(), voixBtn, sound, close)),
-      el("p", { class: "muted small", text: rev ? "10 questions sur les notes, gammes, positions et accords que tu as ratés. Réussies, elles reviendront moins souvent."
-        : sansFin ? "Sans fin : tu as 3 vies, et ton record est gardé. Le chrono est court : c'est l'entretien." : "10 questions. 8 justes du premier coup, sans indice, ouvrent le niveau suivant." + (CHRONO[lvl - 1] ? ` Chrono : ${CHRONO[lvl - 1]} s par note.` : "") }),
-      el("div", { class: "jeu-bar" }, q, prog), chronoBar, actions, fb, ecoute, boardHost, answers));
+    const eyebrow = rev ? "Ce que tu as raté" : `${FAMILLES[f].titre} · niveau ${lvl}${sansFin ? " · entretien" : ""}`;
+    // la règle du niveau, en une ligne courte sous la question du premier tour
+    const regle = rev ? "Réussies, ces questions reviendront moins souvent." : sansFin ? "3 vies : ton record est gardé." : lvl < 10 ? `${PASSE}/10 sans indice pour ouvrir le niveau ${lvl + 1}.` : "";
+    d.replaceChildren(cadre({ eyebrow, titre, idTitre: "nivTitre", gauche: [nomsBtn?.(), voixBtn].filter(Boolean), droite: [sound, close],
+      q, prog, fb, boardHost: el("div", { class: "jeu-milieu" }, ecoute, boardHost), answers, actions, autres: [chronoBar] }));
     if (!d.open) d.showModal();
 
     let board = null, frets = 0;
@@ -352,12 +352,10 @@
       if (Q.son && Q.type === "choix") gratte(Q.son);
       if (Q.oreille) gratte(Q.oreille);
       answers.hidden = Q.type !== "choix";
-      answers.classList.toggle("douze", Q.choix?.length === 12);
-      answers.classList.toggle("deux", Q.choix?.length <= 4);
-      if (Q.type === "choix") answers.replaceChildren(...Q.choix.map(c => el("button", { type: "button", class: "btn", "data-v": String(c.val), onclick: () => repond(c.val) }, aff(c.label), c.sub ? el("small", { text: aff(c.sub) }) : null)));
+      if (Q.type === "choix") grille(answers, Q.choix.map(c => el("button", { type: "button", class: "btn", "data-v": String(c.val), onclick: () => repond(c.val) }, aff(c.label), c.sub ? el("small", { text: aff(c.sub) }) : null)));
       q.textContent = Q.texte;
       prog.textContent = sansFin ? `Série ${run.serie} · ${"♥".repeat(run.vies)}${"♡".repeat(3 - run.vies)}` : `${run.i + 1} / ${queue.length}`;
-      setFb(rev ? `${FAMILLES[item.f].titre} · niveau ${item.lvl}` : "");
+      setFb(rev ? `${FAMILLES[item.f].titre} · niveau ${item.lvl}` : run.i === 0 ? regle : "");
       hintBtn.hidden = solveBtn.hidden = false; hintBtn.disabled = lvl === 10 && !rev; nextBtn.hidden = true;
       if (hintBtn.disabled) hintBtn.hidden = true;
       say(Q.voix);
@@ -468,7 +466,7 @@
       if (!rev) {
         const prev = fm.best[lvl] || 0;
         if (score > prev) { fm.best[lvl] = score; record = sansFin && prev > 0; }
-        if (!sansFin && score >= 8 && lvl < 10 && debloque(f) <= lvl) { fm.max = lvl + 1; ouvert = true; }
+        if (!sansFin && score >= PASSE && lvl < 10 && debloque(f) <= lvl) { fm.max = lvl + 1; ouvert = true; }
       }
       // le journal, lu par le compte-rendu de la semaine : score, essais, notes, fautes les plus fréquentes, d'où le jeu a été lancé
       const fautes = Object.entries(run.fautes).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, n]) => { const [ff, key] = k.split("|"); return [libelle(ff, key), n]; });
@@ -481,7 +479,7 @@
       answers.hidden = true; ecoute.hidden = true; boardHost.hidden = false; actions.hidden = true; board?.dim(null, null);
       q.textContent = bravo; prog.textContent = "";
       setFb(sansFin ? `Série de ${score} bonne${score > 1 ? "s" : ""} réponse${score > 1 ? "s" : ""}. Ton record : ${Math.max(score, famMem(f).best[10] || 0)}.`
-        : `${score} juste${score > 1 ? "s" : ""} sur ${total} du premier coup.` + (ouvert ? ` Le niveau ${lvl + 1} est ouvert !` : !rev && lvl < 10 && score < 8 ? " Il en faut 8 pour ouvrir le niveau suivant." : ""), pct >= 0.8 || record ? "good" : "");
+        : `${score} juste${score > 1 ? "s" : ""} sur ${total} du premier coup.` + (ouvert ? ` Le niveau ${lvl + 1} est ouvert !` : !rev && lvl < 10 && score < PASSE ? ` Il en faut ${PASSE} pour ouvrir le niveau suivant.` : ""), pct >= 0.8 || record ? "good" : "");
       say(ouvert ? "Bravo, niveau suivant débloqué !" : bravo);
       window.Sons?.[pct >= 0.8 || record ? "bloc" : "cling"]?.();
       const fin = el("div", { class: "jeu-end" });

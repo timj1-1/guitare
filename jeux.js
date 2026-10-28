@@ -60,16 +60,17 @@
   function Board(host, { vertical, frets: FRETS = 12 }) {
     const cells = new Map();
     const strings = [6, 5, 4, 3, 2, 1];
-    const W = vertical ? 330 : 760, H = vertical ? 600 : 250;
+    const W = vertical ? 354 : 800, H = vertical ? 600 : 250;
     const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, class: "jeu-board", role: "group", "aria-label": "Manche de guitare : flèches pour choisir une case, Entrée pour la jouer" });
     // géométrie
     const padA = vertical ? 30 : 34; // côté numéros de case
     const openSpan = vertical ? 46 : 54;
-    const lenAvail = (vertical ? H : W) - padA - openSpan - 10;
+    // le bois (du sillet à la dernière case) est au centre : autant de marge des deux côtés en largeur
+    const lenAvail = vertical ? H - padA - openSpan - 10 : W - 2 * (padA + openSpan);
     const fretLen = lenAvail / FRETS;
     const r = Math.min(15, fretLen * 0.36 + 2); // rayon des pastilles : plus petit quand il y a plus de cases
     const crossPad = vertical ? 38 : 24;
-    const crossSpan = (vertical ? W : H) - crossPad - 16;
+    const crossSpan = vertical ? W - 2 * crossPad : H - crossPad - 16;
     const gap = crossSpan / 6;
     const along = f => (f === 0 ? padA + openSpan / 2 : padA + openSpan + (f - 0.5) * fretLen); // centre d'une case
     const wire = f => padA + openSpan + f * fretLen; // position de la frette f (0 = sillet)
@@ -89,12 +90,12 @@
     strings.forEach(s => line(padA + 6, cross(s), wire(FRETS), cross(s), { class: "jb-string", "stroke-width": 0.9 + (s - 1) * 0.42 }));
     // numéros de case et noms de cordes
     for (let f = 1; f <= FRETS; f++) {
-      const [x, y] = vertical ? [14, along(f) + 5] : [along(f), H - 6];
-      root.append(Object.assign(svg("text", { x, y, class: "jb-num" + ([3, 5, 7, 9, 12, 15].includes(f) ? " strong" : ""), "text-anchor": "middle" }), { textContent: f }));
+      const [x, y] = vertical ? [crossPad / 2, along(f)] : [along(f), H - 9];
+      root.append(Object.assign(svg("text", { x, y, class: "jb-num" + ([3, 5, 7, 9, 12, 15].includes(f) ? " strong" : ""), "text-anchor": "middle", "dominant-baseline": "central" }), { textContent: f }));
     }
     strings.forEach(s => {
-      const [x, y] = vertical ? [cross(s), 14] : [14, cross(s) + 5];
-      root.append(Object.assign(svg("text", { x, y, class: "jb-sname", "text-anchor": "middle" }), { textContent: s === 1 ? (aff("Mi") === "E" ? "e" : "mi") : aff({ 6: "Mi", 5: "La", 4: "Ré", 3: "Sol", 2: "Si" }[s]) }));
+      const [x, y] = vertical ? [cross(s), 12] : [padA / 2, cross(s)];
+      root.append(Object.assign(svg("text", { x, y, class: "jb-sname", "text-anchor": "middle", "dominant-baseline": "central" }), { textContent: s === 1 ? (aff("Mi") === "E" ? "e" : "mi") : aff({ 6: "Mi", 5: "La", 4: "Ré", 3: "Sol", 2: "Si" }[s]) }));
     });
     // cases cliquables
     const layer = svg("g");
@@ -108,7 +109,8 @@
         const hw = vertical ? gap / 2 : fretLen / 2, hh = vertical ? fretLen / 2 : gap / 2;
         g.append(svg("rect", { x: x - (vertical ? hw : (f === 0 ? openSpan / 2 : hw)), y: y - (vertical ? (f === 0 ? openSpan / 2 : hh) : hh), width: vertical ? gap : (f === 0 ? openSpan : fretLen), height: vertical ? (f === 0 ? openSpan : fretLen) : gap, class: "jb-hit" }));
         const dot = svg("circle", { cx: x, cy: y, r, class: "jb-dot" });
-        const txt = Object.assign(svg("text", { x, y: y + 5, "text-anchor": "middle", class: "jb-label" }), { textContent: "" });
+        // le texte au centre exact de la pastille, quelle que soit la taille du texte
+        const txt = Object.assign(svg("text", { x, y, "text-anchor": "middle", "dominant-baseline": "central", class: "jb-label" }), { textContent: "" });
         g.append(dot, txt);
         layer.append(g);
         cells.set(s + ":" + f, { g, txt, nom });
@@ -304,7 +306,6 @@
     quiet = listen;
     const info = MODES[cfg.mode];
     const vertical = window.matchMedia("(max-width: 700px)").matches;
-    const title = el("h2", { id: "jeuTitre", text: cfg.label || info.titre });
     const close = el("button", { class: "icon-btn", type: "button", "aria-label": "Fermer", text: "✕", onclick: () => d.close() });
     const sound = el("button", { class: "icon-btn", type: "button", "aria-pressed": String(soundOn), title: "Son de la guitare", text: soundOn ? "🔊" : "🔈" });
     sound.addEventListener("click", () => { soundOn = !soundOn; sound.textContent = soundOn ? "🔊" : "🔈"; sound.setAttribute("aria-pressed", String(soundOn)); try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} });
@@ -325,10 +326,8 @@
     const listenBar = el("div", { class: "jeu-listen", hidden: !listen }, el("span", { class: "jl-level", "aria-hidden": "true" }, level), heardTxt);
     const boardHost = el("div", { class: "jeu-board-wrap" + (vertical ? " vertical" : "") });
     const answers = el("div", { class: "jeu-answers", hidden: true });
-    const body = el("div", { class: "sheet-in jeu-in" },
-      el("div", { class: "sheet-head" }, el("div", {}, (cfg.label && cfg.label !== info.titre) ? el("span", { class: "eyebrow", text: info.titre + (listen ? " · écoute" : "") }) : null, title), el("div", { class: "jeu-tools" }, nomsBtn(), voixBtn, sound, close)),
-      el("p", { class: "muted small", text: listen ? info.ecoute : info.regle }),
-      el("div", { class: "jeu-bar" }, q, prog), actions, listenBar, fb, boardHost, answers);
+    const body = cadre({ eyebrow: (cfg.label && cfg.label !== info.titre) ? info.titre + (listen ? " · écoute" : "") : null, titre: cfg.label || info.titre, idTitre: "jeuTitre",
+      gauche: [nomsBtn(), voixBtn], droite: [sound, close], regle: listen ? info.ecoute : info.regle, q, prog, fb, boardHost, answers, actions, autres: [listenBar] });
     d.replaceChildren(body);
     if (!d.open) d.showModal();
 
@@ -354,7 +353,7 @@
       answers.hidden = !r.ask;
       if (r.ask) {
         board.set(r.ask[0], r.ask[1], "ask", "?");
-        answers.replaceChildren(...NATURALS.map(n => el("button", { type: "button", class: "btn", "data-v": n, text: aff(n), onclick: () => answer(n) })));
+        grille(answers, NATURALS.map(n => el("button", { type: "button", class: "btn", "data-v": n, text: aff(n), onclick: () => answer(n) })));
       }
       if (r.src) { board.set(r.src[0], r.src[1], "src", r.note); play(OPEN[r.src[0]] + r.src[1]); }
       say(q.textContent);
@@ -535,7 +534,33 @@
   const resume = r => `${r.label}${r.ecoute ? " (à l'écoute)" : ""} : ${r.ask || (r.mode === "nomme" && !r.ecoute) ? `${r.score}/${r.total} justes` : `${r.score}/${r.total} tours sans faute, ${r.errors} erreur${r.errors > 1 ? "s" : ""}`}`
     + (r.hints ? `, ${r.hints} indice${r.hints > 1 ? "s" : ""}` : "") + (r.solved ? `, ${r.solved} résolu${r.solved > 1 ? "s" : ""}` : "")
     + `${r.ms ? `, ${(r.ms / 1000).toFixed(1).replace(".", ",")} s par note` : ""}`;
+  // ---------- La mise en page commune des jeux ----------
+  // En haut, les outils de part et d'autre du titre centré ; puis la question, le manche (toute la place qui reste),
+  // les réponses et les boutons : tout tient dans l'écran, sans défiler.
+  function cadre({ eyebrow, titre, idTitre, gauche = [], droite = [], regle, q, prog, fb, boardHost, answers, actions, autres = [] }) {
+    return el("div", { class: "sheet-in jeu-in" },
+      el("div", { class: "jeu-top" },
+        el("div", { class: "jeu-tools" }, ...gauche),
+        el("div", { class: "jeu-titre" }, eyebrow ? el("span", { class: "eyebrow", text: eyebrow }) : null, el("h2", { id: idTitre, text: titre })),
+        el("div", { class: "jeu-tools" }, ...droite)),
+      el("div", { class: "jeu-bar" }, prog, q),
+      regle ? el("p", { class: "jeu-regle", text: regle }) : null,
+      ...autres.slice(0, 1), fb, ...autres.slice(1), boardHost, answers, actions);
+  }
+  // Les réponses en rectangle plein : des rangées égales quand c'est possible ;
+  // sinon les boutons de la dernière rangée s'élargissent, sans laisser de trou.
+  function grille(answers, boutons) {
+    const n = boutons.length, etroit = window.matchMedia("(max-width: 520px)").matches;
+    const lg = Math.max(0, ...boutons.map(b => (b.firstChild?.textContent || b.textContent).length));
+    const max = etroit ? (lg <= 3 ? 7 : lg <= 6 ? 4 : 3) : (lg <= 6 ? 7 : 4);
+    let rangs = Math.ceil(n / max);
+    if (n % rangs && (n % (rangs + 1) === 0)) rangs++; // une rangée de plus, mais toutes égales
+    const parRang = Array.from({ length: rangs }, (_, i) => Math.floor(n / rangs) + (i < n % rangs ? 1 : 0));
+    let k = 0;
+    answers.replaceChildren(...parRang.map(m => el("div", { class: "jeu-rang" }, ...boutons.slice(k, (k += m)))));
+  }
+
   window.Jeux = { open, resume, MODES, NOM_CORDE, ecouteEnCours: () => !!mic,
     // pour les jeux à niveaux (niveaux.js)
-    base: { Board, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, nameOf, shuffle, pick, play, nomsBtn, son: { get: () => soundOn, set: v => { soundOn = !!v; try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} } } } };
+    base: { Board, cadre, grille, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, nameOf, shuffle, pick, play, nomsBtn, son: { get: () => soundOn, set: v => { soundOn = !!v; try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} } } } };
 })();

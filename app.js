@@ -311,10 +311,11 @@
         b.voix?.quand ? speakBtn(b.voix.quand, "Écouter", "Écouter pourquoi c'est utile") : null));
       inner.append(q);
     }
-    inner.append(el("p", { class: "faire" }, el("strong", { text: "À faire : " }), b.faire));
+    inner.append(programme(b));
 
-    const sch = (b.schemas || []).map(k => SCHEMAS[k]).filter(Boolean);
-    if (sch.length) inner.append(el("div", { class: "schemas" }, sch.map(schemaFig)));
+    // les explications et les schémas vont dans l'exercice dont ils parlent ; le reste (le principe…) reste au bloc
+    const rg = rangeBloc(b, (b.schemas || []).map(k => SCHEMAS[k]).filter(Boolean));
+    if (rg.schGen.length) inner.append(el("div", { class: "schemas" }, rg.schGen.map(schemaFig)));
 
     const tools = el("div", { class: "row-tools" });
     tools.append(withIcon(el("button", { class: "btn small", type: "button", onclick: () => startTimer(b.duree, b.titre.replace(/^\d+\.\s*/, "")) }), ICON_TIMER, `Minuteur ${b.duree} min`));
@@ -341,7 +342,7 @@
     if (bi === 5) { const sm = semaineCard(c); if (sm) inner.append(sm); }
     const ul = el("ul", { class: "exos" });
     let wasComplete = complete();
-    b.exercices.forEach(e => ul.append(renderExo(c, b, e, posEx.get(e), checked => {
+    b.exercices.forEach(e => ul.append(renderExo(c, b, e, posEx.get(e), rg.parExo.get(e), checked => {
       const now = complete();
       card.classList.toggle("complete", now);
       // chaque exercice coché joue la note suivante de la gamme du cours ; la fin d'un bloc, une double note
@@ -354,21 +355,11 @@
     const jb = jeuBloc(c, bi); if (jb) inner.append(jb);
 
     const moreKey = openKey + "/more";
-    const more = el("details", { class: "more", open: state.open[moreKey] ?? true }, el("summary", { text: "Explication et vidéos" }));
+    const more = el("details", { class: "more", open: state.open[moreKey] ?? true }, el("summary", { text: rg.general.length ? "Le principe et les vidéos" : "Écouter l'explication et les vidéos" }));
     more.addEventListener("toggle", () => { if (state.open[moreKey] !== more.open) { state.open[moreKey] = more.open; save(); } });
     const mi = el("div", { class: "more-in" });
     if (b.voix?.explication?.length) mi.append(el("div", { class: "row-tools" }, speakBtn(b.voix.explication, "Écouter l'explication", "Écouter l'explication")));
-    b.explication.forEach(t => {
-      if (typeof t === "string") return mi.append(el("p", { text: t }));
-      if (t.titre) mi.append(el("h4", { class: "expl-titre", text: t.titre }));
-      if (t.liste) mi.append(el(t.ordonnee ? "ol" : "ul", { class: "expl-liste" }, t.liste.map(x => el("li", { text: x }))));
-      if (t.table) {
-        const [head, ...rows] = t.table;
-        mi.append(el("div", { class: "expl-table" }, el("table", {},
-          el("thead", {}, el("tr", {}, head.map(h => el("th", { text: h })))),
-          el("tbody", {}, rows.map(r => el("tr", {}, r.map((c, i) => el(i ? "td" : "th", { text: c }))))))));
-      }
-    });
+    mi.append(...rg.general.flatMap(explBloc));
     // ouvert tant qu'un exercice demande de lire l'explication (« Lire « Comprendre les barrés… » »)
     if (b.exercices.some(e => /^Lire\b/.test(e.label) && !s.ex[exKey(b, e)]?.done)) more.open = true;
     if (b.videos?.length) mi.append(el("p", { class: "eyebrow", text: "Vidéos" }), lecteur(b.videos, b.titre, { liste: true }));
@@ -415,6 +406,79 @@
     e.scrollIntoView({ behavior: "smooth", block: grand ? "start" : "center" });
   }
 
+  // une partie d'explication : un paragraphe, ou un titre avec sa liste ou son tableau
+  function explBloc(t) {
+    if (typeof t === "string") return [el("p", { text: t })];
+    const out = [];
+    if (t.titre) out.push(el("h4", { class: "expl-titre", text: t.titre }));
+    if (t.liste) out.push(el(t.ordonnee ? "ol" : "ul", { class: "expl-liste" }, t.liste.map(x => el("li", { text: x }))));
+    if (t.table) {
+      const [head, ...rows] = t.table;
+      out.push(el("div", { class: "expl-table" }, el("table", {},
+        el("thead", {}, el("tr", {}, head.map(h => el("th", { text: h })))),
+        el("tbody", {}, rows.map(r => el("tr", {}, r.map((c, i) => el(i ? "td" : "th", { text: c }))))))));
+    }
+    return out;
+  }
+  // « À faire » : le programme du bloc, une ligne par étape, sa durée à droite
+  // une phrase se coupe à ses virgules quand c'est une liste d'étapes minutées (« Jeu facile (4 min), étirements (2 min)… »)
+  const DUREE_FIN = /\s*\((\d+) ?min\)\s*$/, DUREE_MILIEU = /\s*\((\d+) ?min\)\s*:/, DUREE_DEBUT = /(^|: )(?:puis )?(\d+) min (?:d'|de |à |(?=sur ))/;
+  function programme(b) {
+    const virgules = t => {
+      const out = []; let prof = 0, cur = "";
+      for (const ch of t) { if (ch === "(") prof++; if (ch === ")") prof--; if (ch === "," && !prof) { out.push(cur); cur = ""; } else cur += ch; }
+      return [...out, cur].map(x => x.trim()).filter(Boolean);
+    };
+    const minute = x => DUREE_FIN.test(x) || DUREE_MILIEU.test(x) || DUREE_DEBUT.test(x);
+    const etape = (t, coupe = true) => {
+      let duree = "", m;
+      t = t.replace(/^(?:puis|et|enfin)\s+/i, "");
+      if ((m = t.match(DUREE_FIN))) t = t.replace(DUREE_FIN, "");
+      else if ((m = t.match(DUREE_MILIEU))) t = t.replace(DUREE_MILIEU, " :");
+      else if (coupe && (m = t.match(DUREE_DEBUT))) { t = t.replace(DUREE_DEBUT, "$1"); m = [0, m[2]]; }
+      if (m) duree = m[1] + " min";
+      return { nom: t.replace(/^./, x => x.toUpperCase()), duree };
+    };
+    const etapes = String(b.faire).trim().replace(/\.$/, "").split(/(?<=[.!?])\s+(?=[A-ZÀ-Ý«])/).flatMap((ph, i) => {
+      ph = ph.replace(/\.$/, "");
+      // une étape finit sur sa durée « (7 min) », ou commence par elle « 5 min d'impro… »
+      const parts = [];
+      virgules(ph).forEach(x => {
+        const prev = parts[parts.length - 1];
+        if (!prev || DUREE_FIN.test(prev) || DUREE_DEBUT.test(x.replace(/^puis /, "")) || (/^(?:puis|enfin|ensuite) /.test(x) && minute(prev))) parts.push(x);
+        else parts[parts.length - 1] += ", " + x;
+      });
+      return parts.length > 1 && parts.filter(minute).length >= 2 ? parts.map(x => etape(x)) : [etape(ph, i > 0)];
+    });
+    const liste = el("ol", { class: "prog-liste" }, etapes.map(x =>
+      el("li", {}, el("span", { class: "prog-nom", text: x.nom }), x.duree ? el("span", { class: "prog-duree", text: x.duree }) : null)));
+    return el("section", { class: "programme" }, el("div", { class: "prog-tete" }, el("strong", { text: "Au programme" }), el("span", { class: "prog-total", text: b.duree + " min" })), liste);
+  }
+  // Range les explications et les schémas d'un bloc dans les exercices dont ils parlent (mots en commun)
+  const STOP = new Set("les des une sur puis avec dans pour par tes ton mes son ses sans plus qui que est aux entre chaque tout tous fois comme corde case note manche vide semaine".split(" "));
+  const mots = t => new Set(String(t || "").replace(/\(\d+ ?min\)/g, "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9#]+/)
+    .filter(w => (w.length >= 3 || /^\d\d$/.test(w)) && !STOP.has(w) && !STOP.has(w.replace(/[sx]$/, ""))).map(w => w.replace(/[sx]$/, "").replace(/e$/, "")));
+  function rangeBloc(b, schemas) {
+    const ex = b.exercices.map(e => ({ e, m: mots(e.label), facile: e.id === "facile" }));
+    // le titre compte triple ; à égalité, l'exercice le plus précis (le moins de mots) l'emporte
+    const vers = (titre, sous, general) => {
+      if (general) return null;
+      const mt = mots(titre), ms = mots(sous);
+      let best = null, sc = 0, taille = Infinity;
+      for (const x of ex) {
+        if (x.facile && !mt.has("facil")) continue;
+        let n = 0; mt.forEach(w => { if (x.m.has(w)) n += 3; }); ms.forEach(w => { if (!mt.has(w) && x.m.has(w)) n++; });
+        if (n > sc || (n === sc && n > 0 && x.m.size < taille)) { sc = n; best = x.e; taille = x.m.size; }
+      }
+      return best;
+    };
+    const parExo = new Map(), general = [], schGen = [];
+    const met = (e, k, v) => { if (!parExo.has(e)) parExo.set(e, { expl: [], sch: [] }); parExo.get(e)[k].push(v); };
+    (b.explication || []).forEach(t => { const e = typeof t === "object" && t.titre ? vers(t.titre, "", /^Le principe|^Comprendre|^Pourquoi/.test(t.titre)) : null; e ? met(e, "expl", t) : general.push(t); });
+    schemas.forEach(s => { const e = vers(s.titre, s.sous); e ? met(e, "sch", s) : schGen.push(s); });
+    return { parExo, general, schGen };
+  }
+
   // ---------- Schémas (les mêmes que dans le cours du Claude Doc) ----------
   function schemaFig(s) {
     const fig = el("figure", { class: "schema", role: "button", tabindex: "0", "aria-label": "Agrandir le schéma : " + s.titre });
@@ -454,7 +518,9 @@
   const NIVEAUX = { 1: "Fondations", 2: "Indépendance", 3: "Liberté", 4: "Bossa nova" };
   const cleMorceau = t => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const analyseDe = x => (DATA.analyses || []).find(a => a.cle === cleMorceau(x.titre));
-  const tousMorceaux = () => [...(DATA.morceaux || []), ...(state.mesPieces || []).map(x => { const a = analyseDe(x); return { ...a, ...Object.fromEntries(Object.entries(x).filter(([, v]) => v !== "")), perso: true, analyse: !!a }; })];
+  // tes changements sur un morceau du cours (titre, vidéos, tablatures…) sont gardés à part : l'original reste disponible
+  const avecModifs = pz => { const m = state.modifs?.[pz.id]; return m ? { ...pz, ...m, modifie: true } : pz; };
+  const tousMorceaux = () => [...(DATA.morceaux || []).map(avecModifs), ...(state.mesPieces || []).map(x => { const a = analyseDe(x); return { ...a, ...Object.fromEntries(Object.entries(x).filter(([, v]) => v !== "")), perso: true, analyse: !!a }; })];
   const morceau = id => tousMorceaux().find(x => x.id === id);
   const semaineAtteinte = c => Math.max(c?.semaine || 0, nextCours().semaine);
   const verrou = (pz, sem) => !pz.perso && sem < (pz.des || 1);
@@ -720,6 +786,97 @@
     return d;
   }
 
+  // Modifier un morceau : tout ce qu'il contient, y compris ceux du cours et leur vidéo principale
+  function editeMorceau(pz, refresh) {
+    const orig = (DATA.morceaux || []).find(x => x.id === pz.id), perso = (state.mesPieces || []).find(x => x.id === pz.id);
+    const champ = (lab, v, type = "text", ph = "") => {
+      const i = el(type === "area" ? "textarea" : "input", type === "area" ? { rows: "3" } : { type, placeholder: ph });
+      i.value = v || ""; return { i, box: el("label", { class: "ed-champ" }, el("span", { text: lab }), i) };
+    };
+    const titre = champ("Titre", pz.titre), artiste = champ("Artiste", pz.artiste), style = champ("Style", pz.style);
+    const ecouter = champ("Vidéo principale (à écouter)", pz.ecouter, "url", "https://…"), tuto = champ("Tuto", pz.tuto, "url", "https://…");
+    const interet = champ("Pourquoi ce morceau", pz.interet, "area");
+    const aj = state.ajouts?.[pz.id] || { videos: [], tabs: [] };
+    // une ligne par vidéo ou tablature : son nom, son lien, et ✕ pour la retirer
+    const liste = (items, phNom) => {
+      const lignes = [], ul = el("div", { class: "ed-liste" });
+      const ajoute = (it, mine) => {
+        const nom = el("input", { type: "text", placeholder: phNom, "aria-label": "Nom" }); nom.value = it.t || "";
+        const lien = it.f ? null : el("input", { type: "url", placeholder: "https://…", "aria-label": "Lien" });
+        if (lien) lien.value = it.u || "";
+        const L = { it, mine, nom, lien, out: false };
+        const row = el("div", { class: "ed-ligne" + (mine ? " mine" : "") }, nom, lien || el("span", { class: "muted small ed-fic", text: "Photo ou PDF sur cet appareil" }),
+          el("button", { class: "icon-btn", type: "button", "aria-label": "Retirer", text: "✕", onclick: () => { L.out = true; row.remove(); } }));
+        lignes.push(L); ul.append(row); return nom;
+      };
+      items.forEach(([it, mine]) => ajoute(it, mine));
+      return { ul, lignes, ajoute };
+    };
+    const V = liste([...(pz.plus || []).map(v => [v, false]), ...aj.videos.map(v => [v, true])], "Nom de la vidéo");
+    const T = liste([...(pz.tabs || []).map(t => [t, false]), ...aj.tabs.map(t => [t, true])], "Nom de la tablature");
+    const msg = el("p", { class: "muted small", role: "status" });
+    const d = el("dialog", { class: "sheet ed-sheet", "aria-labelledby": "edTitre" });
+    const fermer = () => { d.close(); d.remove(); };
+    const enregistrer = () => {
+      const t = titre.i.value.trim(); if (!t) { msg.textContent = "Il faut un titre."; titre.i.focus(); return; }
+      const lus = [...V.lignes, ...T.lignes].filter(L => !L.out);
+      const mauvais = [ecouter.i, tuto.i, ...lus.map(L => L.lien)].find(i => i && i.value.trim() && !urlOk(i.value.trim()));
+      if (mauvais) { msg.textContent = "Un lien doit commencer par https://."; mauvais.focus(); return; }
+      const garde = (L, def) => (L.lien && !L.lien.value.trim() ? null : { ...L.it, t: L.nom.value.trim() || def, ...(L.lien ? { u: L.lien.value.trim() } : {}) });
+      const vids = V.lignes.filter(L => !L.out), tabs = T.lignes.filter(L => !L.out);
+      const v = { titre: t, artiste: artiste.i.value.trim(), style: style.i.value.trim(), ecouter: ecouter.i.value.trim(), tuto: tuto.i.value.trim(), interet: interet.i.value.trim(),
+        plus: vids.filter(L => !L.mine).map(L => garde(L, "Vidéo")).filter(Boolean), tabs: tabs.filter(L => !L.mine).map(L => garde(L, "Tablature")).filter(Boolean) };
+      // les fichiers retirés quittent aussi l'appareil
+      T.lignes.filter(L => L.out && L.it.f).forEach(L => fichiers.del(L.it.f).catch(() => {}));
+      (state.ajouts ||= {})[pz.id] = { videos: vids.filter(L => L.mine).map(L => garde(L, "Ma vidéo")).filter(Boolean), tabs: tabs.filter(L => L.mine).map(L => garde(L, "Ma tablature")).filter(Boolean) };
+      sansAjouts(pz);
+      if (perso) Object.assign(perso, v);
+      else if (orig) {
+        // on ne garde que ce qui diffère du cours
+        const m = {}; const pareil = (a, b) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
+        for (const k of Object.keys(v)) if (!pareil(v[k], k === "plus" || k === "tabs" ? orig[k] || [] : orig[k])) m[k] = v[k];
+        state.modifs ||= {};
+        if (Object.keys(m).length) state.modifs[pz.id] = m; else delete state.modifs[pz.id];
+      }
+      save(); Sons.cling(); toast(`« ${t} » modifié.`); fermer(); refresh();
+    };
+    d.append(el("div", { class: "sheet-in" },
+      el("div", { class: "sheet-head" }, el("h2", { id: "edTitre", text: "Modifier le morceau" }), el("button", { class: "icon-btn", type: "button", "aria-label": "Fermer", text: "✕", onclick: fermer })),
+      el("div", { class: "ed-grille" }, titre.box, artiste.box, orig ? style.box : null),
+      ecouter.box, tuto.box, interet.box,
+      el("div", { class: "ed-sec" }, el("strong", { text: "Autres vidéos" }), V.ul,
+        el("button", { class: "link-btn", type: "button", text: "+ Ajouter une vidéo", onclick: () => V.ajoute({}, true).focus() })),
+      el("div", { class: "ed-sec" }, el("strong", { text: "Tablatures" }), T.ul,
+        el("button", { class: "link-btn", type: "button", text: "+ Ajouter un lien de tablature", onclick: () => T.ajoute({}, true).focus() })),
+      msg,
+      el("div", { class: "ed-actions" },
+        state.modifs?.[pz.id] ? el("button", { class: "btn ghost", type: "button", text: "Revenir à l'original", onclick: () => {
+          if (!confirm("Remettre ce morceau comme dans le cours ? Tes ajouts à toi restent.")) return;
+          delete state.modifs[pz.id]; save(); fermer(); refresh();
+        } }) : null,
+        el("button", { class: "btn", type: "button", text: "Annuler", onclick: fermer }),
+        el("button", { class: "btn primary", type: "button", text: "Enregistrer", onclick: enregistrer }))));
+    d.addEventListener("close", () => d.remove());
+    d.addEventListener("click", e => { if (e.target === d) fermer(); });
+    document.body.append(d); openSheet(d);
+  }
+  // appui long (téléphone) ou clic droit (ordi) sur un morceau : le modifier
+  function appuiLong(node, fn) {
+    let t = null, x0 = 0, y0 = 0, fait = false;
+    const stop = () => { clearTimeout(t); t = null; };
+    const hors = e => e.target.closest("a, input, textarea, select, iframe, .yt");
+    node.addEventListener("pointerdown", e => {
+      fait = false; if (e.pointerType === "mouse" || hors(e)) return;
+      x0 = e.clientX; y0 = e.clientY; stop();
+      t = setTimeout(() => { t = null; fait = true; navigator.vibrate?.(15); fn(); }, 550);
+    });
+    node.addEventListener("pointermove", e => { if (t && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) stop(); });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(k => node.addEventListener(k, stop));
+    // le toucher qui a ouvert la fenêtre ne doit pas aussi plier la fiche
+    node.addEventListener("click", e => { if (fait) { e.preventDefault(); e.stopPropagation(); fait = false; } }, true);
+    node.addEventListener("contextmenu", e => { if (hors(e)) return; e.preventDefault(); if (!fait) { stop(); fn(); } });
+  }
+
   function morceauCard(pz, sem, refresh) {
     const lock = verrou(pz, sem), st = statutDe(pz, sem);
     const li = el("li", { class: "piece" + (lock ? " locked" : "") + (st === "travail" ? " chosen" : "") + (st === "maitrise" ? " mastered" : "") });
@@ -764,6 +921,7 @@
       nv ? el("span", { class: "niveau n" + nv, title: "Difficulté dans son niveau" }, el("span", { class: "pts", "aria-hidden": "true", text: "●".repeat(nv) + "○".repeat(3 - nv) }), " " + NIVEAU[nv]) : null,
       !pz.perso && pz.style ? el("span", { class: "piece-style", text: pz.style }) : null);
     tools.append(meta);
+    tools.append(el("button", { class: "link-btn", type: "button", text: "Modifier", title: "Ou appui long sur le morceau (clic droit sur ordi)", onclick: () => editeMorceau(pz, refresh) }));
     if (pz.perso) tools.append(el("button", { class: "link-btn", type: "button", text: "Supprimer", onclick: () => {
       if (!confirm(`Retirer « ${pz.titre} » de tes morceaux ?`)) return;
       (state.ajouts?.[pz.id]?.tabs || []).forEach(t => t.f && fichiers.del(t.f).catch(() => {}));
@@ -771,6 +929,7 @@
       state.mesPieces = (state.mesPieces || []).filter(x => x.id !== pz.id); delete state.morceaux?.[pz.id]; save(); refresh();
     } }));
     li.append(head, tools, corps);
+    appuiLong(li, () => editeMorceau(pz, refresh));
     return li;
   }
 
@@ -885,21 +1044,104 @@
     return card;
   }
 
-  // un bouton qui ouvre la position sur Mon manche
+  // un bouton de position : 1er toucher, une bulle avec le dessin ; 2e toucher, Mon manche
   function posBtn(pz) {
-    const btn = el("button", { class: "btn small pos-btn", type: "button", title: "Voir sur le manche", onclick: () => go("manche", { pos: pz.code }) });
+    const btn = el("button", { class: "btn small pos-btn", type: "button", title: "Aperçu, puis Mon manche", "aria-expanded": "false" });
     btn.innerHTML = ICON_POS; btn.append(pz.label);
+    btn.addEventListener("click", ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      if (bulle?.btn === btn) { fermeBulle(); go("manche", { pos: pz.code }); } else ouvreBulle(btn, pz);
+    });
     return btn;
   }
-  function renderExo(c, b, e, positions, onChange) {
+  let bulle = null;
+  function fermeBulle() {
+    if (!bulle) return;
+    bulle.btn.setAttribute("aria-expanded", "false"); bulle.node.remove(); bulle = null;
+    document.removeEventListener("pointerdown", horsBulle, true); document.removeEventListener("keydown", escBulle, true);
+    window.removeEventListener("scroll", fermeBulle, true); window.removeEventListener("resize", fermeBulle);
+  }
+  const horsBulle = ev => { if (bulle && !bulle.node.contains(ev.target) && !bulle.btn.contains(ev.target)) fermeBulle(); };
+  const escBulle = ev => { if (ev.key === "Escape" && bulle) { const b = bulle.btn; fermeBulle(); b.focus(); } };
+  function ouvreBulle(btn, pz) {
+    fermeBulle();
+    const node = el("div", { class: "bulle", role: "dialog", "aria-label": pz.label },
+      el("strong", { class: "bulle-titre", text: pz.label }),
+      Object.assign(el("div", { class: "bulle-art" }), { innerHTML: miniDiagramme(pz.code) }),
+      el("button", { class: "btn small bulle-go", type: "button", text: "Ouvrir dans Mon manche", onclick: () => { fermeBulle(); go("manche", { pos: pz.code }); } }));
+    document.body.append(node);
+    bulle = { btn, node };
+    btn.setAttribute("aria-expanded", "true");
+    // sous le bouton (au-dessus s'il n'y a pas la place), sans sortir de l'écran
+    const r = btn.getBoundingClientRect(), w = node.offsetWidth, h = node.offsetHeight, m = 8;
+    const left = Math.min(Math.max(m, r.left + r.width / 2 - w / 2), innerWidth - w - m);
+    const top = r.bottom + m + h <= innerHeight ? r.bottom + m : Math.max(m, r.top - m - h);
+    node.style.left = left + "px"; node.style.top = top + "px";
+    document.addEventListener("pointerdown", horsBulle, true); document.addEventListener("keydown", escBulle, true);
+    window.addEventListener("scroll", fermeBulle, true); window.addEventListener("resize", fermeBulle);
+  }
+  // Petit dessin d'une position : un accord en grille (code x32010), une gamme sur 5 cases (gamme-la-penta-mineure-z5)
+  const GAMME_DEG = { majeur: [0, 2, 4, 5, 7, 9, 11], mineur: [0, 2, 3, 5, 7, 8, 10], "penta-mineure": [0, 3, 5, 7, 10], "penta-majeure": [0, 2, 4, 7, 9], phrygien: [0, 1, 3, 5, 7, 8, 10] };
+  const TONIQUE = { do: 0, dod: 1, re: 2, mib: 3, mi: 4, fa: 5, fad: 6, sol: 7, lab: 8, la: 9, sib: 10, si: 11 };
+  const CORDES_PC = [4, 9, 2, 7, 11, 4]; // Mi La Ré Sol Si Mi, du grave à l'aigu
+  function miniDiagramme(code) {
+    const NS = 'xmlns="http://www.w3.org/2000/svg"';
+    const g = String(code).match(/^gamme-([a-z]+)-([a-z-]+?)(?:-z(\d+))?$/);
+    if (g) {
+      const t = TONIQUE[g[1]], deg = GAMME_DEG[g[2]];
+      if (t == null || !deg) return "";
+      const z = g[3] != null ? +g[3] : null;
+      const f0 = z == null ? 0 : Math.max(0, z <= 1 ? 0 : z), f1 = z == null ? 12 : z + 4;
+      // les cordes à vide se jouent à gauche du sillet
+      const n = f1 - f0 + 1 - (f0 === 0 ? 1 : 0), cw = z == null ? 18 : 34, L = f0 === 0 ? 30 : 12, W = L + n * cw + 8, H = 6 * 18 + 30;
+      const d0 = f0 === 0 ? 1 : f0, x = f => (f === 0 ? L - 13 : L + (f - d0 + 0.5) * cw), y = s => 14 + (5 - s) * 18;
+      let s = `<svg ${NS} viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">`;
+      for (let k = 0; k < 6; k++) s += `<line x1="${L}" x2="${L + n * cw}" y1="${y(k)}" y2="${y(k)}" class="md-corde"/>`;
+      for (let i = 0; i <= n; i++) s += `<line x1="${L + i * cw}" x2="${L + i * cw}" y1="${y(5)}" y2="${y(0)}" class="${!i && f0 === 0 ? "md-sillet" : "md-frette"}"/>`;
+      for (let f = d0; f <= f1; f++) if (z != null || [3, 5, 7, 9, 12].includes(f)) s += `<text x="${x(f)}" y="${H - 8}" class="md-num">${f}</text>`;
+      for (let k = 0; k < 6; k++) for (let f = f0; f <= f1; f++) {
+        const iv = (CORDES_PC[k] + f - t + 120) % 12;
+        if (deg.includes(iv)) s += `<circle cx="${x(f)}" cy="${y(k)}" r="${z == null ? 5.5 : 7}" class="${iv ? "md-note" : "md-tonique"}"/>`;
+      }
+      return s + "</svg>";
+    }
+    const fr = (String(code).includes("-") ? String(code).split("-") : [...String(code)]).map(v => (/^\d+$/.test(v) ? +v : null));
+    if (fr.length !== 6) return "";
+    const joue = fr.filter(v => v > 0), lo = Math.min(...joue), hi = Math.max(...joue);
+    const debut = hi <= 4 ? 1 : lo, n = Math.max(4, hi - debut + 1);
+    const cw = 22, rh = 26, W = 5 * cw + 44, H = n * rh + 40;
+    const x = k => 26 + k * cw, y = f => 24 + (f - debut + 0.5) * rh;
+    let s = `<svg ${NS} viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">`;
+    for (let k = 0; k < 6; k++) s += `<line x1="${x(k)}" x2="${x(k)}" y1="24" y2="${24 + n * rh}" class="md-corde"/>`;
+    for (let i = 0; i <= n; i++) s += `<line x1="${x(0)}" x2="${x(5)}" y1="${24 + i * rh}" y2="${24 + i * rh}" class="${!i && debut === 1 ? "md-sillet" : "md-frette"}"/>`;
+    if (debut > 1) s += `<text x="${x(5) + 14}" y="${y(debut)}" class="md-num">${debut}</text>`;
+    fr.forEach((v, k) => { if (v == null || v === 0) s += `<text x="${x(k)}" y="12" class="md-haut">${v == null ? "×" : "○"}</text>`; });
+    // un barré : la plus petite case, posée sur la corde la plus grave jouée et sur la plus aiguë
+    const prem = fr.findIndex(v => v != null), barre = joue.length >= 4 && fr[prem] === lo && fr[5] === lo && fr.filter(v => v === lo).length >= 2;
+    if (barre) s += `<rect x="${x(prem) - 7}" y="${y(lo) - 7}" width="${x(5) - x(prem) + 14}" height="14" rx="7" class="md-note"/>`;
+    fr.forEach((v, k) => { if (v > 0 && !(barre && v === lo)) s += `<circle cx="${x(k)}" cy="${y(v)}" r="8" class="md-note"/>`; });
+    return s + "</svg>";
+  }
+  // « Jeu facile : arpèges lents… (4 min) » : un titre, son détail et sa durée
+  function decoupeExo(label) {
+    const m = String(label).match(/^(.*?)\s*\((\d+ ?min)\)$/);
+    const sans = m ? m[1] : label, i = sans.indexOf(" : ");
+    return { titre: i > 0 ? sans.slice(0, i) : sans, detail: i > 0 ? sans.slice(i + 3).replace(/^./, x => x.toUpperCase()) : "", duree: m?.[2] || "" };
+  }
+  function renderExo(c, b, e, positions, extra, onChange) {
     const key = exKey(b, e);
     const x = exState(c.id, key);
     const id = "x-" + c.id + "-" + key.replace(/\W/g, "-");
     const li = el("li", { class: "exo" + (x.done ? " is-done" : "") });
     const box = el("input", { type: "checkbox", class: "check", id, checked: !!x.done, "aria-label": e.label });
     box.addEventListener("change", () => { x.done = box.checked; li.classList.toggle("is-done", x.done); touch(c); save(); onChange(x.done); });
-    const label = el("label", { class: "exo-label", for: id }, e.label, e.aide ? el("span", { class: "aide", text: e.aide }) : null);
+    const dec = decoupeExo(e.label);
+    const label = el("label", { class: "exo-label", for: id },
+      el("span", { class: "exo-titre", text: dec.titre }),
+      dec.detail ? el("span", { class: "exo-detail", text: dec.detail }) : null,
+      e.aide ? el("span", { class: "aide", text: e.aide }) : null);
     const main = el("div", { class: "exo-main" }, box, label);
+    if (dec.duree) main.append(el("span", { class: "exo-duree", text: dec.duree }));
     if (positions?.length) label.append(el("span", { class: "exo-pos" }, positions.map(posBtn)));
     // Tempo qui progresse : on part un peu sous la cible, +4 bpm après 3 passages propres d'affilée, jusqu'à la cible
     const depart = e.tempo ? Math.max(40, e.tempo - 10) : 0;
@@ -914,9 +1156,11 @@
       const passes = x.passes || 0;
       if (chip) chip.textContent = `${bpmNow()} bpm`;
       progRow.replaceChildren(
-        el("span", {}, `Tu joues à ${bpmNow()} bpm, cible ${e.tempo}. `),
-        el("span", { class: "muted small" }, `${passes}/3 passages propres`),
-        el("button", { class: "link-btn", type: "button", text: "Propre", onclick: () => {
+        el("span", { class: "tempo-txt" }, `Tu joues à ${bpmNow()} bpm, cible ${e.tempo}.`),
+        el("div", { class: "passes" },
+        el("span", { class: "passes-n" }, `${passes}/3 passages propres`),
+        el("span", { class: "passes-btns" },
+        el("button", { class: "btn small", type: "button", text: "Propre", onclick: () => {
           x.passes = passes + 1;
           if (x.passes >= 3) {
             x.bpm = Math.min(e.tempo, bpmNow() + 4); x.passes = 0;
@@ -924,7 +1168,7 @@
           }
           touch(c); save(); drawProg(); onChange();
         } }),
-        el("button", { class: "link-btn", type: "button", text: "Pas propre", onclick: () => { x.passes = 0; save(); drawProg(); } }),
+        el("button", { class: "btn small", type: "button", text: "Pas propre", onclick: () => { x.passes = 0; save(); drawProg(); } }))),
       );
     };
     const moreRow = el("div", { class: "exo-more" });
@@ -953,7 +1197,16 @@
     const nb = el("button", { class: "link-btn", type: "button", text: x.note ? "Commentaire" : "+ Commentaire" });
     nb.addEventListener("click", () => { noteWrap.hidden = !noteWrap.hidden; if (!noteWrap.hidden) ta.focus(); });
     moreRow.append(nb);
-    li.append(...[progRow, moreRow, noteWrap].filter(Boolean));
+    // l'explication et les schémas de cet exercice, repliés dessous
+    let expl = null;
+    if (extra && (extra.expl.length || extra.sch.length)) {
+      const k = c.id + "/" + key + "/expl";
+      expl = el("details", { class: "exo-expl", open: !!state.open[k] },
+        el("summary", { text: extra.sch.length ? (extra.expl.length ? "Explication et schéma" : "Schéma") : "Explication" }),
+        el("div", { class: "exo-expl-in" }, ...extra.expl.flatMap(explBloc), extra.sch.length ? el("div", { class: "schemas" }, extra.sch.map(schemaFig)) : null));
+      expl.addEventListener("toggle", () => { if (!!state.open[k] !== expl.open) { state.open[k] = expl.open || undefined; save(); } });
+    }
+    li.append(...[expl, progRow, moreRow, noteWrap].filter(Boolean));
     if (e.jeux?.length && window.Jeux) {
       const row = el("div", { class: "exo-jeux" });
       const last = el("p", { class: "jeu-last" });
@@ -1587,7 +1840,7 @@
         jouer.textContent = `▶ Jouer le niveau ${n}`;
       };
       for (let i = 1; i <= 10; i++) {
-        const passe = i === 10 ? best[10] > 0 : best[i] >= 8;
+        const passe = i === 10 ? best[10] > 0 : best[i] >= 10;
         const b = el("button", { type: "button", role: "radio", class: "niv-pip" + (passe ? " passe" : "") + (auCours.includes(i) ? " cours" : ""), disabled: i > max, "aria-label": `Niveau ${i}`, text: String(i) });
         b.addEventListener("click", () => { n = i; state.jeuxNiv[f] = i; save(); sync(); });
         pips.append(b);
