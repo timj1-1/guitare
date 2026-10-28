@@ -1,5 +1,5 @@
 // Ma gratte : fonctionne hors ligne. Le cours et les retours du prof sont pris en ligne d'abord.
-const VERSION = "v44";
+const VERSION = "v45";
 // la voix : un fichier par phrase, nommé par son empreinte, donc gardé d'une version à l'autre
 const VOIX = "voix-1";
 // les sons de guitare (1,7 Mo) ne changent jamais : gardés à part, eux aussi, au lieu d'être retéléchargés à chaque version
