@@ -201,8 +201,10 @@
 
     // En-tête : un manche en bois, une case par exercice, qui s'allume quand il est fait
     const pr = progressOf(c);
-    const frets = el("div", { class: "frets", "aria-hidden": "true" });
-    frets.style.setProperty("--n", pr.total);
+    // le manche : une case par cours du palier ; elle se remplit au fil des exercices et reste allumée quand le cours est terminé
+    const duPalier = DATA.cours.filter(x => x.palier === c.palier);
+    const frets = el("div", { class: "frets", role: "group", "aria-label": `Les ${duPalier.length} cours du palier ${p.num}` });
+    frets.style.setProperty("--n", duPalier.length);
     const prLabel = el("span", { class: "progress-label" });
     const hero = el("header", { class: "hero" },
       el("span", { class: "hero-kicker", text: `Palier ${p.num} · ${p.nom}` }),
@@ -214,9 +216,16 @@
     if (!s.finishedAt) hero.append(renderSeance(c));
     const updateProgress = () => {
       const q = progressOf(c);
-      const keys = allEx(c).map(x => !!s.ex[x.key]?.done);
-      frets.replaceChildren(...keys.map((on, k) => el("i", { class: (on ? "on " : "") + (FRET_INLAYS.has(k + 1) ? "inlay" + (k + 1 === 12 ? " double" : "") : "") })));
-      prLabel.textContent = `${q.done} / ${q.total} exercices faits`;
+      frets.replaceChildren(...duPalier.map((x, k) => {
+        const px = x.id === c.id ? q : progressOf(x), fait = isDone(x.id), part = fait ? 1 : px.total ? px.done / px.total : 0;
+        const b = el("button", { type: "button", class: "fret" + (fait ? " on" : part ? " part" : "") + (x.id === c.id ? " ici" : "") + (FRET_INLAYS.has(k + 1) ? " inlay" + (k + 1 === 12 ? " double" : "") : ""),
+          "aria-label": `Cours ${x.num}${x.id === c.id ? " (celui-ci)" : ""} : ${fait ? "terminé" : `${px.done} exercices sur ${px.total}`}`, "aria-current": x.id === c.id ? "true" : null,
+          title: `Cours ${x.num}`, onclick: () => x.id !== c.id && selectCours(x.id) });
+        b.style.setProperty("--p", Math.round(part * 100) + "%");
+        return b;
+      }));
+      const fin = duPalier.filter(x => isDone(x.id)).length;
+      prLabel.textContent = `${q.done} / ${q.total} exercices faits · ${fin} cours terminé${fin > 1 ? "s" : ""} sur ${duPalier.length}`;
       const tab = document.querySelector(`.ctab[data-id="${c.id}"]`);
       if (tab && !isDone(c.id)) tab.classList.toggle("started", isStarted(c.id));
     };

@@ -623,14 +623,22 @@ dialog.schema-view::backdrop { background: var(--surface); }
     linear-gradient(to bottom, transparent calc(90% - 1.1px), rgba(230, 220, 198, 0.9) calc(90% - 1.1px) calc(90% + 1.1px), transparent calc(90% + 1.1px)),
     #241510;
 }
-.frets i { position: relative; border-right: 2px solid #b9b3a6; transition: background .25s; }
-.frets i.on { background: color-mix(in srgb, var(--brass) 70%, transparent); }
-.frets i.inlay::after {
-  content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
-  border-radius: 50%; background: var(--nacre); opacity: .55;
+.frets .fret {
+  position: relative; padding: 0; margin: 0; border: 0; border-right: 2px solid #b9b3a6; border-radius: 0; background: none; cursor: pointer; min-width: 0;
+  transition: background .25s;
 }
-.frets i.inlay.double::after { box-shadow: 0 -11px 0 var(--nacre), 0 11px 0 var(--nacre); background: transparent; opacity: .55; }
-.frets i.on.inlay::after { opacity: .9; }
+/* la case se remplit de gauche à droite avec les exercices du cours (--p), puis s'allume en entier quand le cours est terminé */
+.frets .fret.part { background: linear-gradient(to right, color-mix(in srgb, var(--brass) 70%, transparent) var(--p, 0%), transparent var(--p, 0%)); }
+.frets .fret.on { background: color-mix(in srgb, var(--brass) 70%, transparent); }
+.frets .fret.ici { box-shadow: inset 0 0 0 2px var(--nacre); }
+.frets .fret:focus-visible { outline: 3px solid var(--nacre); outline-offset: -3px; }
+@media (hover: hover) { .frets .fret:hover:not(.on) { background-color: color-mix(in srgb, var(--brass) 25%, transparent); } }
+.frets .fret.inlay::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%; background: var(--nacre); opacity: .55; pointer-events: none;
+}
+.frets .fret.inlay.double::after { box-shadow: 0 -11px 0 var(--nacre), 0 11px 0 var(--nacre); background: transparent; opacity: .55; }
+.frets .fret.on.inlay::after { opacity: .9; }
 
 /* Minuteur de séance, logé dans le manche */
 .hero .seance-card {
@@ -646,7 +654,7 @@ dialog.schema-view::backdrop { background: var(--surface); }
 .hero .seance-card .btn.primary { background: var(--brass); color: #241707; }
 @media (max-width: 420px) { .hero .seance-card { flex-wrap: nowrap; } .hero .seance-card .btn { width: auto; } }
 .hero .seance-txt { line-height: 1.25; }
-@media (prefers-reduced-motion: reduce) { .frets i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .frets .fret { transition: none; } }
 @media (max-width: 380px) { .hero .seance-ic { display: none; } }
 
 /* Pourquoi c'est utile, et quand tu t'en serviras */
