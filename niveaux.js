@@ -7,7 +7,7 @@
 (() => {
   "use strict";
   const J = window.Jeux; if (!J?.base) return;
-  const { Board, cadre, grille, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, shuffle, pick, son, nomsBtn } = J.base;
+  const { Board, cadre, grille, points, schema, aideBtn, schemaNotes, schemaOctaves, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, shuffle, pick, son, nomsBtn } = J.base;
   const corde = s => "la corde de " + NOM_CORDE[s];
   const BEMOL = { 1: "Ré♭", 3: "Mi♭", 6: "Sol♭", 8: "La♭", 10: "Si♭" };
   // noms usuels des tonalités et des accords
@@ -281,6 +281,36 @@
     return a;
   }
 
+  // ---------- Les schémas d'aide : ce qui sert dans le jeu, jusqu'au niveau joué ----------
+  function figuresAide(f, lvl, vertical, rev) {
+    if (rev) return [schemaNotes(STR, vertical), ...figuresAide("gammes", 10, vertical), ...figuresAide("penta", 10, vertical), ...figuresAide("accords", 10, vertical)];
+    if (f === "manche") return [schemaNotes(STR, vertical), lvl >= 7 ? schema({ titre: "Dièses et bémols", vertical, sous: "Un dièse monte d'une case, un bémol descend d'une case : Fa♯ = Sol♭.",
+      cases: STR.flatMap(s => Array.from({ length: 13 }, (_, k) => k).filter(k => !nat(s, k)).map(k => [s, k, "note", FR[pcOf(s, k)].replace("♯", "#")])) }) : null, lvl >= 9 ? schemaOctaves(vertical) : null].filter(Boolean);
+    if (f === "gammes" || f === "penta") {
+      const N = f === "penta" ? PENTAS : GAMMES;
+      const ids = [...new Set(N.slice(0, lvl).flatMap(L => L.pool().map(k => k.slice(2))))];
+      return ids.map(id => {
+        const P = POS[id], cases = casesPos(P).map(([s, fr]) => [s, fr, pcOf(s, fr) === P.ton ? "root" : "note", nomDe(OPEN[s] + fr)]);
+        return schema({ titre: nomPos(P), sous: "En rouge, la tonique.", cases, f0: P.win[0] === 0 ? 0 : P.win[0], f1: P.win[1], vertical });
+      });
+    }
+    // accords : les ouverts du jeu, puis les deux formes de barré
+    const keys = [...new Set(ACCORDS.slice(0, lvl).flatMap(L => L.pool()).map(k => (k[0] === "p" || k[0] === "o" ? k.slice(1) : k)))];
+    const figs = keys.filter(k => k.startsWith("c:")).map(k => {
+      const A = accord(k), hi = Math.max(3, ...A.fr);
+      return schema({ titre: nomAcc(A), cases: A.fr.map((fr, j) => [STR[j], Math.max(0, fr), fr < 0 ? "mute" : fr === 0 ? "note" : "note", fr > 0 ? nomDe(OPEN[STR[j]] + fr) : fr === 0 ? nomDe(OPEN[STR[j]]) : ""]).map(c => (pcOf(c[0], c[1]) === PC_DE(A.r) && c[2] !== "mute" ? [c[0], c[1], "root", c[3]] : c)), f0: 0, f1: hi, vertical });
+    });
+    const formes = [["E", "maj", "Forme Mi : Fa en case 1"], ["E", "min", "Forme Mi mineur : Fa mineur en case 1"], ["A", "maj", "Forme La : Si♭ en case 1"], ["A", "min", "Forme La mineur : Si♭ mineur en case 1"]];
+    if (keys.some(k => /^[EA]:/.test(k))) formes.forEach(([t, q, titre]) => {
+      if (!keys.some(k => k.startsWith(t + ":") && k.endsWith(":" + q))) return;
+      const A = accord(`${t}:1:${q}`);
+      figs.push(schema({ titre, sous: "Déplace la forme : la case de la note grave du barré donne le nom.", f0: 0, f1: 4, vertical,
+        cases: A.fr.map((fr, j) => (fr < 0 ? [STR[j], 0, "mute", ""] : [STR[j], fr, pcOf(STR[j], fr) === PC_DE(A.r) ? "root" : "note", nomDe(OPEN[STR[j]] + fr)])) }));
+    });
+    return figs;
+  }
+  const PC_DE = r => TON.indexOf(r);
+
   const PASSE = 10; // bonnes réponses du premier coup, sur 10, pour ouvrir le niveau suivant
   // ---------- La feuille du jeu ----------
   let dlg = null, run = null;
@@ -312,13 +342,22 @@
     const solveBtn = el("button", { class: "btn small", type: "button", text: "Résoudre" });
     const nextBtn = el("button", { class: "btn small primary", type: "button", text: "Suivant →", hidden: true });
     const ecoute = el("button", { class: "btn niv-ecoute", type: "button", hidden: true }, "🔊 Réécouter");
-    const actions = el("div", { class: "jeu-actions" }, hintBtn, solveBtn, nextBtn);
+    // recommencer la série du début (une faute d'inattention ne force pas à finir les 10 questions)
+    const restartBtn = el("button", { class: "btn small", type: "button", text: "↺ Recommencer", title: "Recommencer du début", onclick: () => (rev ? revision(opts) : ouvrir(f, lvl, opts)) });
+    const aide = aideBtn(vertical => figuresAide(f, lvl, vertical, rev), () => {
+      const Q = cur(); if (!Q || run.locked) return "";
+      run.help = true; clearTimeout(run.chrono);
+      const bar = chronoBar.firstChild; bar.style.width = getComputedStyle(bar).width; bar.style.transition = "none";
+      majProg();
+      return "Pour cette question, regarder les schémas compte comme un indice : elle reviendra.";
+    });
+    const actions = el("div", { class: "jeu-actions" }, hintBtn, solveBtn, nextBtn, aide, restartBtn);
     const boardHost = el("div", { class: "jeu-board-wrap" + (vertical ? " vertical" : "") });
     const answers = el("div", { class: "jeu-answers", hidden: true });
     const titre = rev ? "Révision du jour" : L.txt;
     const eyebrow = rev ? "Ce que tu as raté" : `${FAMILLES[f].titre} · niveau ${lvl}${sansFin ? " · entretien" : ""}`;
     // la règle du niveau, en une ligne courte sous la question du premier tour
-    const regle = rev ? "Réussies, ces questions reviendront moins souvent." : sansFin ? "3 vies : ton record est gardé." : lvl < 10 ? `${PASSE}/10 sans indice pour ouvrir le niveau ${lvl + 1}.` : "";
+    const regle = rev ? "Réussies, ces questions reviendront moins souvent." : sansFin ? (famMem(f).best[10] ? `3 vies. Ton record : ${famMem(f).best[10]} de suite.` : "3 vies : ton record est gardé.") : lvl < 10 ? `${PASSE}/10 sans indice pour ouvrir le niveau ${lvl + 1}.` : "";
     d.replaceChildren(cadre({ eyebrow, titre, idTitre: "nivTitre", gauche: [nomsBtn?.(), voixBtn].filter(Boolean), droite: [sound, close],
       q, prog, fb, boardHost: el("div", { class: "jeu-milieu" }, ecoute, boardHost), answers, actions, autres: [chronoBar] }));
     if (!d.open) d.showModal();
@@ -328,7 +367,16 @@
     run = { i: 0, ok: 0, vies: 3, serie: 0, faits: [], erreurs: 0, essais: 0, notes: 0, fautes: {}, t0: Date.now(), timer: null, chrono: null, locked: false, help: false, err: false, found: new Set(), hintLvl: 0, remis: new Set() };
     const me = run;
     const cur = () => run?.cur;
-    const setFb = (t, cls = "") => { fb.textContent = t; fb.className = "jeu-fb" + (cls ? " " + cls : ""); };
+    const setFb = (t, cls = "") => { fb.textContent = t; fb.className = "jeu-fb" + (cls ? " " + cls : ""); majProg(); };
+    // la progression : un point par question, rouge dès la première erreur ; en entretien, la série, les vies et le record
+    const record = () => (rev ? 0 : famMem(f).best[10] || 0);
+    function majProg() {
+      if (!run || run !== me) return;
+      if (sansFin) { prog.textContent = `Série ${run.serie} · ${"♥".repeat(Math.max(0, run.vies))}${"♡".repeat(3 - Math.max(0, run.vies))}` + (record() ? ` · Record ${Math.max(record(), run.serie)}` : ""); return; }
+      const res = run.faits.slice();
+      if (!run.locked && (run.err || run.help)) res[run.i] = false;
+      points(prog, queue.length, res, run.i);
+    }
     const k2 = (s, fr) => s + ":" + fr;
     const reste = Q => Q.targets.filter(([s, fr]) => !run.found.has(k2(s, fr)));
     const secs = Q => {
@@ -354,7 +402,6 @@
       answers.hidden = Q.type !== "choix";
       if (Q.type === "choix") grille(answers, Q.choix.map(c => el("button", { type: "button", class: "btn", "data-v": String(c.val), onclick: () => repond(c.val) }, aff(c.label), c.sub ? el("small", { text: aff(c.sub) }) : null)));
       q.textContent = Q.texte;
-      prog.textContent = sansFin ? `Série ${run.serie} · ${"♥".repeat(run.vies)}${"♡".repeat(3 - run.vies)}` : `${run.i + 1} / ${queue.length}`;
       setFb(rev ? `${FAMILLES[item.f].titre} · niveau ${item.lvl}` : run.i === 0 ? regle : "");
       hintBtn.hidden = solveBtn.hidden = false; hintBtn.disabled = lvl === 10 && !rev; nextBtn.hidden = true;
       if (hintBtn.disabled) hintBtn.hidden = true;
@@ -386,7 +433,7 @@
       if (Q.fin) { board.clear(); dessine(Q.fin); boardHost.hidden = false; }
       if (Q.son && Q.type === "cases") gratte(Q.son);
       hintBtn.hidden = solveBtn.hidden = true;
-      sauve();
+      sauve(); majProg();
       const delai = bon ? 950 : 2200;
       if (sansFin && run.vies <= 0) { run.timer = setTimeout(() => run === me && finir(), delai); return; }
       const suite = () => { if (run !== me) return; run.i++; if (!sansFin && run.i >= queue.length) finir(); else poser(); };
@@ -477,7 +524,8 @@
       const pct = total ? score / total : 0;
       const bravo = sansFin ? (record ? "Nouveau record !" : "Bien joué !") : pct === 1 ? "Parfait !" : pct >= 0.8 ? "Très bien !" : pct >= 0.5 ? "C'est en train de rentrer." : "On continue, ça va venir.";
       answers.hidden = true; ecoute.hidden = true; boardHost.hidden = false; actions.hidden = true; board?.dim(null, null);
-      q.textContent = bravo; prog.textContent = "";
+      q.textContent = bravo;
+      run.locked = true; majProg(); if (sansFin) prog.textContent = "";
       setFb(sansFin ? `Série de ${score} bonne${score > 1 ? "s" : ""} réponse${score > 1 ? "s" : ""}. Ton record : ${Math.max(score, famMem(f).best[10] || 0)}.`
         : `${score} juste${score > 1 ? "s" : ""} sur ${total} du premier coup.` + (ouvert ? ` Le niveau ${lvl + 1} est ouvert !` : !rev && lvl < 10 && score < PASSE ? ` Il en faut ${PASSE} pour ouvrir le niveau suivant.` : ""), pct >= 0.8 || record ? "good" : "");
       say(ouvert ? "Bravo, niveau suivant débloqué !" : bravo);

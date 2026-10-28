@@ -316,11 +316,18 @@
     const fb = el("p", { class: "jeu-fb", role: "status" });
     const hintBtn = el("button", { class: "btn small", type: "button", text: "💡 Indice" });
     const solveBtn = el("button", { class: "btn small", type: "button", text: "Résoudre" });
-    const retryBtn = el("button", { class: "btn small", type: "button", text: "↺ Réessayer", hidden: true, title: "Rejouer ce tour (il compte comme aidé)" });
+    const retryBtn = el("button", { class: "btn small", type: "button", text: "Rejouer ce tour", hidden: true, title: "Rejouer ce tour (il compte comme aidé)" });
     const nextBtn = el("button", { class: "btn small primary", type: "button", text: "Suivant →", hidden: true });
     const listenBtn = el("button", { class: "btn small listen-btn", type: "button", "aria-pressed": String(listen), title: "Jouer les notes sur ta guitare : le micro les reconnaît" });
     listenBtn.innerHTML = ICON_MIC; listenBtn.append(listen ? "Écoute : oui" : "Mode écoute");
-    const actions = el("div", { class: "jeu-actions" }, hintBtn, solveBtn, retryBtn, nextBtn, listenBtn);
+    const restartBtn = el("button", { class: "btn small", type: "button", text: "↺ Recommencer", title: "Recommencer du début", onclick: () => open(cfg, onDone) });
+    const aide = aideBtn(v => [schemaNotes(cfg.mode === "partout" || cfg.mode === "quiz" ? [6, 5, 4, 3, 2, 1] : (cfg.cordes?.length ? cfg.cordes : [6, 5, 4, 3, 2, 1]), v),
+      cfg.mode === "octave" ? schemaOctaves(v) : null].filter(Boolean), () => {
+      if (!run || run.locked) return "";
+      if (!run.roundHelp) { run.roundHelp = true; run.hints++; majProg(); }
+      return "Pour ce tour, regarder les schémas compte comme une aide.";
+    });
+    const actions = el("div", { class: "jeu-actions" }, hintBtn, solveBtn, retryBtn, nextBtn, aide, restartBtn, listenBtn);
     const level = el("i");
     const heardTxt = el("span", { text: "Je prépare le micro…" });
     const listenBar = el("div", { class: "jeu-listen", hidden: !listen }, el("span", { class: "jl-level", "aria-hidden": "true" }, level), heardTxt);
@@ -333,20 +340,29 @@
 
     const board = Board(boardHost, { vertical });
     const rounds = makeRounds(cfg, listen);
-    run = { i: 0, errors: 0, perfect: 0, roundErr: 0, found: new Set(), t0: 0, times: [], correct: 0, timer: null, locked: false, hints: 0, solved: 0, hintLevel: 0, wrongSeen: new Set() };
+    run = { res: [], i: 0, errors: 0, perfect: 0, roundErr: 0, found: new Set(), t0: 0, times: [], correct: 0, timer: null, locked: false, hints: 0, solved: 0, hintLevel: 0, wrongSeen: new Set() };
     const R = () => rounds[run?.i];
     const key = (s, f) => s + ":" + f;
     const left = r => r.targets.filter(([s, f]) => !run.found.has(key(s, f)));
     // à l'écoute, « partout » et « quiz » se jouent corde par corde, du Mi grave au Mi aigu
     const curString = r => (left(r)[0] || [])[0];
-    const setFb = (text, cls = "", speak = true) => { fb.textContent = text; fb.className = "jeu-fb" + (cls ? " " + cls : ""); if (speak) say(text); };
+    const setFb = (text, cls = "", speak = true) => { fb.textContent = text; fb.className = "jeu-fb" + (cls ? " " + cls : ""); if (speak) say(text); majProg(); };
+    // un point par tour : vert sans faute ni aide, rouge dès la première erreur
+    const me = run;
+    function majProg() {
+      if (run !== me || run.fini) return;
+      const res = run.res.slice();
+      if (res[run.i] == null && (run.roundErr || run.roundHelp)) res[run.i] = false;
+      points(prog, rounds.length, res, run.i);
+    }
 
     // retry : le même tour, rejoué après « Résoudre » (il reste compté comme aidé)
     function showRound(retry = false) {
       const r = R();
       board.clear(); run.found = new Set(); run.roundErr = 0; run.hintLevel = 0; run.roundHelp = retry; run.locked = false; run.wrongSeen = new Set();
       fb.textContent = ""; fb.className = "jeu-fb";
-      prog.textContent = `${run.i + 1} / ${rounds.length}`;
+      if (!retry) delete run.res[run.i];
+      majProg();
       hintBtn.hidden = solveBtn.hidden = false; nextBtn.hidden = retryBtn.hidden = true; hintBtn.disabled = false;
       q.textContent = r.seq ? `${r.q} : commence par ${corde(curString(r))}` : r.q;
       board.dim(r.only || (r.ask ? [r.ask[0]] : r.seq ? [curString(r)] : null));
@@ -375,6 +391,7 @@
       run.locked = true;
       play(OPEN[s] + f);
       answers.querySelectorAll("button").forEach(b => { b.disabled = true; if (b.dataset.v === r.answer) b.classList.add("good"); else if (b.dataset.v === n) b.classList.add("bad"); });
+      run.res[run.i] = n === r.answer && !run.roundHelp;
       if (n === r.answer) {
         run.correct++; if (!run.roundHelp) run.perfect++; run.times.push(ms); board.set(s, f, "ok", r.answer);
         setFb(ms < 3000 ? `Oui, ${r.answer} ! (${(ms / 1000).toFixed(1).replace(".", ",")} s)` : `Oui, ${r.answer}. ${(ms / 1000).toFixed(1).replace(".", ",")} s : vise moins de 3 s.`, "good", false);
@@ -404,7 +421,7 @@
         return;
       }
       if (!run.roundErr && !run.roundHelp) run.perfect++;
-      run.correct++;
+      run.correct++; run.res[run.i] = !run.roundErr && !run.roundHelp;
       setFb(run.roundHelp ? "Trouvé !" : run.roundErr ? "Trouvé !" : "Parfait, sans erreur !", "good");
       if (r.src) board.set(r.src[0], r.src[1], "src", r.note);
       hintBtn.hidden = solveBtn.hidden = true;
@@ -478,7 +495,7 @@
     // Résoudre : montre la réponse ; le tour ne compte pas comme réussi
     solveBtn.addEventListener("click", () => {
       const r = R(); if (!r || run.locked) return;
-      run.solved++; run.locked = true; run.roundHelp = true; clearTimeout(run.timer);
+      run.solved++; run.locked = true; run.roundHelp = true; clearTimeout(run.timer); run.res[run.i] = false;
       if (r.ask) {
         const [s, f] = r.ask;
         board.set(s, f, "sol", r.answer); play(OPEN[s] + f);
@@ -509,7 +526,7 @@
       const pct = score / rounds.length;
       const bravo = pct === 1 ? "Parfait !" : pct >= 0.8 ? "Très bien !" : pct >= 0.5 ? "C'est en train de rentrer." : "On continue, ça va venir.";
       answers.hidden = true; board.dim(null); actions.hidden = true;
-      q.textContent = bravo; prog.textContent = "";
+      q.textContent = bravo; majProg(); run.fini = true;
       fb.className = "jeu-fb";
       fb.textContent = (isAsk ? `${score} bonnes réponses sur ${rounds.length}` : `${score} tours sur ${rounds.length} sans aide ni erreur, ${run.errors} erreur${run.errors > 1 ? "s" : ""}`)
         + (run.hints ? `, ${run.hints} indice${run.hints > 1 ? "s" : ""}` : "") + (run.solved ? `, ${run.solved} résolu${run.solved > 1 ? "s" : ""}` : "")
@@ -560,7 +577,69 @@
     answers.replaceChildren(...parRang.map(m => el("div", { class: "jeu-rang" }, ...boutons.slice(k, (k += m)))));
   }
 
+  // La progression : « 3 / 10 », puis un point par question (vert du premier coup, rouge raté ou aidé)
+  function points(prog, total, res, i) {
+    prog.replaceChildren(el("span", { class: "jp-n", text: `${Math.min(i + 1, total)} / ${total}` }),
+      el("span", { class: "jeu-points", "aria-hidden": "true" }, Array.from({ length: total }, (_, k) =>
+        el("i", { class: res[k] === true ? "ok" : res[k] === false ? "ko" : k === i ? "cur" : "" }))));
+    const ko = res.filter(x => x === false).length;
+    prog.setAttribute("aria-label", `Question ${Math.min(i + 1, total)} sur ${total}` + (ko ? `, ${ko} ratée${ko > 1 ? "s" : ""}` : ""));
+  }
+
+  // ---------- Les schémas d'aide : un petit manche, dans le même sens que celui du jeu ----------
+  // cases : [corde (1 = Mi aigu … 6 = Mi grave), case, "note" | "root" | "mute", étiquette]
+  function schema({ titre, sous, cases, f0 = 0, f1 = 12, vertical = false }) {
+    const d0 = Math.max(1, f0), n = f1 - d0 + 1, ouv = f0 === 0, pas = n > 8 ? 26 : 32, ec = 22;
+    const long = 22 + (ouv ? 18 : 6) + n * pas + 8, large = 18 + 5 * ec + 30;
+    const W = vertical ? large : long, H = vertical ? long : large;
+    // a : le long du manche (cases) ; c : en travers (cordes, le Mi grave à gauche en vertical, en bas en horizontal)
+    const a0 = 22 + (ouv ? 18 : 6);
+    const A = f => (f === 0 ? a0 - 11 : a0 + (f - d0 + 0.5) * pas), C = s => (vertical ? 22 + (6 - s) * ec : 14 + (s - 1) * ec);
+    const P = (a, c) => (vertical ? [c, a] : [a, c]);
+    const ligne = (a1, c1, a2, c2, cls) => { const [x1, y1] = P(a1, c1), [x2, y2] = P(a2, c2); return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${cls}"/>`; };
+    let svg = "";
+    for (let k = 0; k <= n; k++) svg += ligne(a0 + k * pas, C(vertical ? 6 : 1), a0 + k * pas, C(vertical ? 1 : 6), !k && ouv ? "sc-sillet" : "sc-frette");
+    for (let s = 1; s <= 6; s++) svg += ligne(a0, C(s), a0 + n * pas, C(s), "sc-corde");
+    const txt = (a, c, t, cls) => { const [x, y] = P(a, c); return `<text x="${x}" y="${y}" class="${cls}">${t}</text>`; };
+    for (let f = d0; f <= f1; f++) if (n <= 6 || [3, 5, 7, 9, 12].includes(f)) svg += txt(A(f), vertical ? 9 : H - 9, f, "sc-num");
+    for (let s = 1; s <= 6; s++) svg += txt(vertical ? 9 : 10, C(s), aff(NOM_CORDE[s].split(" ")[0]).slice(0, 3), "sc-corde-nom");
+    for (const [s, f, cls, lab] of cases) {
+      const [x, y] = P(A(f), C(s));
+      if (cls === "mute") { svg += `<text x="${x}" y="${y}" class="sc-mute">×</text>`; continue; }
+      svg += `<circle cx="${x}" cy="${y}" r="9.5" class="sc-${cls}"/>` + (lab ? `<text x="${x}" y="${y}" class="sc-lab">${aff(lab).replace("♯", "#").replace("♭", "b")}</text>` : "");
+    }
+    const fig = el("figure", { class: "jeu-schema" }, el("figcaption", {}, el("strong", { text: titre }), sous ? el("span", { text: sous }) : null));
+    const art = el("div", { class: "js-art" }); art.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${titre}">${svg}</svg>`;
+    fig.append(art);
+    return fig;
+  }
+  // Le bouton « Schémas » : ouvre par-dessus le jeu les schémas qui aident (figures() est appelé à l'ouverture)
+  function aideBtn(figures, onOpen) {
+    const b = el("button", { class: "btn small", type: "button", text: "📖 Schémas" });
+    b.addEventListener("click", () => {
+      const host = b.closest(".jeu-in"); if (!host || host.querySelector(".jeu-aide")) return;
+      const avertir = onOpen?.();
+      const fermer = () => { pane.remove(); b.focus({ preventScroll: true }); };
+      const vertical = window.matchMedia("(max-width: 700px)").matches;
+      const pane = el("div", { class: "jeu-aide", role: "dialog", "aria-label": "Schémas" },
+        el("div", { class: "ja-tete" }, el("strong", { text: "Schémas" }), el("button", { class: "icon-btn", type: "button", "aria-label": "Fermer les schémas", text: "✕", onclick: fermer })),
+        avertir ? el("p", { class: "ja-note", text: avertir }) : null,
+        el("div", { class: "ja-liste" }, figures(vertical)));
+      // Échap ferme les schémas, pas le jeu
+      pane.addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); fermer(); } });
+      host.append(pane); pane.querySelector(".icon-btn").focus({ preventScroll: true });
+    });
+    return b;
+  }
+  // les notes naturelles sur des cordes, cases 0 à 12
+  const schemaNotes = (cordes, vertical, sous) => schema({ titre: "Les notes naturelles", vertical,
+    sous: sous || "Mi-Fa et Si-Do : une seule case d'écart. Entre les autres notes : 2 cases.",
+    cases: cordes.flatMap(s => Array.from({ length: 13 }, (_, f) => f).filter(f => isNatural(s, f)).map(f => [s, f, "note", nameOf(s, f)])) });
+  const schemaOctaves = vertical => schema({ titre: "Les octaves", vertical, f0: 1, f1: 8,
+    sous: "Deux cordes plus loin vers l'aigu : +2 cases depuis le Mi grave ou le La, +3 depuis le Ré ou le Sol.",
+    cases: [[6, 3, "root", "Sol"], [4, 5, "root", "Sol"], [5, 2, "note", "Si"], [3, 4, "note", "Si"], [4, 2, "root", "Mi"], [2, 5, "root", "Mi"], [3, 2, "note", "La"], [1, 5, "note", "La"]] });
+
   window.Jeux = { open, resume, MODES, NOM_CORDE, ecouteEnCours: () => !!mic,
     // pour les jeux à niveaux (niveaux.js)
-    base: { Board, cadre, grille, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, nameOf, shuffle, pick, play, nomsBtn, son: { get: () => soundOn, set: v => { soundOn = !!v; try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} } } } };
+    base: { Board, cadre, grille, points, schema, aideBtn, schemaNotes, schemaOctaves, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, nameOf, shuffle, pick, play, nomsBtn, son: { get: () => soundOn, set: v => { soundOn = !!v; try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} } } } };
 })();
