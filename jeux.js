@@ -354,7 +354,6 @@
       const res = run.res.slice();
       if (res[run.i] == null && (run.roundErr || run.roundHelp)) res[run.i] = false;
       points(prog, rounds.length, res, run.i);
-      restartBtn.classList.toggle("primary", res.includes(false));
     }
 
     // retry : le même tour, rejoué après « Résoudre » (il reste compté comme aidé)

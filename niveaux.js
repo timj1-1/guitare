@@ -376,7 +376,6 @@
       const res = run.faits.slice();
       if (!run.locked && (run.err || run.help)) res[run.i] = false;
       points(prog, queue.length, res, run.i);
-      restartBtn.classList.toggle("primary", !rev && lvl < 10 && res.includes(false));
     }
     const k2 = (s, fr) => s + ":" + fr;
     const reste = Q => Q.targets.filter(([s, fr]) => !run.found.has(k2(s, fr)));
