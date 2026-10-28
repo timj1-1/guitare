@@ -234,7 +234,7 @@
     if (c.num === 1 && !mots.length) {
       body.append(el("div", { class: "card prof-card" },
         el("span", { class: "eyebrow", text: "Comment ça marche" }),
-        el("p", { text: "Coche chaque exercice fait, dis si c'était facile, correct ou une galère, note ton tempo et un commentaire si besoin." }),
+        el("p", { text: "Coche chaque exercice fait, dis si c'était une galère, correct ou facile, note ton tempo et un commentaire si besoin." }),
         el("p", { text: "À la fin, touche « Terminer le cours ». Après le cours 3, le dernier de la semaine, envoie-moi ton bilan : j'adapte la semaine suivante." }),
       ));
     }
@@ -311,10 +311,22 @@
         b.voix?.quand ? speakBtn(b.voix.quand, "Écouter", "Écouter pourquoi c'est utile") : null));
       inner.append(q);
     }
-    inner.append(programme(b));
-
     // les explications et les schémas vont dans l'exercice dont ils parlent ; le reste (le principe…) reste au bloc
     const rg = rangeBloc(b, (b.schemas || []).map(k => SCHEMAS[k]).filter(Boolean));
+    if (rg.general.length) {
+      const prKey = openKey + "/principe";
+      // ouvert tant qu'un exercice demande de le lire (« Lire « Comprendre les barrés » »)
+      const aLire = b.exercices.some(e => /^Lire\b/.test(e.label) && !s.ex[exKey(b, e)]?.done);
+      const titre = rg.general.find(t => t?.titre)?.titre || "Le principe";
+      const pr = el("details", { class: "quand principe", open: aLire || !!state.open[prKey] }, el("summary", { text: titre }));
+      pr.addEventListener("toggle", () => { if (!!state.open[prKey] !== pr.open) { state.open[prKey] = pr.open || undefined; save(); } });
+      pr.append(el("div", { class: "quand-in principe-in" },
+        ...rg.general.flatMap((t, k) => (k === 0 && t?.titre ? explBloc({ ...t, titre: "" }) : explBloc(t))),
+        speakBtn(rg.general.flatMap(voixSection), "Écouter", "Écouter le principe")));
+      inner.append(pr);
+    }
+    inner.append(programme(b));
+
     if (rg.schGen.length) inner.append(el("div", { class: "schemas" }, rg.schGen.map(schemaFig)));
 
     const tools = el("div", { class: "row-tools" });
@@ -354,17 +366,14 @@
     inner.append(ul);
     const jb = jeuBloc(c, bi); if (jb) inner.append(jb);
 
-    const moreKey = openKey + "/more";
-    const more = el("details", { class: "more", open: state.open[moreKey] ?? true }, el("summary", { text: rg.general.length ? "Le principe et les vidéos" : "Écouter l'explication et les vidéos" }));
-    more.addEventListener("toggle", () => { if (state.open[moreKey] !== more.open) { state.open[moreKey] = more.open; save(); } });
-    const mi = el("div", { class: "more-in" });
-    if (b.voix?.explication?.length) mi.append(el("div", { class: "row-tools" }, speakBtn(b.voix.explication, "Écouter l'explication", "Écouter l'explication")));
-    mi.append(...rg.general.flatMap(explBloc));
-    // ouvert tant qu'un exercice demande de lire l'explication (« Lire « Comprendre les barrés… » »)
-    if (b.exercices.some(e => /^Lire\b/.test(e.label) && !s.ex[exKey(b, e)]?.done)) more.open = true;
-    if (b.videos?.length) mi.append(el("p", { class: "eyebrow", text: "Vidéos" }), lecteur(b.videos, b.titre, { liste: true }));
-    more.append(mi);
-    inner.append(more);
+    // en bas du bloc, seulement les vidéos : ouvertes de base, repliables
+    if (b.videos?.length) {
+      const vidKey = openKey + "/videos";
+      const vids = el("details", { class: "more", open: state.open[vidKey] ?? true }, el("summary", { text: b.videos.length > 1 ? `Les vidéos (${b.videos.length})` : "La vidéo" }),
+        el("div", { class: "more-in" }, lecteur(b.videos, b.titre, { liste: true })));
+      vids.addEventListener("toggle", () => { if ((state.open[vidKey] ?? true) !== vids.open) { state.open[vidKey] = vids.open; save(); } });
+      inner.append(vids);
+    }
     return card;
   }
 
@@ -388,24 +397,44 @@
     const vise = L.some(x => x.cible != null);
     return Sons.dire(L.map(x => x.t), { force: true, onSeg: vise ? i => montre(L[i]?.cible) : null }).finally(() => { if (vise && n === parleN) montre(null); });
   }
-  // la partie dont parle le prof grossit un peu, au centre de l'écran ; l'écran descend doucement vers la suivante
+  // la partie dont parle le prof grossit un peu et ses voisines s'écartent pour lui faire de la place, sans rien recouvrir.
+  // L'écran glisse en même temps : la partie au centre, ou son haut sous les onglets si elle est plus grande que l'écran.
   function montre(cible) {
-    document.querySelectorAll(".en-parole, .pres-parole").forEach(e => { e.classList.remove("en-parole", "pres-parole"); e.style.removeProperty("--zoom"); });
-    if (cible == null || state.view !== "cours" || !Reglages.get("animation")) return;
     const body = $("#coursBody");
-    // l'en-tête, les mots du prof, puis les 6 blocs : plus une partie est proche de celle annoncée, plus elle grossit
-    const suite = [body.querySelector(".hero"), ...body.querySelectorAll(".prof-card, .palier-card"), ...body.querySelectorAll(".bloc")].filter(Boolean);
+    const parties = [body.querySelector(".hero"), ...body.querySelectorAll(".prof-card, .palier-card"), ...body.querySelectorAll(".bloc")].filter(Boolean);
+    const efface = () => body.querySelectorAll(".en-parole, .pres-parole").forEach(x => { x.classList.remove("en-parole", "pres-parole"); x.style.removeProperty("--zoom"); x.style.removeProperty("--marge"); });
+    if (cible == null || state.view !== "cours" || !Reglages.get("animation")) return efface();
     const e = cible === "tete" ? body.querySelector(".hero") : cible === "palier" ? body.querySelector(".palier-card")
       : String(cible).startsWith("mot:") ? body.querySelectorAll(".prof-card")[+String(cible).slice(4)]
       : body.querySelectorAll(".bloc")[cible];
-    if (!e) return;
-    const i = suite.indexOf(e);
-    suite.forEach((x, j) => { const d = Math.abs(j - i); if (d <= 2) { x.classList.add("pres-parole"); x.style.setProperty("--zoom", [1.05, 1.022, 1.008][d]); } });
-    e.classList.add("en-parole");
-    const grand = e.getBoundingClientRect().height > window.innerHeight * 0.6;
-    e.scrollIntoView({ behavior: "smooth", block: grand ? "start" : "center" });
+    if (!e) return efface();
+    if (e.classList.contains("en-parole")) return; // même partie que la phrase d'avant : rien ne bouge
+    const i = parties.indexOf(e);
+    // grossir de 4 % au plus, et jamais de plus de 36 px : une grande partie ouverte grossit à peine
+    const pose = () => parties.forEach((x, j) => {
+      const d = Math.abs(j - i);
+      if (d > 2) { x.classList.remove("pres-parole", "en-parole"); x.style.removeProperty("--zoom"); x.style.removeProperty("--marge"); return; }
+      const h = x.offsetHeight, z = Math.min([1.04, 1.015, 1.005][d], 1 + 36 / Math.max(h, 1));
+      x.classList.add("pres-parole"); x.classList.toggle("en-parole", d === 0);
+      x.style.setProperty("--zoom", z.toFixed(4)); x.style.setProperty("--marge", ((z - 1) * h / 2 + (d === 0 ? 6 : 0)).toFixed(1) + "px");
+    });
+    // on mesure où la partie arrivera (sans animation), on remet tout, puis on lance l'animation et le défilement ensemble
+    const avant = parties.map(x => [x.className, x.style.getPropertyValue("--zoom"), x.style.getPropertyValue("--marge")]);
+    body.classList.add("mesure-parole"); pose();
+    const r = e.getBoundingClientRect();
+    parties.forEach((x, j) => { x.className = avant[j][0]; ["--zoom", "--marge"].forEach((k, n) => avant[j][n + 1] ? x.style.setProperty(k, avant[j][n + 1]) : x.style.removeProperty(k)); });
+    void body.offsetHeight; body.classList.remove("mesure-parole"); void body.offsetHeight;
+    pose();
+    const haut = Math.max(0, ...[".top", "#coursTabs"].map(q => document.querySelector(q)?.getBoundingClientRect().bottom || 0));
+    const bas = document.querySelector(".tabbar")?.getBoundingClientRect().top || innerHeight, dispo = bas - haut;
+    const y = r.height <= dispo * 0.92 ? scrollY + r.top + r.height / 2 - (haut + dispo / 2) : scrollY + r.top - haut - 12;
+    window.scrollTo({ top: Math.max(0, y), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 
+  // ce que dit le prof pour une partie d'explication : les mêmes phrases que voix_explication() de tools/build_cours.py (donc déjà enregistrées)
+  const voixSection = t => typeof t === "string" ? [t] : [
+    ...(t.titre ? [t.titre + "."] : []), ...(t.liste || []),
+    ...(t.table ? t.table.slice(1).map(r => r[0] + " : " + t.table[0].slice(1, r.length).map((h, i) => h.split(" (")[0].toLowerCase() + " " + r[i + 1]).join(", ") + ".") : [])];
   // une partie d'explication : un paragraphe, ou un titre avec sa liste ou son tableau
   function explBloc(t) {
     if (typeof t === "string") return [el("p", { text: t })];
@@ -1044,13 +1073,13 @@
     return card;
   }
 
-  // un bouton de position : 1er toucher, une bulle avec le dessin ; 2e toucher, Mon manche
+  // un bouton de position : un toucher ouvre une bulle avec le dessin, un 2e la ferme ; Mon manche s'ouvre par le bouton de la bulle
   function posBtn(pz) {
-    const btn = el("button", { class: "btn small pos-btn", type: "button", title: "Aperçu, puis Mon manche", "aria-expanded": "false" });
+    const btn = el("button", { class: "btn small pos-btn", type: "button", title: "Aperçu de la position", "aria-expanded": "false" });
     btn.innerHTML = ICON_POS; btn.append(pz.label);
     btn.addEventListener("click", ev => {
       ev.preventDefault(); ev.stopPropagation();
-      if (bulle?.btn === btn) { fermeBulle(); go("manche", { pos: pz.code }); } else ouvreBulle(btn, pz);
+      if (bulle?.btn === btn) fermeBulle(); else ouvreBulle(btn, pz);
     });
     return btn;
   }
@@ -1151,7 +1180,9 @@
     li.append(main);
 
     const progRow = e.tempo ? el("div", { class: "tempo-prog" }) : null;
+    let tempoIn = null;
     const drawProg = () => {
+      if (tempoIn) tempoIn.value = x.tempo ?? bpmNow();
       if (!progRow) return;
       const passes = x.passes || 0;
       if (chip) chip.textContent = `${bpmNow()} bpm`;
@@ -1164,6 +1195,7 @@
           x.passes = passes + 1;
           if (x.passes >= 3) {
             x.bpm = Math.min(e.tempo, bpmNow() + 4); x.passes = 0;
+            if (x.tempo != null && x.tempo < x.bpm) x.tempo = x.bpm;
             toast(x.bpm >= e.tempo ? `Cible atteinte : ${e.tempo} bpm !` : `Monte à ${x.bpm} bpm.`);
           }
           touch(c); save(); drawProg(); onChange();
@@ -1174,7 +1206,7 @@
     const moreRow = el("div", { class: "exo-more" });
     if (progRow) drawProg();
     const feel = el("div", { class: "feel", role: "group", "aria-label": "Ressenti" });
-    [["facile", "Facile"], ["correct", "Correct"], ["galere", "Galère"]].forEach(([k, t]) => {
+    [["galere", "Galère"], ["correct", "Correct"], ["facile", "Facile"]].forEach(([k, t]) => {
       const fb = el("button", { type: "button", "data-feel": k, "aria-pressed": String(x.feel === k), text: t });
       fb.addEventListener("click", () => {
         x.feel = x.feel === k ? undefined : k;
@@ -1185,9 +1217,18 @@
     });
     moreRow.append(feel);
     if (e.tempo) {
-      const tin = el("input", { type: "number", inputmode: "numeric", min: "20", max: "260", placeholder: String(e.tempo), value: x.tempo ?? "", "aria-label": "Tempo atteint" });
-      tin.addEventListener("input", () => { const v = parseInt(tin.value, 10); x.tempo = Number.isFinite(v) ? v : undefined; touch(c); save(); });
-      moreRow.append(el("label", { class: "tempo-in" }, "Atteint", tin, "bpm"));
+      // le tempo atteint part du tempo de départ de l'exercice (50 pour une cible de 60), et devient le tempo de travail
+      const tin = el("input", { type: "number", inputmode: "numeric", min: "20", max: "260", value: x.tempo ?? bpmNow(), "aria-label": "Tempo atteint" });
+      const pose = v => {
+        if (!Number.isFinite(v)) return;
+        v = Math.max(20, Math.min(260, v)); x.tempo = v; x.bpm = Math.min(v, Math.max(e.tempo, bpmNow())); x.passes = 0;
+        if (+tin.value !== v) tin.value = v;
+        touch(c); save(); drawProg();
+      };
+      tin.addEventListener("change", () => pose(parseInt(tin.value, 10)));
+      const pas = d => el("button", { class: "icon-btn tempo-pas", type: "button", "aria-label": d > 0 ? "Plus 2 bpm" : "Moins 2 bpm", text: d > 0 ? "+" : "−", onclick: () => pose((parseInt(tin.value, 10) || bpmNow()) + d) });
+      tempoIn = tin;
+      moreRow.append(el("div", { class: "tempo-in" }, el("span", { text: "Atteint" }), pas(-2), tin, pas(2), el("span", { text: "bpm" })));
     }
     const noteWrap = el("div", { class: "note-field", hidden: !x.note });
     const ta = el("textarea", { rows: "2", placeholder: "Ce qui coince, une sensation, une question…", "aria-label": "Commentaire" });
@@ -1203,7 +1244,8 @@
       const k = c.id + "/" + key + "/expl";
       expl = el("details", { class: "exo-expl", open: !!state.open[k] },
         el("summary", { text: extra.sch.length ? (extra.expl.length ? "Explication et schéma" : "Schéma") : "Explication" }),
-        el("div", { class: "exo-expl-in" }, ...extra.expl.flatMap(explBloc), extra.sch.length ? el("div", { class: "schemas" }, extra.sch.map(schemaFig)) : null));
+        el("div", { class: "exo-expl-in" }, extra.expl.length ? el("div", { class: "row-tools" }, speakBtn(extra.expl.flatMap(voixSection), "Écouter l'explication", "Écouter l'explication de cet exercice")) : null,
+          ...extra.expl.flatMap(explBloc), extra.sch.length ? el("div", { class: "schemas" }, extra.sch.map(schemaFig)) : null));
       expl.addEventListener("toggle", () => { if (!!state.open[k] !== expl.open) { state.open[k] = expl.open || undefined; save(); } });
     }
     li.append(...[expl, progRow, moreRow, noteWrap].filter(Boolean));
@@ -1458,7 +1500,7 @@
       for (const { e, occ } of groups.values()) {
         const n = occ.filter(o => o.v.done).length, bits = [];
         const fe = {}; occ.forEach(o => { if (o.v.feel) fe[o.v.feel] = (fe[o.v.feel] || 0) + 1; });
-        for (const k of ["facile", "correct", "galere"]) if (fe[k]) bits.push(FEEL[k] + (fe[k] > 1 ? ` ×${fe[k]}` : ""));
+        for (const k of ["galere", "correct", "facile"]) if (fe[k]) bits.push(FEEL[k] + (fe[k] > 1 ? ` ×${fe[k]}` : ""));
         const tp = Math.max(0, ...occ.map(o => o.v.tempo || 0));
         if (tp) bits.push(`${tp} bpm` + (e.tempo ? ` (objectif ${e.tempo})` : ""));
         L.push(`[${n}/${occ.length}] ${e.label}` + (bits.length ? " — " + bits.join(", ") : ""));
