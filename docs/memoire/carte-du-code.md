@@ -1,5 +1,7 @@
 # Carte du code (dépôt timj1-1/guitare, v48)
 
+_Mis à jour le 2026-11-02 (app v48)._
+
 L'app est en JavaScript sans framework ni étape de compilation. Les cours sont générés en Python. Les chemins sont relatifs à la racine du dépôt.
 
 ## L'app (ce qui est publié)
