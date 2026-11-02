@@ -1,5 +1,7 @@
 # Décisions déjà prises
 
+_Mis à jour le 2026-11-02 (app v48)._
+
 Les dates viennent des notes du projet et de l'historique du dépôt. « À confirmer » signale une date ou une raison que les notes ne donnent pas.
 
 ## Le projet

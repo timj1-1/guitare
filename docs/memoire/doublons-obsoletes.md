@@ -1,5 +1,7 @@
 # Fichiers en doublon ou obsolètes (2 novembre 2026)
 
+_Mis à jour le 2026-11-02 (app v48)._
+
 Je n'ai rien supprimé ni déplacé. C'est à toi de décider.
 
 ## À supprimer sans risque

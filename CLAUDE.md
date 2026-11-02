@@ -21,5 +21,8 @@ App de guitare personnelle de Timothée (PWA, JavaScript sans framework, cours g
 
 Les fiches personnelles (profil de Timothée, résumé, pédagogie) ne sont pas dans le dépôt, qui est public : elles sont dans le dossier du projet, `/mnt/project-files/memoire-projet/` (`resume.md`, `pedagogie.md`). Ne les copie jamais ici.
 
-## Tenir la mémoire à jour
-Après un changement qui compte (nouvelle version, décision, bug résolu), corrige la fiche concernée dans la même PR, en une ou deux lignes. Si la fiche et le code ne sont pas d'accord, le code a raison : corrige la fiche.
+## Tenir la mémoire à jour (c'est ton travail, pas celui de Timothée)
+1. À chaque grosse mise à jour de l'app (nouvelle version, décision, bug résolu), corrige la fiche concernée dans la même PR, en une ou deux lignes, et change la ligne « Mis à jour le… (app vXX) » en haut de la fiche.
+2. Tous les 15 jours, un contrôle automatique compare les fiches au code et ouvre une PR avec les corrections. Timothée peut aussi écrire « mets à jour la mémoire » dans n'importe quel fil.
+3. Si une fiche et le code se contredisent, le code a raison : corrige la fiche.
+4. Fiches personnelles (`resume.md`, `pedagogie.md`) : mêmes règles, mais dans `/mnt/project-files/memoire-projet/`, jamais dans le dépôt.
