@@ -15,11 +15,11 @@ App de guitare personnelle de Timothée (PWA, JavaScript sans framework, cours g
 | Tu dois... | Lis |
 |---|---|
 | Savoir où est quoi dans le code, comment publier | `carte-du-code.md` |
-| Comprendre l'état actuel et les priorités | `resume.md` |
-| Modifier le contenu des cours, jeux, morceaux | `pedagogie.md` |
 | Ne pas refaire un choix déjà tranché | `decisions.md` |
 | Chercher un bug ou une idée à reprendre | `backlog.md` |
 | Nettoyer le dépôt | `doublons-obsoletes.md` |
+
+Les fiches personnelles (profil de Timothée, résumé, pédagogie) ne sont pas dans le dépôt, qui est public : elles sont dans le dossier du projet, `/mnt/project-files/memoire-projet/` (`resume.md`, `pedagogie.md`). Ne les copie jamais ici.
 
 ## Tenir la mémoire à jour
 Après un changement qui compte (nouvelle version, décision, bug résolu), corrige la fiche concernée dans la même PR, en une ou deux lignes. Si la fiche et le code ne sont pas d'accord, le code a raison : corrige la fiche.
