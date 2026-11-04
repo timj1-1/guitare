@@ -273,11 +273,43 @@
     ));
   }
 
+  // MAJ 01 §8.1 : ce que lit « Écouter » d'un bloc : la consigne, puis « Pourquoi c'est utile » et les explications
+  const segsBloc = b => [...(b.voix?.consigne || [`${b.titre.replace(/^\d+\.\s*/, "")}.`, b.sert, `À faire : ${b.faire}`]),
+    ...(b.voix?.quand || []), ...(b.voix?.explication || [])];
+  // MAJ 01 (Q6) : le bouton du haut lit tout le cours, avec Pause, Reprendre et « Bloc suivant »
+  let lecture = null;
+  function lisTout(c) {
+    if (lecture) lecture.stop();
+    const L = introSegs(c).map(x => (typeof x === "string" ? { t: x } : x));
+    const debuts = [];
+    c.blocs.forEach((b, bi) => { debuts.push(L.length); segsBloc(b).forEach(t => L.push({ t, cible: bi })); });
+    let i = 0, n = 0, enPause = false;
+    const pauseBtn = el("button", { class: "btn small", type: "button", text: "Pause" });
+    const bar = el("div", { class: "lecture-bar", role: "region", "aria-label": "Lecture du cours" },
+      el("span", { class: "lecture-txt", text: "Le prof lit le cours" }), pauseBtn,
+      el("button", { class: "btn small", type: "button", text: "Bloc suivant", onclick: () => { const k = debuts.find(d => d > i); if (k != null) { i = k; enPause = false; joue(); } } }),
+      el("button", { class: "icon-btn", type: "button", "aria-label": "Arrêter la lecture", text: "✕", onclick: () => lecture.stop() }));
+    const joue = () => {
+      const moi = ++n, depart = i;
+      pauseBtn.textContent = "Pause";
+      Sons.dire(L.slice(depart).map(x => x.t), { force: true, onSeg: k => { i = depart + k; montre(L[i]?.cible); } })
+        .then(() => { if (moi === n && !enPause) lecture.stop(); });
+    };
+    pauseBtn.addEventListener("click", () => {
+      if (enPause) { enPause = false; joue(); }
+      else { enPause = true; n++; Sons.tais(); pauseBtn.textContent = "Reprendre"; }
+    });
+    lecture = { stop: () => { n++; Sons.tais(); montre(null); bar.remove(); lecture = null; } };
+    document.body.append(bar);
+    joue();
+  }
   function renderBloc(c, b, bi, updateProgress) {
     const s = cs(c.id);
     const openKey = c.id + "/" + b.id;
     const firstTodo = c.blocs.find(x => !x.exercices.every(e => s.ex[exKey(x, e)]?.done));
-    const isOpen = state.open[openKey] ?? (firstTodo ? firstTodo.id === b.id : false);
+    // MAJ 01 §9 : un seul bloc ouvert à la fois (celui qu'on a ouvert, sinon le premier à faire)
+    state.ouvert ||= {};
+    const isOpen = c.id in state.ouvert ? state.ouvert[c.id] === b.id : (firstTodo ? firstTodo.id === b.id : false);
     const complete = () => b.exercices.every(e => s.ex[exKey(b, e)]?.done);
 
     const card = el("article", { class: "card bloc" + (complete() ? " complete" : ""), "open-state": isOpen ? "open" : "closed" });
@@ -289,18 +321,22 @@
     );
     head.insertAdjacentHTML("beforeend", CHEV);
     const inner = el("div", { class: "bloc-body", hidden: !isOpen });
+    const pose = open => { inner.hidden = !open; card.setAttribute("open-state", open ? "open" : "closed"); head.setAttribute("aria-expanded", String(open)); };
+    card._ferme = () => pose(false);
+    card._ouvre = () => {
+      card.parentElement?.querySelectorAll(".bloc").forEach(o => { if (o !== card) o._ferme?.(); });
+      pose(true); state.ouvert[c.id] = b.id; save();
+    };
     head.addEventListener("click", () => {
-      const open = inner.hidden;
-      inner.hidden = !open; card.setAttribute("open-state", open ? "open" : "closed");
-      head.setAttribute("aria-expanded", String(open));
-      state.open[openKey] = open; save();
+      if (inner.hidden) card._ouvre();
+      else { pose(false); state.ouvert[c.id] = null; save(); }
     });
     // le prof explique le bloc : visible même bloc replié, et il l'ouvre
-    const consigne = b.voix?.consigne || [`${b.titre.replace(/^\d+\.\s*/, "")}.`, b.sert, `À faire : ${b.faire}`];
+    const consigne = segsBloc(b);
     const ecoute = withIcon(el("button", { class: "bloc-ecoute", type: "button", title: "Le prof explique ce bloc", "aria-label": `Le prof explique le bloc ${bi + 1}` }), ICON_SPEAK);
     ecoute.addEventListener("click", async () => {
       if (ecoute.classList.contains("speaking")) return Sons.tais();
-      if (inner.hidden) head.click();
+      if (inner.hidden) card._ouvre();
       ecoute.classList.add("speaking");
       try { await parle(consigne.map(t => ({ t, cible: bi }))); } finally { ecoute.classList.remove("speaking"); }
     });
@@ -369,18 +405,30 @@
       // chaque exercice coché joue la note suivante de la gamme du cours ; la fin d'un bloc, une double note
       const finBloc = now && !wasComplete;
       if (checked || finBloc) Sons.noteCours(c.num, Math.max(0, progressOf(c).done - 1), finBloc);
-      if (finBloc) toast(`Bloc ${bi + 1} terminé, bravo !`);
+      if (finBloc) {
+        toast(`Bloc ${bi + 1} terminé, bravo !`);
+        // MAJ 01 §9 : le bloc fini se ferme et le suivant à faire s'ouvre
+        const cards = [...(card.parentElement?.querySelectorAll(".bloc") || [])];
+        const suivant = cards.slice(cards.indexOf(card) + 1).find(o => !o.classList.contains("complete"));
+        setTimeout(() => {
+          if (suivant) { suivant._ouvre(); suivant.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); }
+          else { card._ferme(); state.ouvert[c.id] = null; save(); }
+        }, 900);
+      }
+      if (checked || finBloc) pauseSiBesoin();
       wasComplete = now; updateProgress();
     })));
     inner.append(ul);
     const jb = jeuBloc(c, bi); if (jb) inner.append(jb);
 
-    // en bas du bloc, seulement les vidéos : ouvertes de base, repliables
+    // MAJ 01 §6 : chaque exercice a ses vidéos ; en bas du bloc, seulement celles pour aller plus loin, hors séance
     if (b.videos?.length) {
       const vidKey = openKey + "/videos";
-      const vids = el("details", { class: "more", open: state.open[vidKey] ?? true }, el("summary", { text: b.videos.length > 1 ? `Les vidéos (${b.videos.length})` : "La vidéo" }),
+      const parExo = b.exercices.some(e => e.videos?.length);
+      const titre = parExo ? `Pour aller plus loin, hors séance (${b.videos.length})` : (b.videos.length > 1 ? `Les vidéos (${b.videos.length})` : "La vidéo");
+      const vids = el("details", { class: "more", open: state.open[vidKey] ?? !parExo }, el("summary", { text: titre }),
         el("div", { class: "more-in" }, lecteur(b.videos, b.titre, { liste: true })));
-      vids.addEventListener("toggle", () => { if ((state.open[vidKey] ?? true) !== vids.open) { state.open[vidKey] = vids.open; save(); } });
+      vids.addEventListener("toggle", () => { if ((state.open[vidKey] ?? !parExo) !== vids.open) { state.open[vidKey] = vids.open; save(); } });
       inner.append(vids);
     }
     return card;
@@ -512,8 +560,17 @@
     };
     const parExo = new Map(), general = [], schGen = [];
     const met = (e, k, v) => { if (!parExo.has(e)) parExo.set(e, { expl: [], sch: [] }); parExo.get(e)[k].push(v); };
-    (b.explication || []).forEach(t => { const e = typeof t === "object" && t.titre ? vers(t.titre, "", /^Le principe|^Comprendre|^Pourquoi/.test(t.titre)) : null; e ? met(e, "expl", t) : general.push(t); });
-    schemas.forEach(s => { const e = vers(s.titre, s.sous); e ? met(e, "sch", s) : schGen.push(s); });
+    const parId = id => b.exercices.find(e => e.id === id);
+    // une partie qui nomme son exercice (« exo ») y va directement ; sinon on la range d'après son titre
+    (b.explication || []).forEach(t => {
+      const e = typeof t === "object" && t.exo ? parId(t.exo) : typeof t === "object" && t.titre ? vers(t.titre, "", /^Le principe|^Comprendre|^Pourquoi/.test(t.titre)) : null;
+      if (typeof t === "object" && t.exo && !e) return; // exercice absent de ces deux semaines
+      e ? met(e, "expl", t) : general.push(t);
+    });
+    // MAJ 01 : chaque exercice peut nommer ses schémas (un schéma peut servir à plusieurs exercices)
+    const explicite = b.exercices.some(e => e.schemas);
+    b.exercices.forEach(e => (e.schemas || []).map(k => SCHEMAS[k]).filter(Boolean).forEach(s => met(e, "sch", s)));
+    schemas.forEach(s => { const e = explicite ? null : vers(s.titre, s.sous); e ? met(e, "sch", s) : schGen.push(s); });
     return { parExo, general, schGen };
   }
 
@@ -686,7 +743,10 @@
     let ouverte = null;
     const bar = el("div", { class: "row-tools" + (liste ? " vids-liste" : "") });
     vids.forEach(v => {
-      const id = ytId(v.u), nom = (v.t === "Écouter" ? "▶ Écouter" : v.t === "Tuto" ? "▶ Tuto" : "▶ " + v.t);
+      const mn = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+      // MAJ 01 §2, §6 : le passage à regarder (début et fin conseillés, en secondes)
+      const moment = v.debut != null ? (v.fin ? ` (de ${mn(v.debut)} à ${mn(v.fin)})` : ` (à partir de ${mn(v.debut)})`) : "";
+      const id = ytId(v.u), nom = (v.t === "Écouter" ? "▶ Écouter" : v.t === "Tuto" ? "▶ Tuto" : "▶ " + v.t) + moment;
       if (!id) { bar.append(el("a", { class: "btn small ghost", href: v.u, target: "_blank", rel: "noopener" }, nom + " ↗")); return; }
       const b = el("button", { class: "btn small vid-btn" + (v.t === "Tuto" ? " tuto" : ""), type: "button", "aria-pressed": "false" }, nom);
       b.addEventListener("click", () => {
@@ -697,9 +757,9 @@
         ouverte = id; b.setAttribute("aria-pressed", "true");
         slot.replaceChildren(
           el("div", { class: "yt" }, el("iframe", {
-            src: `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`, title: `${titre} : ${v.t}`, loading: "lazy", allowfullscreen: true,
+            src: `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1${v.debut ? `&start=${v.debut}` : ""}${v.fin ? `&end=${v.fin}` : ""}`, title: `${titre} : ${v.t}`, loading: "lazy", allowfullscreen: true,
             allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share", referrerpolicy: "strict-origin-when-cross-origin" })),
-          el("a", { class: "link-btn small", href: `https://www.youtube.com/watch?v=${id}`, target: "_blank", rel: "noopener" }, "Elle ne se lit pas ? Ouvrir sur YouTube ↗"));
+          el("a", { class: "link-btn small", href: `https://www.youtube.com/watch?v=${id}${v.debut ? `&t=${v.debut}s` : ""}`, target: "_blank", rel: "noopener" }, "Elle ne se lit pas ? Ouvrir sur YouTube ↗"));
         slot.hidden = false;
       });
       bar.append(b);
@@ -1166,6 +1226,15 @@
     const sans = m ? m[1] : label, i = sans.indexOf(" : ");
     return { titre: i > 0 ? sans.slice(0, i) : sans, detail: i > 0 ? sans.slice(i + 3).replace(/^./, x => x.toUpperCase()) : "", duree: m?.[2] || "" };
   }
+  // MAJ 01 §1.3 : le type de l'exercice, calculé par le générateur
+  const TYPE_EXO = { decouverte: "Découverte", revision: "Révision", approfondissement: "Approfondissement", pratique: "Pratique" };
+  // MAJ 01 §10.2 : record personnel, le tempo le plus haut atteint sur cet exercice, tous cours confondus
+  const record = key => state.records?.[key]?.bpm || 0;
+  function noteRecord(key, bpm) {
+    if (!(bpm > record(key))) return false;
+    (state.records ||= {})[key] = { bpm, date: new Date().toISOString() };
+    return true;
+  }
   function renderExo(c, b, e, positions, extra, onChange) {
     const key = exKey(b, e);
     const x = exState(c.id, key);
@@ -1175,11 +1244,14 @@
     box.addEventListener("change", () => { x.done = box.checked; li.classList.toggle("is-done", x.done); touch(c); save(); onChange(x.done); });
     const dec = decoupeExo(e.label);
     const label = el("label", { class: "exo-label", for: id },
+      e.type ? el("span", { class: "exo-type t-" + e.type, text: TYPE_EXO[e.type] }) : null,
       el("span", { class: "exo-titre", text: dec.titre }),
       dec.detail ? el("span", { class: "exo-detail", text: dec.detail }) : null,
       e.aide ? el("span", { class: "aide", text: e.aide }) : null);
     const main = el("div", { class: "exo-main" }, box, label);
-    if (dec.duree) main.append(el("span", { class: "exo-duree", text: dec.duree }));
+    // MAJ 01 §3 : la durée prévue, toujours, et le tempo à côté
+    const duree = e.duree ? `${e.duree} min` : dec.duree;
+    if (duree) main.append(el("span", { class: "exo-duree", text: duree }));
     if (positions?.length) label.append(el("span", { class: "exo-pos" }, positions.map(posBtn)));
     // Tempo qui progresse : on part un peu sous la cible, +4 bpm après 3 passages propres d'affilée, jusqu'à la cible
     const depart = e.tempo ? Math.max(40, e.tempo - 10) : 0;
@@ -1193,29 +1265,38 @@
     const drawProg = () => {
       if (tempoIn) tempoIn.value = x.tempo ?? bpmNow();
       if (!progRow) return;
-      const passes = x.passes || 0;
+      const passes = Math.min(3, x.passes || 0);
       if (chip) chip.textContent = `${bpmNow()} bpm`;
+      // MAJ 01 §10.1 : 3/3 reste affiché ; c'est toi qui décides de monter, et le compteur repart à ce moment-là
+      const plein = passes >= 3, suivant = Math.min(260, bpmNow() + 4);
+      const rec = record(key);
       progRow.replaceChildren(
-        el("span", { class: "tempo-txt" }, `Tu joues à ${bpmNow()} bpm, cible ${e.tempo}.`),
-        el("div", { class: "passes" },
+        el("span", { class: "tempo-txt" }, `Tu joues à ${bpmNow()} bpm, cible ${e.tempo}.`, rec ? el("span", { class: "record", text: ` Record : ${rec} bpm.` }) : null),
+        el("div", { class: "passes" + (plein ? " plein" : "") },
         el("span", { class: "passes-n" }, `${passes}/3 passages propres`),
         el("span", { class: "passes-btns" },
-        el("button", { class: "btn small", type: "button", text: "Propre", onclick: () => {
-          x.passes = passes + 1;
-          if (x.passes >= 3) {
-            x.bpm = Math.min(e.tempo, bpmNow() + 4); x.passes = 0;
-            if (x.tempo != null && x.tempo < x.bpm) x.tempo = x.bpm;
-            toast(x.bpm >= e.tempo ? `Cible atteinte : ${e.tempo} bpm !` : `Monte à ${x.bpm} bpm.`);
-          }
-          touch(c); save(); drawProg(); onChange();
-        } }),
+        plein
+          ? el("button", { class: "btn small primary", type: "button", text: `Monter à ${suivant} bpm`, onclick: () => {
+              x.bpm = suivant; x.passes = 0;
+              if (x.tempo != null && x.tempo < x.bpm) x.tempo = x.bpm;
+              if (x.bpm >= e.tempo) toast(x.bpm === e.tempo ? `Cible atteinte : ${e.tempo} bpm !` : `Au-dessus de la cible : ${x.bpm} bpm.`);
+              touch(c); save(); drawProg(); onChange();
+            } })
+          : el("button", { class: "btn small", type: "button", text: "Propre", onclick: () => {
+              x.passes = passes + 1;
+              if (x.passes >= 3) {
+                if (noteRecord(key, bpmNow())) toast(`Nouveau record : ${bpmNow()} bpm !`);
+              }
+              touch(c); save(); drawProg(); onChange();
+            } }),
         el("button", { class: "btn small", type: "button", text: "Pas propre", onclick: () => { x.passes = 0; save(); drawProg(); } }))),
       );
     };
     const moreRow = el("div", { class: "exo-more" });
     if (progRow) drawProg();
-    const feel = el("div", { class: "feel", role: "group", "aria-label": "Ressenti" });
-    [["galere", "Galère"], ["correct", "Correct"], ["facile", "Facile"]].forEach(([k, t]) => {
+    // MAJ 01 §12 : pas de Galère/Correct/Facile sur le jeu facile, les étirements et la lecture des barrés
+    const feel = e.ressenti === false ? null : el("div", { class: "feel", role: "group", "aria-label": "Ressenti" });
+    if (feel) [["galere", "Galère"], ["correct", "Correct"], ["facile", "Facile"]].forEach(([k, t]) => {
       const fb = el("button", { type: "button", "data-feel": k, "aria-pressed": String(x.feel === k), text: t });
       fb.addEventListener("click", () => {
         x.feel = x.feel === k ? undefined : k;
@@ -1224,13 +1305,14 @@
       });
       feel.append(fb);
     });
-    moreRow.append(feel);
+    if (feel) moreRow.append(feel);
     if (e.tempo) {
       // le tempo atteint part du tempo de départ de l'exercice (50 pour une cible de 60), et devient le tempo de travail
       const tin = el("input", { type: "number", inputmode: "numeric", min: "20", max: "260", value: x.tempo ?? bpmNow(), "aria-label": "Tempo atteint" });
       const pose = v => {
         if (!Number.isFinite(v)) return;
         v = Math.max(20, Math.min(260, v)); x.tempo = v; x.bpm = Math.min(v, Math.max(e.tempo, bpmNow())); x.passes = 0;
+        if (noteRecord(key, v)) toast(`Nouveau record : ${v} bpm !`);
         if (+tin.value !== v) tin.value = v;
         touch(c); save(); drawProg();
       };
@@ -1243,7 +1325,8 @@
     const ta = el("textarea", { rows: "2", placeholder: "Ce qui coince, une sensation, une question…", "aria-label": "Commentaire" });
     ta.value = x.note || "";
     ta.addEventListener("input", () => { x.note = ta.value.trim() ? ta.value : undefined; touch(c); save(); });
-    noteWrap.append(ta);
+    // MAJ 01 §17 : dire clairement où va le commentaire
+    noteWrap.append(ta, el("p", { class: "muted small note-aide", text: "Ton commentaire reste sur ton appareil. Il est repris dans ton bilan de la semaine, pour que ton prof en tienne compte." }));
     const nb = el("button", { class: "link-btn", type: "button", text: x.note ? "Commentaire" : "+ Commentaire" });
     nb.addEventListener("click", () => { noteWrap.hidden = !noteWrap.hidden; if (!noteWrap.hidden) ta.focus(); });
     moreRow.append(nb);
@@ -1257,7 +1340,16 @@
           ...extra.expl.flatMap(explBloc), extra.sch.length ? el("div", { class: "schemas" }, extra.sch.map(schemaFig)) : null));
       expl.addEventListener("toggle", () => { if (!!state.open[k] !== expl.open) { state.open[k] = expl.open || undefined; save(); } });
     }
-    li.append(...[expl, progRow, moreRow, noteWrap].filter(Boolean));
+    // MAJ 01 §6 : la vidéo de l'exercice, juste là
+    let vids = null;
+    if (e.videos?.length) {
+      const k = c.id + "/" + key + "/videos";
+      vids = el("details", { class: "exo-expl exo-videos", open: !!state.open[k] },
+        el("summary", { text: e.videos.length > 1 ? `Les vidéos (${e.videos.length})` : "La vidéo" }),
+        el("div", { class: "exo-expl-in" }, lecteur(e.videos, e.label, { liste: e.videos.length > 1 })));
+      vids.addEventListener("toggle", () => { if (!!state.open[k] !== vids.open) { state.open[k] = vids.open || undefined; save(); } });
+    }
+    li.append(...[expl, vids, progRow, moreRow, noteWrap].filter(Boolean));
     if (e.jeux?.length && window.Jeux) {
       const row = el("div", { class: "exo-jeux" });
       const last = el("p", { class: "jeu-last" });
@@ -1440,10 +1532,6 @@
       seanceChip.classList.toggle("paused", !running);
       seanceChip.title = `Séance du cours ${c.num} : touche pour la mettre en pause, la reprendre ou la remettre à zéro`;
     }
-    for (const id in state.cours) {
-      const sc = state.cours[id];
-      if (sc?.seance?.start && !sc.seance.pausa && seanceMs(sc) >= 50 * 60000) { sc.seance.pausa = true; save(); toast("Mi-séance, après le bloc 3 : fais une pause de 2 minutes, lâche tes mains."); }
-    }
     const u = seanceUI;
     if (u.card && u.c) {
       const us = state.cours[u.c.id], on = !!us?.seance?.start, has = !!us?.seance;
@@ -1462,6 +1550,49 @@
     ecran();
   }
   seanceChip.addEventListener("click", () => openTimers());
+  // ---------- MAJ 01 §7 : les pauses, selon le temps de pratique réel et l'effort ----------
+  // Pratique effective : minuteur de séance ou de bloc, métronome ou jeu en marche, écran visible.
+  // Les blocs physiques (échauffement des doigts, barrés) comptent à part, avec un seuil plus court.
+  const PAUSE_MIN = { general: 25, physique: 15 };
+  const blocPhysique = () => {
+    const c = byId(state.current), bid = c && state.ouvert?.[c.id];
+    return !!bid && (bid === "b1" || (bid === "b5" && c.palier <= 2));
+  };
+  setInterval(() => {
+    if (document.hidden || !DATA || !besoinEcran()) return;
+    const p = (state.pratique ||= { general: 0, physique: 0 });
+    p.general += 5; if (blocPhysique()) p.physique += 5;
+    if (!p.due && (p.general >= PAUSE_MIN.general * 60 || p.physique >= PAUSE_MIN.physique * 60)) { p.due = p.physique >= PAUSE_MIN.physique * 60 ? "physique" : "general"; save(); }
+  }, 5000);
+  // le rappel arrive entre deux exercices (un exercice coché, un bloc fini), jamais au milieu
+  let pauseDlg = null;
+  function pauseSiBesoin() {
+    const p = state.pratique;
+    if (!p?.due || pauseDlg?.open) return;
+    const phys = p.due === "physique";
+    const reste = el("b", { class: "pause-reste" });
+    let t = null;
+    const fin = () => { clearInterval(t); pauseDlg.close(); state.pratique = { general: 0, physique: 0 }; save(); };
+    const lance = el("button", { class: "btn", type: "button", text: "Lancer 2 minutes", onclick: () => {
+      let n = 120; lance.disabled = true;
+      const aff = () => { reste.textContent = `${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}`; };
+      aff(); t = setInterval(() => { n--; aff(); if (n <= 0) { clearInterval(t); Sons.cling?.(); reste.textContent = "Pause finie !"; } }, 1000);
+    } });
+    if (!pauseDlg) {
+      pauseDlg = el("dialog", { class: "pause-modal", "aria-labelledby": "pauseTitre" });
+      pauseDlg.addEventListener("cancel", ev => ev.preventDefault()); // il faut la valider pour continuer
+      document.body.append(pauseDlg);
+    }
+    pauseDlg.replaceChildren(el("div", { class: "pause-in" },
+      el("strong", { id: "pauseTitre", text: "Petite pause" }),
+      el("p", { text: phys
+        ? `Tes doigts viennent de beaucoup travailler (${PAUSE_MIN.physique} min d'effort). Fais une pause de 2 minutes : pose la guitare, lâche tes mains, secoue-les doucement.`
+        : `Tu joues depuis ${PAUSE_MIN.general} minutes. Fais une pause de 2 minutes : pose la guitare, lâche tes mains, étire doucement tes doigts.` }),
+      reste,
+      el("div", { class: "row-tools" }, lance, el("button", { class: "btn primary", type: "button", text: "C'est fait, je reprends", onclick: fin }))));
+    pauseDlg.showModal();
+    navigator.vibrate?.(150);
+  }
   function renderSeance(c) {
     const time = el("b", { class: "seance-time" }), label = el("span", { class: "eyebrow" });
     const btn = el("button", { type: "button", onclick: () => seanceToggle(c) });
@@ -1470,7 +1601,8 @@
       withIcon(el("div", { class: "seance-ic" }), ICON_TIMER),
       el("div", { class: "seance-txt" }, label, time, el("span", { class: "muted small", text: "Il s'arrête quand tu touches « Terminer le cours »." })),
       el("div", { class: "seance-btns" }, reset, btn),
-      c.prof ? el("div", { class: "seance-intro" }, speakBtn(() => introSegs(c), "Intro du prof", "Le prof présente le cours : le palier, les objectifs, le programme")) : null);
+      c.prof ? el("div", { class: "seance-intro" }, speakBtn(() => introSegs(c), "Intro du prof", "Le prof présente le cours : le palier, les objectifs, le programme"),
+        withIcon(el("button", { class: "btn small speak-btn", type: "button", title: "Le prof lit tout le cours, bloc par bloc", onclick: () => lisTout(c) }), ICON_SPEAK, "Écouter tout le cours")) : null);
     seanceUI = { c, card, time, label, btn, reset, duree: null };
     requestAnimationFrame(updateSeance);
     return card;

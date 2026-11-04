@@ -4,6 +4,8 @@
 # GARDE : blocs dont l'ancienne explication reste à la suite (elle est déjà détaillée).
 
 S = lambda titre, *liste: {"titre": titre, "liste": list(liste)}
+# X : une partie attachée à un exercice précis (son id), au lieu d'être devinée d'après son titre
+X = lambda exo, titre, *liste: {"titre": titre, "liste": list(liste), "exo": exo}
 
 ETIREMENTS_X = S("Les étirements",
     "Ouvre et ferme les mains dix fois.",
@@ -14,15 +16,24 @@ EXPL = {
   # ---------- Palier 1 ----------
   (1, 1): [
     S("Le jeu facile",
-      "Joue lentement des accords que tu connais déjà, en arpèges : Do, La mineur, Mi mineur, ou l'intro de Fragile.",
+      "Joue lentement quelques accords ouverts, en arpèges : Do, La mineur, Mi mineur.",
       "Pas de métronome et pas d'effort : le but est de chauffer les tendons avant le travail. C'est la meilleure protection contre les douleurs."),
     ETIREMENTS_X,
-    S("L'araignée, cases 5 à 8",
+    X("araignee", "L'araignée, variante simple",
+      "L'araignée se travaille en deux exercices, l'un après l'autre : d'abord cette variante simple, la plus facile, puis la variante avancée, juste en dessous. Chacune a son tempo et son record.",
       "Le principe : un doigt par case. Index case 5, majeur case 6, annulaire case 7, auriculaire case 8.",
-      "Joue les 4 cases sur la 6e corde, puis sur la 5e, et ainsi de suite jusqu'à la 1re corde. Puis redescends.",
-      "Chaque doigt reste posé jusqu'à ce que le suivant ait joué. Les doigts levés restent à un centimètre des cordes.",
+      "Pose les 4 doigts sur la 6e corde. Garde un seul doigt posé : c'est ton ancre. Lève les trois autres ensemble, à un centimètre des cordes.",
+      "Repose un seul doigt : il joue sa note et devient la nouvelle ancre. Lève à nouveau les trois autres, et continue ainsi.",
+      "Quand les 4 doigts sont passés, recommence sur la corde suivante, jusqu'à la 1re corde. Puis redescends.",
       "Appuie juste derrière la frette, la barrette de métal, sans écraser. La note doit sonner nette, sans friser : friser, c'est le petit grésillement d'une corde mal appuyée.",
-      "Une note par clic du métronome. Si une note frise, ralentis."),
+      "Une note par clic du métronome. Si une note frise, ralentis.",
+      "Dans la vidéo, la variante simple est au début, jusqu'à 5 minutes 50."),
+    X("araignee-avancee", "L'araignée, variante avancée",
+      "Le deuxième exercice de l'araignée, juste après la variante simple. Plus difficile : deux doigts bougent pendant que les deux autres restent posés. Si elle accroche, ralentis le tempo : c'est normal au début.",
+      "Pose les 4 doigts sur une corde. Lève le majeur et l'auriculaire, l'index et l'annulaire restent posés, et pose-les sur la corde suivante.",
+      "Garde maintenant le majeur et l'auriculaire posés. Lève l'index et l'annulaire, et pose-les à leur tour sur la corde suivante.",
+      "Répète cette alternance corde après corde, puis redescends. Elle a son propre tempo et son propre record.",
+      "Dans la vidéo, elle commence à 5 minutes 50."),
     S("Les arpèges sur Do, puis Sol7",
       "Le principe : chaque doigt de la main droite a sa corde. Le pouce, p, joue la basse. L'index, i, la corde de Sol. Le majeur, m, la corde de Si. L'annulaire, a, le Mi aigu.",
       "La basse de Do est sur la 5e corde, case 3. Celle de Sol7 est sur la 6e corde, case 3.",
@@ -75,6 +86,9 @@ EXPL = {
       "1-3-2-4 : index case 5, annulaire case 7, majeur case 6, auriculaire case 8. 1-4-2-3 : index, auriculaire, majeur, annulaire.",
       "Sur chaque corde, de la 6e à la 1re, puis retour. Les doigts qui ne jouent pas restent près des cordes, jamais crispés en l'air.",
       "C'est dur parce que l'annulaire et l'auriculaire n'aiment pas bouger seuls : c'est justement ce qu'on muscle."),
+    X("araignee-combinee", "L'araignée combinée",
+      "Une minute de variante simple, puis une minute de variante avancée, sans t'arrêter entre les deux, au même tempo.",
+),
   ],
   (2, 2): [
     S("Le principe : la position fixe",
@@ -97,9 +111,17 @@ EXPL = {
   ],
   (2, 5): [
     S("Le principe : la forme La",
-      "C'est l'accord de La majeur, déplacé : l'index barre les cordes 5 à 1, et la fondamentale, la note qui donne son nom à l'accord, est sur la corde de La.",
+      "C'est l'accord de La majeur, déplacé : monte la forme de deux cases et couche l'index, tu obtiens Si majeur (de La à Si, il y a deux cases).",
+      "L'index barre les cordes 5 à 1, et la fondamentale, la note qui donne son nom à l'accord, est sur la corde de La, que tu as apprise au palier 1.",
       "Ne joue pas la 6e corde : le bout de l'index la touche pour l'étouffer.",
       "Le mineur : index barré, majeur sur la 2e corde une case plus haut, annulaire sur la 4e et auriculaire sur la 3e, deux cases plus haut."),
+    S("Pourquoi deux formes",
+      "Pour jouer près de l'endroit où ta main se trouve déjà. Do existe en forme La case 3 et en forme Mi case 8 : tu prends celle qui t'évite de sauter sur le manche.",
+      "Avec ce tableau, tu trouves n'importe quel accord."),
+    {"table": [["Accord", "Forme Mi (fondamentale sur la 6e corde)", "Forme La (fondamentale sur la 5e corde)"],
+               ["Fa", "case 1", "case 8"], ["Sol", "case 3", "case 10"], ["La", "case 5", "accord ouvert, ou case 12"],
+               ["Si", "case 7", "case 2"], ["Do", "case 8", "case 3"], ["Ré", "case 10", "case 5"], ["Mi", "accord ouvert, ou case 12", "case 7"]]},
+    "Les accords en dièse ou en bémol sont entre les deux : Fa# (Fa dièse) = forme Mi case 2, Sib (Si bémol) = forme La case 1.",
     S("La rumba : compter",
       "La rumba se compte sur 8 croches, c'est-à-dire 8 demi-temps : « 1 et 2 et 3 et 4 et ».",
       "On les groupe 3 + 3 + 2 : 1-2-3, 4-5-6, 7-8. Les accents, des coups plus forts, tombent sur 1, 4 et 7.",
@@ -140,7 +162,7 @@ EXPL = {
   (3, 4): [
     S("Le quiz des 6 cordes",
       "Une note au hasard : trouve-la sur chacune des 6 cordes, de la 6e à la 1re.",
-      "Le Mi aigu porte les mêmes notes que le Mi grave, que tu connais déjà.",
+      "Le Mi aigu porte les mêmes notes que le Mi grave : mêmes cases, mêmes noms.",
       "Pour aller vite, sers-toi des octaves : 2 cordes plus haut et 2 cases plus loin, ou 3 cases quand tu passes la corde de Si."),
   ],
   (3, 5): [
@@ -177,8 +199,9 @@ PLUS = {
       "Case 5 à l'index, case 7 à l'annulaire, case 8 à l'auriculaire.",
       "Les La : 6e corde case 5, 4e corde case 7, 1re corde case 5.",
       "Monte et redescends, une note par clic, en alternant i et m."),
-    S("En disant le nom des notes",
-      "La même position, plus lentement, en disant chaque note : La, Do, Ré, Mi, Sol, La.",
+    X("penta1-noms", "En lisant le nom des notes",
+      "La même position, plus lentement. Sur le schéma de l'exercice, chaque rond porte le nom de sa note : lis-le et dis-le en jouant.",
+      "En montant : La, Do, Ré, Mi, Sol, puis La de nouveau, et ainsi de suite jusqu'à la 1re corde. Les ronds pleins sont les La.",
       "Tu relies la forme aux noms : c'est ce qui te permettra de viser une note précise en impro.")],
   (1, 3, 1): [
     S("La position 2, cases 7 à 10",
@@ -197,7 +220,7 @@ PLUS = {
       "Tous les Ré : 6e corde case 10, 5e case 5, 4e à vide et case 12, 3e case 7, 2e case 3, 1re case 10.")],
   (1, 5, 0): [
     S("La forme Mi : Fa, Sol, La",
-      "Le Fa barré case 1, que tu connais, puis la même forme en case 3, c'est Sol, et en case 5, c'est La.",
+      "Le Fa barré case 1, puis la même forme en case 3, c'est Sol, et en case 5, c'est La.",
       "Dis le nom de l'accord à voix haute : c'est la note de la 6e corde, sous l'index.",
       "Vérifie les 6 cordes une par une : chacune doit sonner."),
     S("L'enchaînement Fa, Sol, La, Sol, Fa",

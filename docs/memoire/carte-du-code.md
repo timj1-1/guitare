@@ -1,6 +1,6 @@
 # Carte du code (dépôt timj1-1/guitare, v48)
 
-_Mis à jour le 2026-11-02 (app v48)._
+_Mis à jour le 2026-11-04 (app v49, MAJ 01)._
 
 L'app est en JavaScript sans framework ni étape de compilation. Les cours sont générés en Python. Les chemins sont relatifs à la racine du dépôt.
 
@@ -36,12 +36,15 @@ Sur l'appareil, les données sont dans localStorage : `maguitare:v1` (cases, tem
 ## Les outils (non publiés dans l'app)
 | Fichier | Rôle |
 |---|---|
-| `tools/build_cours.py` | **Source du cours.** Paliers (`PALIERS`, `NOMS`), blocs, « pourquoi c'est utile » (`QUAND`), schémas, morceaux (`MISSIONS`, `REPERTOIRE`, `BOSSA`, `MAITRISER`, `ANALYSES`), textes du prof (`PROF`, `NOM_BLOC`). Lancer `python3 tools/build_cours.py` pour régénérer `data/cours.json`. |
+| `tools/build_cours.py` | **Source du cours.** MAJ 01 : `VIDEO_EXO` et `SCHEMA_EXO` donnent vidéos et schémas de chaque exercice ; `duree_ex`/`complete_durees` la durée ; le type et « Relire » sont calculés après la construction des cours ; `ARAIGNEE*` les variantes. Paliers (`PALIERS`, `NOMS`), blocs, « pourquoi c'est utile » (`QUAND`), schémas, morceaux (`MISSIONS`, `REPERTOIRE`, `BOSSA`, `MAITRISER`, `ANALYSES`), textes du prof (`PROF`, `NOM_BLOC`). Lancer `python3 tools/build_cours.py` pour régénérer `data/cours.json`. |
 | `tools/explications.py` | Explications par exercice et positions (accords, gammes). |
 | `tools/voix.py` | Enregistre les phrases manquantes (Kokoro ou Azure `--azure`). Ses phrases doivent rester identiques à celles de l'app. |
 | `tools/schemas/` | Schémas des effets en JSX (`effets/`), compilés par `compile.cjs` et recadrés par `crop.mjs`. |
 | `tools/icons.py` | Génère les icônes. |
+| `tools/schemas/penta_notes.py` | Schéma « penta-1-notes » (nom des notes dans les ronds), écrit dans `data/schemas.json`. |
 | `tools/test-micro.html` | Page de diagnostic du micro. |
+| `tools/tests/smoke.js` | Test automatique (MAJ 01) : 36 cours, chaque bloc et chaque onglet, écran ordinateur et téléphone, erreurs de console. `node tools/tests/smoke.js`. |
+| `tools/tests/contenu.py` | Contrôle du contenu : exercices disparus (référence `exercices-reference.json`), durée ≤ 90 min, prénom en dur. |
 
 ## Pour publier un changement (méthode suivie jusqu'ici)
 1. Modifier `tools/build_cours.py` ou `tools/explications.py`, puis lancer `build_cours.py`.

@@ -110,7 +110,7 @@ def phrases_niveaux():
     P += ["Bravo, niveau suivant débloqué !", "Nouveau record !", "Bien joué !", "Parfait !"]
     return P
 
-EXEMPLE = "Salut Timothée ! Aujourd'hui, on travaille la gamme de Do majeur. Prends ton temps : un son propre vaut mieux qu'un tempo rapide."
+EXEMPLE = "Salut ! Aujourd'hui, on travaille la gamme de Do majeur. Prends ton temps : un son propre vaut mieux qu'un tempo rapide."
 PHRASES_APP = [
     "D'accord, je lis les consignes des jeux.",
     EXEMPLE,
