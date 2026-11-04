@@ -743,7 +743,10 @@
     let ouverte = null;
     const bar = el("div", { class: "row-tools" + (liste ? " vids-liste" : "") });
     vids.forEach(v => {
-      const id = ytId(v.u), nom = (v.t === "Écouter" ? "▶ Écouter" : v.t === "Tuto" ? "▶ Tuto" : "▶ " + v.t);
+      const mn = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+      // MAJ 01 §2, §6 : le passage à regarder (début et fin conseillés, en secondes)
+      const moment = v.debut != null ? (v.fin ? ` (de ${mn(v.debut)} à ${mn(v.fin)})` : ` (à partir de ${mn(v.debut)})`) : "";
+      const id = ytId(v.u), nom = (v.t === "Écouter" ? "▶ Écouter" : v.t === "Tuto" ? "▶ Tuto" : "▶ " + v.t) + moment;
       if (!id) { bar.append(el("a", { class: "btn small ghost", href: v.u, target: "_blank", rel: "noopener" }, nom + " ↗")); return; }
       const b = el("button", { class: "btn small vid-btn" + (v.t === "Tuto" ? " tuto" : ""), type: "button", "aria-pressed": "false" }, nom);
       b.addEventListener("click", () => {
@@ -754,9 +757,9 @@
         ouverte = id; b.setAttribute("aria-pressed", "true");
         slot.replaceChildren(
           el("div", { class: "yt" }, el("iframe", {
-            src: `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`, title: `${titre} : ${v.t}`, loading: "lazy", allowfullscreen: true,
+            src: `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1${v.debut ? `&start=${v.debut}` : ""}${v.fin ? `&end=${v.fin}` : ""}`, title: `${titre} : ${v.t}`, loading: "lazy", allowfullscreen: true,
             allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share", referrerpolicy: "strict-origin-when-cross-origin" })),
-          el("a", { class: "link-btn small", href: `https://www.youtube.com/watch?v=${id}`, target: "_blank", rel: "noopener" }, "Elle ne se lit pas ? Ouvrir sur YouTube ↗"));
+          el("a", { class: "link-btn small", href: `https://www.youtube.com/watch?v=${id}${v.debut ? `&t=${v.debut}s` : ""}`, target: "_blank", rel: "noopener" }, "Elle ne se lit pas ? Ouvrir sur YouTube ↗"));
         slot.hidden = false;
       });
       bar.append(b);

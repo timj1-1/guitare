@@ -600,6 +600,11 @@ SCHEMA_EXO = {
     (3, 5): {"rasgueado": ["rasgueado"], "rumba": ["rumba"]},
     (3, 6): {"morceau": ["cadence-andalouse"], "impro": ["penta-1"]},
 }
+# Le passage à regarder dans une vidéo d'exercice : (palier, bloc, exercice) -> (début, fin) en secondes (fin : None).
+# Araignée (Timothée, 2026-11-04) : la variante simple est au début, l'avancée à partir de 5:50.
+VIDEO_MOMENT = {
+    (1, 1, "araignee"): (0, 350), (1, 1, "araignee-avancee"): (350, None),
+}
 SANS_TYPE = {"facile", "etirements"}  # échauffement de base : ni « nouveau », ni « révision »
 
 
@@ -749,7 +754,10 @@ def bloc_for(palier, b, bi, moitie, seance):
     for e, d in zip(ex, duree_ex(faire, ex)):
         if d: e["duree"] = d
         v = [i for i in vmap.get(e["id"], []) if i < len(b["videos"])]
-        if v: e["videos"] = [b["videos"][i] for i in v]; prises.update(v)
+        if v:
+            mom = VIDEO_MOMENT.get((*k, e["id"]))
+            e["videos"] = [{**b["videos"][i], "debut": mom[0], **({"fin": mom[1]} if mom[1] else {})} if mom else b["videos"][i] for i in v]
+            prises.update(v)
         s = smap.get(e["id"], [])
         if s: e["schemas"] = s; sch_prises.update(s)
     complete_durees(ex, b["duree"], faire)

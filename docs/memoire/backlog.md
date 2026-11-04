@@ -57,6 +57,6 @@ Statuts : **ouvert** (à faire), **en pause**, **plus tard** (idée gardée, à 
 ## MAJ 01 : restes à faire
 | Sujet | Statut | Détail |
 |---|---|---|
-| Moment à regarder dans chaque vidéo | ouvert | Les vidéos YouTube ne sont pas lisibles depuis les sessions de Claude : il faut les minutes de début et de fin (araignée d'abord) pour les écrire dans l'exercice. |
+| Moment à regarder dans chaque vidéo | ouvert | Araignée faite (`VIDEO_MOMENT` dans build_cours.py : simple 0:00-5:50, avancée dès 5:50, donné par Timothée). Les autres vidéos : il faut les minutes de début et de fin. |
 | Bilan envoyé au prof | plus tard | « Envoie-moi ton bilan » et le mot du prof (`data/retours.json`) supposent que Claude adapte le cours de Timothée : à repenser pour d'autres utilisateurs. |
 | Profil (prénom, guitare, main, goûts) | ouvert | Prévu avec la synchro (lot 5) puis le questionnaire (MAJ 02). |
