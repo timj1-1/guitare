@@ -1,5 +1,5 @@
 // Ma gratte : fonctionne hors ligne. Le cours et les retours du prof sont pris en ligne d'abord.
-const VERSION = "v50";
+const VERSION = "v51";
 // la voix : un fichier par phrase, nommé par son empreinte, donc gardé d'une version à l'autre
 const VOIX = "voix-1";
 // les sons de guitare (1,7 Mo) ne changent jamais : gardés à part, eux aussi, au lieu d'être retéléchargés à chaque version
@@ -8,7 +8,7 @@ const SAMPLES = ["samples-nylon.js", "samples-acier.js"];
 // le lecteur de PDF (1,4 Mo) ne change pas non plus : gardé à part, pour ouvrir tes tablatures hors ligne même après une mise à jour
 const LIBS = "libs-1";
 const PDFJS = ["lib/pdfjs/pdf.min.js", "lib/pdfjs/pdf.worker.min.js"];
-const SHELL = ["./", "index.html", "style.css", "app.js", "sons.js", "jeux.js", "niveaux.js", "reglages.js", "manche.html", "manifest.webmanifest",
+const SHELL = ["./", "index.html", "style.css", "app.js", "sons.js", "jeux.js", "accordeur.js", "niveaux.js", "reglages.js", "manche.html", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "data/cours.json", "data/retours.json", "data/schemas.json", "schemas/notes-manche.webp", "voix/voix.json",
   "fonts/fonts.css", "fonts/instrument-sans.woff2", "fonts/instrument-sans-italic.woff2", "fonts/instrument-serif.woff2", "fonts/instrument-serif-italic.woff2", "fonts/jetbrains-mono.woff2"];
 

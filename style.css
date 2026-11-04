@@ -1071,3 +1071,28 @@ dialog.pause-modal::backdrop { background: rgba(10, 14, 12, .45); }
 .lecture-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 40; display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 8px 28px rgba(0,0,0,.18); max-width: calc(100vw - 32px); }
 .lecture-txt { font-size: .85rem; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 440px) { .lecture-txt { display: none; } }
+
+/* ---------- Accordeur (MAJ 01 §15) ---------- */
+.tuner-sheet .sheet-in { display: grid; gap: 12px; }
+.tuner-cordes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.tuner-corde { display: grid; justify-items: center; padding: 6px 0; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); }
+.tuner-corde b { font-size: 1rem; color: var(--ink); }
+.tuner-corde small { font-size: .72rem; }
+.tuner-corde.on { border-color: var(--accent); background: var(--accent-soft); }
+.tuner-corde.ok { border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); }
+.tuner-corde.ok small::after { content: " ✓"; color: var(--ok); }
+.tuner-note { display: grid; justify-items: center; }
+.tuner-note strong { font-family: var(--f-display); font-size: 3.4rem; line-height: 1; }
+.tuner-note span { color: var(--muted); font-size: .9rem; min-height: 1.2em; }
+.tuner-cadran { position: relative; height: 64px; border-bottom: 2px solid var(--line); margin: 0 12px; }
+.tuner-zone { position: absolute; left: 47%; width: 6%; top: 0; bottom: 0; background: var(--ok-soft); border-radius: 6px 6px 0 0; }
+.tuner-aiguille { --x: 0; position: absolute; left: calc(50% + var(--x) * 50%); bottom: 0; width: 3px; height: 58px; margin-left: -1.5px; border-radius: 2px; background: var(--warn); transition: left .12s linear, background .2s; }
+.juste .tuner-aiguille { background: var(--ok); }
+.tuner-cadran > span:not(.tuner-zone) { position: absolute; bottom: -20px; font-size: .72rem; color: var(--muted); transform: translateX(-50%); }
+.tuner-g { left: 0; } .tuner-m { left: 50%; } .tuner-d { left: 100%; }
+.tuner-cents { display: block; text-align: center; margin-top: 14px; font-variant-numeric: tabular-nums; color: var(--muted); min-height: 1.2em; }
+.tuner-etat { text-align: center; font-weight: 600; margin: 0; }
+.juste .tuner-etat { color: var(--ok); }
+.tuner-niveau { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.tuner-niveau i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .1s; }
+.eteint .tuner-aiguille, .eteint .tuner-note, .eteint .tuner-cents { opacity: .45; }

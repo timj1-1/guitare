@@ -1,6 +1,6 @@
 # Décisions déjà prises
 
-_Mis à jour le 2026-11-04 (app v50, MAJ 01)._
+_Mis à jour le 2026-11-04 (app v51, MAJ 01)._
 
 Les dates viennent des notes du projet et de l'historique du dépôt. « À confirmer » signale une date ou une raison que les notes ne donnent pas.
 
@@ -70,3 +70,4 @@ Les dates viennent des notes du projet et de l'historique du dépôt. « À conf
 | 2026-11-04 | Niveaux ouverts par le cours ou par 10/10, mais tous jouables en avance, marqués « pas encore vu en cours ». | Q7 B. |
 | 2026-11-04 | Dans les jeux, une phrase de la voix attend la fin de la précédente ; s'il en attend plusieurs, seule la plus récente est dite. | §8.2. |
 | 2026-11-04 | Mes morceaux : plus de croix ; on retire une vidéo, une tablature ou un morceau à soi seulement dans « Modifier », avec confirmation. | §13. |
+| 2026-11-04 | Accordeur : YIN (signal sous-échantillonné, fenêtre 8192, attaque ignorée, médiane de 5 mesures), La = 440 fixe, mode automatique, « juste » à ±3 centièmes. MPM et autocorrélation écartés (erreurs d'octave), banc : `tools/tests/banc_accordeur.js`. | §15, Q9. |
