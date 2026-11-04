@@ -1235,13 +1235,6 @@
     (state.records ||= {})[key] = { bpm, date: new Date().toISOString() };
     return true;
   }
-  // MAJ 01 §2 : un exercice qui se débloque (variante avancée de l'araignée) : propre au tempo voulu dans N cours
-  function deblocage(e) {
-    const d = e.debloque;
-    if (!d) return { ok: true };
-    const n = DATA.cours.filter(k => (state.cours[k.id]?.ex[d.exo]?.ok3 || 0) >= d.bpm).length;
-    return { ok: n >= d.cours || !!state.debloques?.[d.exo + ">" + e.id], n, d };
-  }
   function renderExo(c, b, e, positions, extra, onChange) {
     const key = exKey(b, e);
     const x = exState(c.id, key);
@@ -1292,7 +1285,6 @@
           : el("button", { class: "btn small", type: "button", text: "Propre", onclick: () => {
               x.passes = passes + 1;
               if (x.passes >= 3) {
-                x.ok3 = Math.max(x.ok3 || 0, bpmNow());
                 if (noteRecord(key, bpmNow())) toast(`Nouveau record : ${bpmNow()} bpm !`);
               }
               touch(c); save(); drawProg(); onChange();
@@ -1358,17 +1350,6 @@
       vids.addEventListener("toggle", () => { if (!!state.open[k] !== vids.open) { state.open[k] = vids.open || undefined; save(); } });
     }
     li.append(...[expl, vids, progRow, moreRow, noteWrap].filter(Boolean));
-    // MAJ 01 §2 : la variante avancée attend que la simple soit propre au tempo voulu, dans plusieurs cours
-    const db = deblocage(e);
-    if (!db.ok) {
-      li.classList.add("verrou");
-      box.disabled = true;
-      li.insertBefore(el("p", { class: "verrou-txt" },
-        `Se débloque quand la variante simple est propre à ${db.d.bpm} bpm (3 passages propres) dans ${db.d.cours} cours différents : ${db.n}/${db.d.cours}. En attendant, continue la variante simple. `,
-        el("button", { class: "link-btn", type: "button", text: "L'essayer quand même", onclick: () => {
-          (state.debloques ||= {})[db.d.exo + ">" + e.id] = true; save(); renderCours();
-        } })), li.children[1] || null);
-    }
     if (e.jeux?.length && window.Jeux) {
       const row = el("div", { class: "exo-jeux" });
       const last = el("p", { class: "jeu-last" });

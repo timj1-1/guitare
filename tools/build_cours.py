@@ -9,11 +9,10 @@ ETIREMENTS = {
     "id": "etirements", "label": "Étirements (2 min)", "ressenti": False,
     "aide": "Ouvre et ferme les mains, étire doucement chaque doigt et les poignets, 10 secondes chacun, sans jamais forcer.",
 }
-# L'araignée en deux variantes (MAJ 01, §2) : la simple d'abord ; l'avancée se débloque quand la simple est
-# propre à 60 bpm (3 passages propres) lors de deux cours différents. Chaque variante a son tempo et son record.
-ARAIGNEE = {"id": "araignee", "label": "Araignée, variante simple : cases 5 à 8", "tempo": 60, "duree": 7}
-ARAIGNEE_AVANCEE = {"id": "araignee-avancee", "label": "Araignée, variante avancée : cases 5 à 8", "tempo": 60, "duree": 4,
-                    "debloque": {"exo": "b1/araignee", "bpm": 60, "cours": 2}}
+# L'araignée en deux variantes (MAJ 01, §2), travaillées ensemble dès le cours 1 (Timothée, 2026-11-04) :
+# la simple d'abord, puis l'avancée. Chaque variante a son tempo et son record.
+ARAIGNEE = {"id": "araignee", "label": "Araignée, variante simple : cases 5 à 8", "tempo": 60, "duree": 4}
+ARAIGNEE_AVANCEE = {"id": "araignee-avancee", "label": "Araignée, variante avancée : cases 5 à 8", "tempo": 60, "duree": 3}
 ARAIGNEE_COMBINEE = {"id": "araignee-combinee", "label": "Araignée combinée : 1 min simple, 1 min avancée, en enchaînant", "tempo": 60, "duree": 2, "theme": "technique"}
 
 # Séance de 1 h 30 : chaque échauffement commence par 4 minutes de jeu facile, les mains chauffent avant l'effort
@@ -50,10 +49,10 @@ PALIERS = [
         "videos": [V("Bien s'échauffer avant de jouer, sans puis avec la guitare", "https://www.youtube.com/watch?v=YHSqWScgQvU"), V("L'araignée, cases 5 à 8, pas à pas (en anglais)", "https://www.youtube.com/watch?v=Msj5ZwcUAQQ"), V("Jouer des arpèges aux doigts : pouce sur la basse, i-m-a sur les cordes aiguës", "https://www.youtube.com/watch?v=sNZqpUwu-Hc"), V("Les 120 arpèges de Giuliani, avec le PDF (en anglais)", "https://www.youtube.com/watch?v=AXWetJHbUhA")],
         "positions": [{"label": "Do", "code": "x32010"}, {"label": "Sol7", "code": "320001"}],
         "moities": [
-          {"faire": "Jeu facile (4 min), étirements (2 min), araignée cases 5 à 8, variante simple, vers 60 bpm (7 min), arpèges p-i-m-a et p-a-m-i sur Do puis Sol7 (7 min).",
-           "ex": [FACILE, ETIREMENTS, ARAIGNEE, {"id": "arpeges", "label": "Arpèges p-i-m-a et p-a-m-i sur Do puis Sol7", "tempo": 60, "duree": 7}]},
-          {"faire": "Jeu facile (4 min), étirements (2 min), araignée variante simple (3 min), puis la variante avancée si elle est débloquée (4 min, sinon la simple encore), arpège p-i-m-a-m-i sur Do puis Sol7 (7 min).",
-           "ex": [FACILE, ETIREMENTS, {**ARAIGNEE, "duree": 3}, ARAIGNEE_AVANCEE, {"id": "arpeges", "label": "Arpège p-i-m-a-m-i sur Do puis Sol7", "tempo": 60, "duree": 7}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), araignée cases 5 à 8 : la variante simple (4 min) puis la variante avancée (3 min), arpèges p-i-m-a et p-a-m-i sur Do puis Sol7 (7 min).",
+           "ex": [FACILE, ETIREMENTS, ARAIGNEE, ARAIGNEE_AVANCEE, {"id": "arpeges", "label": "Arpèges p-i-m-a et p-a-m-i sur Do puis Sol7", "tempo": 60, "duree": 7}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), araignée cases 5 à 8 : la variante simple (3 min) puis la variante avancée (4 min), arpège p-i-m-a-m-i sur Do puis Sol7 (7 min).",
+           "ex": [FACILE, ETIREMENTS, {**ARAIGNEE, "duree": 3}, {**ARAIGNEE_AVANCEE, "duree": 4}, {"id": "arpeges", "label": "Arpège p-i-m-a-m-i sur Do puis Sol7", "tempo": 60, "duree": 7}]},
         ],
       },
       {
