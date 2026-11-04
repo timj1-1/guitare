@@ -912,13 +912,13 @@ MAITRISER = {
         N("Basse et mélodie séparées", "Le pouce joue les basses sur les temps, i-m-a les cordes aiguës. Fais sonner la basse un peu moins fort : on entend deux plans, comme deux guitares."),
         N("Le doigt pivot", "Quand deux accords ont un doigt en commun, laisse-le posé pendant le changement : le son ne se coupe pas et ta main se repère."),
         N("Les notes tenues", "Laisse sonner chaque note de l'arpège jusqu'à la suivante : ne relève pas les doigts de la main gauche avant le changement d'accord.")],
-        jeux=[J("accords", 3, "Poser chaque accord ouvert sans regarder"), J("manche", 3, "Les basses que joue ton pouce, sur la corde de La")]),
+        jeux=[J("accords", 3, "Poser chaque accord ouvert sans regarder"), J("manche", 1, "Les basses que joue ton pouce, sur la corde de La")]),
     "bamboleo": dict(notions=[
         N("La cadence andalouse", "La mineur, Sol, Fa, Mi : quatre accords qui descendent, la signature du flamenco. Le Mi final reste en suspens et relance la boucle."),
         N("Le golpe", "Une frappe des doigts sur la table de la guitare, en même temps que le coup de main droite : c'est l'accent percussif de la rumba."),
         N("Le Fa barré à l'heure", "En rumba, le barré doit tomber pile sur le temps : prépare sa forme pendant l'accord d'avant."),
         N("L'impro sur la grille", "La pentatonique de La mineur colle à toute la grille : c'est elle que tu utilises pour ta minute d'impro.")],
-        jeux=[J("accords", 5, "Reconnaître et poser le Fa barré"), J("accords", 8, "Entendre la différence entre le La mineur et le Mi majeur de la cadence"), J("penta", 2, "La position 1, pour improviser dessus")]),
+        jeux=[J("barres", 1, "Reconnaître le Fa barré, forme Mi"), J("accords", 5, "Entendre la différence entre le La mineur et le Mi majeur de la cadence"), J("penta", 2, "La position 1, pour improviser dessus")]),
     "sos": dict(notions=[
         N("Changer sur le dernier temps", "Lève les doigts juste avant le temps 1 : le nouvel accord tombe pile, sans trou."),
         N("La main droite ne s'arrête jamais", "Garde le va-et-vient même pendant les changements : c'est lui qui tient le rythme."),
@@ -933,36 +933,36 @@ MAITRISER = {
         N("Le barré au milieu des arpèges", "Ton Fa barré doit sonner sans casser le flux de l'arpège : pose-le pendant la dernière note de l'accord d'avant."),
         N("Le doigt pivot", "Repère les doigts communs entre deux accords et laisse-les posés."),
         N("Les notes tenues", "Laisse sonner les cordes aiguës pendant que le pouce change de basse.")],
-        jeux=[J("accords", 5, "Le Fa barré et la forme Mi"), J("accords", 3, "Poser les accords ouverts de la grille")]),
+        jeux=[J("barres", 1, "Le Fa barré et la forme Mi"), J("accords", 3, "Poser les accords ouverts de la grille")]),
     "tarrega-mim": dict(notions=[
         N("Mi mineur et son Si7", "Le morceau est en Mi mineur. Le Si7 crée une tension qui revient se poser sur le Mi mineur : écoute ce retour au repos."),
         N("Une forme qui glisse", "Une même forme d'accord se déplace de case en case : la main garde la forme et glisse sans se relever."),
         N("La mélodie sur la corde aiguë", "La mélodie est sur le Mi aigu, jouée par l'annulaire (a) : fais-la sortir plus fort que le reste de l'arpège.")],
-        jeux=[J("accords", 4, "Les accords de 7e, dont le Si7 et le Mi7"), J("manche", 6, "Les notes du Mi aigu, où chante la mélodie")]),
+        jeux=[J("accords", 4, "Les accords de 7e, dont le Si7 et le Mi7"), J("manche", 6, "Les deux Mi, dont le Mi aigu où chante la mélodie")]),
     "cestecrit": dict(notions=[
         N("L'arpège d'accompagnement", "L'arpège soutient la voix : régulier, sans accent, comme un tapis."),
         N("Les barrés forme Mi et forme La", "Les deux formes de barré qui se déplacent : la note grave du barré donne le nom de l'accord.")],
-        jeux=[J("accords", 5, "Les barrés forme Mi"), J("accords", 6, "Les barrés forme La")]),
+        jeux=[J("barres", 3, "Les barrés forme Mi"), J("barres", 6, "Les barrés forme La")]),
     "djobi": dict(notions=[
         N("La cadence andalouse", "La mineur, Sol, Fa, Mi : la même descente que dans Bamboleo, la base de la rumba."),
         N("Le golpe", "La frappe sur la table, sur les accents de la rumba."),
         N("Des barrés qui bougent", "Les barrés se déplacent vite : garde la forme de la main et glisse le long du manche.")],
-        jeux=[J("accords", 5, "Le Fa barré forme Mi"), J("accords", 7, "Les barrés à n'importe quelle case")]),
+        jeux=[J("barres", 1, "Le Fa barré forme Mi"), J("barres", 8, "Tous les barrés, formes Mi et La")]),
     "pompe": dict(notions=[
         N("Basse, puis accord", "La pompe : une basse sur les temps 1 et 3, un accord court sur les temps 2 et 4. La main gauche relâche juste après pour couper le son."),
         N("Les accords sans corde à vide", "Sans corde à vide, la main gauche peut étouffer tout l'accord : c'est ce qui rend la pompe si sèche."),
         N("La grille de Minor Swing", "La mineur, Ré mineur, Mi7 : une grille en La mineur, où le Mi7 ramène toujours au La mineur.")],
-        jeux=[J("accords", 4, "Les accords de 7e, dont le Mi7"), J("accords", 7, "Les barrés à n'importe quelle case")]),
+        jeux=[J("accords", 4, "Les accords de 7e, dont le Mi7"), J("barres", 8, "Tous les barrés, formes Mi et La")]),
     "romance": dict(notions=[
         N("Les triolets", "Trois notes par temps : la mélodie est sur la première, les deux autres plus douces."),
         N("La mélodie sur la corde aiguë", "La mélodie chante sur le Mi aigu, jouée par l'annulaire : elle doit dépasser l'arpège."),
         N("Mi mineur", "La 1re partie est en Mi mineur, la 2e passe en Mi majeur : la même note de repos, deux couleurs.")],
-        jeux=[J("manche", 6, "Les notes du Mi aigu, où chante la mélodie"), J("accords", 7, "Les barrés, comme celui de la case 7")]),
+        jeux=[J("manche", 6, "Les deux Mi, dont le Mi aigu où chante la mélodie"), J("barres", 8, "Les barrés, formes Mi et La")]),
     "malaguena": dict(notions=[
         N("Le Mi phrygien", "Mi Fa Sol La Si Do Ré : la gamme de la cadence andalouse. Le Fa juste au-dessus du Mi donne la couleur flamenca."),
         N("La mélodie au pouce", "La mélodie est sur les cordes graves, jouée au pouce, pendant que les cordes aiguës sonnent à vide."),
         N("Le rasgueado", "Les doigts qui s'ouvrent l'un après l'autre sur les cordes : le roulement des accords flamencos.")],
-        jeux=[J("manche", 2, "Les notes du Mi grave, où passe la mélodie"), J("manche", 3, "Les notes de la corde de La")]),
+        jeux=[J("manche", 6, "Les notes du Mi grave, où passe la mélodie"), J("manche", 1, "Les notes de la corde de La")]),
     "yeuxnoirs": dict(notions=[
         N("La mineure harmonique", "Une gamme mineure dont la 7e note monte d'un demi-ton : c'est elle qui donne la couleur tzigane."),
         N("Une mélodie, puis la pompe", "Joue d'abord le thème seul, puis la pompe dessous : deux rôles différents pour la même grille.")],
@@ -971,22 +971,22 @@ MAITRISER = {
         N("Le passage en Mi majeur", "La même note de repos que la 1re partie, mais une couleur claire : écoute le changement."),
         N("Les grands écarts", "Poignet bas et pouce derrière le manche, au milieu : les doigts s'ouvrent plus facilement."),
         N("Les barrés courts", "Des barrés sur quelques cordes seulement : appuie juste où il faut, sans écraser tout le manche.")],
-        jeux=[J("accords", 7, "Les barrés à n'importe quelle case"), J("manche", 8, "Toutes les cordes, pour te repérer haut sur le manche")]),
+        jeux=[J("barres", 8, "Tous les barrés, formes Mi et La"), J("manche", 8, "Toutes les cordes, pour te repérer haut sur le manche")]),
     "shape": dict(notions=[
         N("Des accords plus haut sur le manche", "Des formes jouées loin du sillet : repère la case de départ grâce aux notes des cordes graves."),
         N("Les notes tenues", "Laisse sonner les notes de l'arpège les unes sur les autres : c'est ce qui donne la profondeur."),
         N("Un arpège qui raconte", "Fais varier le volume des notes : la mélodie doit ressortir de l'arpège.")],
-        jeux=[J("manche", 8, "Toutes les cordes, pour te repérer haut sur le manche"), J("accords", 7, "Les barrés à n'importe quelle case")]),
+        jeux=[J("manche", 8, "Toutes les cordes, pour te repérer haut sur le manche"), J("barres", 8, "Tous les barrés, formes Mi et La")]),
     "ipanema": dict(notions=[
         N("Les accords maj7 et m7", "La 7e ajoutée donne la couleur douce de la bossa : un accord majeur 7 sonne rêveur, un mineur 7 plus feutré."),
         N("Pouce et doigts indépendants", "Le pouce joue une basse régulière, les doigts pincent l'accord en décalé : c'est le rythme bossa."),
         N("Le pont qui change de tonalité", "Au milieu, le morceau part dans une autre tonalité avant de revenir : repère ce moment.")],
-        jeux=[J("accords", 9, "Les accords maj7 et m7"), J("accords", 3, "Poser un accord à partir de son nom")]),
+        jeux=[J("accords", 6, "Les accords maj7 et m7"), J("accords", 3, "Poser un accord à partir de son nom")]),
     "corcovado": dict(notions=[
         N("Les accords enrichis", "Des accords avec une 7e ou une 9e en plus : ils sonnent plus riches que les accords simples."),
         N("Le toucher doux", "Pince près de la rosace, sans attaquer : la bossa lente se joue presque en chuchotant."),
         N("Le rythme bossa lent", "Le même décalage pouce-doigts qu'à Ipanema, mais plus lent : garde le pouce parfaitement régulier.")],
-        jeux=[J("accords", 9, "Les accords maj7 et m7"), J("accords", 10, "Tous les accords mélangés")]),
+        jeux=[J("accords", 6, "Les accords maj7 et m7"), J("accords", 10, "Tous les accords mélangés")]),
 }
 # Les morceaux que Timothée ajoute lui-même, analysés au bilan. L'app les retrouve par leur titre
 # (sans accents, en minuscules, la ponctuation remplacée par des espaces) : la clé est ce titre.

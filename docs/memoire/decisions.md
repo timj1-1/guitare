@@ -1,6 +1,6 @@
 # Décisions déjà prises
 
-_Mis à jour le 2026-11-04 (app v49, MAJ 01)._
+_Mis à jour le 2026-11-04 (app v50, MAJ 01)._
 
 Les dates viennent des notes du projet et de l'historique du dépôt. « À confirmer » signale une date ou une raison que les notes ne donnent pas.
 
@@ -64,3 +64,9 @@ Les dates viennent des notes du projet et de l'historique du dépôt. « À conf
 | 2026-11-04 | Pause : fenêtre à valider après 25 min de pratique effective, 15 min sur les blocs physiques (échauffement, barrés), entre deux exercices. | Q5. |
 | 2026-11-04 | Un seul bloc ouvert ; un bloc fini se ferme et le suivant s'ouvre. « Écouter » d'un bloc lit aussi « Pourquoi c'est utile » et les explications ; « Écouter tout le cours » lit tout, avec Pause et « Bloc suivant ». | §8.1, §9, Q6. |
 | 2026-11-04 | Forme La, tableau des barrés et dièses passent au palier 2 ; le Mi grave n'est révisé dans les jeux qu'au palier 3. | §5, §11.2. |
+| 2026-11-04 | Jeu « Barrés » à part (10 niveaux) : 1 Fa, Sol, La forme Mi ; 2 leurs mineurs ; 3 mélange ; 4-6 forme La (Si♭, Do, Ré ; Si, Do, Ré mineurs) ; 7 Mi ou La ; 8 tout ; 9 chrono ; 10 sans fin. Pas de chrono avant le niveau 9. « Accords » devient « Accords ouverts ». | §11.1, Q7. |
+| 2026-11-04 | Les leurres d'un jeu d'accords ne viennent que des accords déjà vus dans ce jeu (jusqu'au niveau joué). | §11.2. |
+| 2026-11-04 | Notes du manche dans l'ordre du cours : La, Ré, Sol, Si, mélange, les deux Mi, dièses, tout, octaves, sans fin. | §11.2. |
+| 2026-11-04 | Niveaux ouverts par le cours ou par 10/10, mais tous jouables en avance, marqués « pas encore vu en cours ». | Q7 B. |
+| 2026-11-04 | Dans les jeux, une phrase de la voix attend la fin de la précédente ; s'il en attend plusieurs, seule la plus récente est dite. | §8.2. |
+| 2026-11-04 | Mes morceaux : plus de croix ; on retire une vidéo, une tablature ou un morceau à soi seulement dans « Modifier », avec confirmation. | §13. |

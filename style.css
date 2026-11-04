@@ -856,8 +856,6 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .tab-legende { display: flex; gap: 14px; margin: 2px 0 0; font-size: .75rem; color: var(--muted); }
 .tab-legende span::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 3px; border: 1.5px solid var(--accent); vertical-align: -1px; }
 .tab-legende span.mine::before { border-color: var(--ok); }
-.tab-x { flex: none; color: var(--muted); }
-.link-btn.x { color: var(--muted); padding: 2px 6px; }
 .ajout { border-top: 1px dashed var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 8px; }
 .ajout > summary { cursor: pointer; font-weight: 600; color: var(--accent); font-size: .92rem; }
 .ajout[open] > summary { margin-bottom: 4px; }
@@ -914,6 +912,7 @@ details.constr-pal h4 { margin: 12px 0 4px; font-size: .9rem; }
 .niv-pip.cours::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
 .niv-pip[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .niv-pip:disabled { opacity: .35; cursor: default; }
+.niv-pip.avance:not([aria-checked="true"]) { border-style: dashed; color: var(--muted); }
 .niv-desc { margin: 0; font-size: .92rem; }
 .niv-rec { margin: -4px 0 0; }
 .niv-note { margin: 4px 4px 0; }
@@ -1014,6 +1013,7 @@ input, select, textarea { font-size: max(16px, 1rem) !important; }
 .ed-fic { padding: 0 4px; }
 @media (max-width: 480px) { .ed-ligne { grid-template-columns: minmax(0, 1fr) auto; } .ed-ligne > :nth-child(2) { grid-column: 1; grid-row: 2; } .ed-ligne > :last-child { grid-row: 1 / span 2; grid-column: 2; } }
 .ed-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; position: sticky; bottom: calc(-18px - env(safe-area-inset-bottom, 0px)); background: var(--surface); padding: 10px 0 0; }
+.ed-actions .danger { margin-right: auto; color: var(--warn); }
 
 /* Jeux : un point par question, sous le compteur */
 .jeu-prog:has(.jeu-points) { display: inline-flex; align-items: center; gap: 8px; }

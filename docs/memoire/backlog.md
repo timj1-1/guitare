@@ -1,6 +1,6 @@
 # Backlog : bugs et idées
 
-_Mis à jour le 2026-11-04 (app v49, MAJ 01)._
+_Mis à jour le 2026-11-04 (app v50, MAJ 01)._
 
 Statuts : **ouvert** (à faire), **en pause**, **plus tard** (idée gardée, à ne pas traiter maintenant), **refusé**, **fait** (pour mémoire).
 
