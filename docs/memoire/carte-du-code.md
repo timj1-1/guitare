@@ -1,6 +1,6 @@
 # Carte du code (dépôt timj1-1/guitare, v48)
 
-_Mis à jour le 2026-11-02 (app v48)._
+_Mis à jour le 2026-11-04 (app v48, MAJ 01 lot 0)._
 
 L'app est en JavaScript sans framework ni étape de compilation. Les cours sont générés en Python. Les chemins sont relatifs à la racine du dépôt.
 
@@ -42,6 +42,8 @@ Sur l'appareil, les données sont dans localStorage : `maguitare:v1` (cases, tem
 | `tools/schemas/` | Schémas des effets en JSX (`effets/`), compilés par `compile.cjs` et recadrés par `crop.mjs`. |
 | `tools/icons.py` | Génère les icônes. |
 | `tools/test-micro.html` | Page de diagnostic du micro. |
+| `tools/tests/smoke.js` | Test automatique (MAJ 01) : 36 cours, chaque bloc et chaque onglet, écran ordinateur et téléphone, erreurs de console. `node tools/tests/smoke.js`. |
+| `tools/tests/contenu.py` | Contrôle du contenu : exercices disparus (référence `exercices-reference.json`), durée ≤ 90 min, prénom en dur. |
 
 ## Pour publier un changement (méthode suivie jusqu'ici)
 1. Modifier `tools/build_cours.py` ou `tools/explications.py`, puis lancer `build_cours.py`.
