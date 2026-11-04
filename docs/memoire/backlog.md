@@ -1,6 +1,6 @@
 # Backlog : bugs et idées
 
-_Mis à jour le 2026-11-02 (app v48)._
+_Mis à jour le 2026-11-04 (app v49, MAJ 01)._
 
 Statuts : **ouvert** (à faire), **en pause**, **plus tard** (idée gardée, à ne pas traiter maintenant), **refusé**, **fait** (pour mémoire).
 
@@ -53,3 +53,10 @@ Statuts : **ouvert** (à faire), **en pause**, **plus tard** (idée gardée, à 
 | Écoute de ton jeu en temps réel | 2026-10-24 | trop fragile |
 | Voix payante (ElevenLabs) | 2026-10-23 | tu ne veux pas payer |
 | « Demander au prof » dans Mon manche | 2026-10-24 | retiré de l'app (v21) |
+
+## MAJ 01 : restes à faire
+| Sujet | Statut | Détail |
+|---|---|---|
+| Moment à regarder dans chaque vidéo | ouvert | Les vidéos YouTube ne sont pas lisibles depuis les sessions de Claude : il faut les minutes de début et de fin (araignée d'abord) pour les écrire dans l'exercice. |
+| Bilan envoyé au prof | plus tard | « Envoie-moi ton bilan » et le mot du prof (`data/retours.json`) supposent que Claude adapte le cours de Timothée : à repenser pour d'autres utilisateurs. |
+| Profil (prénom, guitare, main, goûts) | ouvert | Prévu avec la synchro (lot 5) puis le questionnaire (MAJ 02). |

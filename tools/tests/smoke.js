@@ -14,6 +14,7 @@ function serve() {
   return new Promise(ok => {
     const srv = http.createServer((req, res) => {
       let p = decodeURIComponent(req.url.split("?")[0]);
+      if (p === "/__vide") { res.writeHead(200, { "Content-Type": "text/html" }); return res.end("<!doctype html><title>vide</title>"); }
       if (p.endsWith("/")) p += "index.html";
       const f = path.join(ROOT, p);
       if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end(); }
@@ -43,13 +44,14 @@ const ECRANS = [
     page.on("pageerror", x => log.push("pageerror: " + x.message));
     page.on("console", m => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) log.push("console: " + m.text()); });
     for (const c of cours) {
-      await page.goto(url);
+      // on écrit l'état depuis une page du même site sans l'app : l'app, en se fermant, réenregistre le sien
+      await page.goto(url + "__vide");
       await page.evaluate(id => {
         const s = JSON.parse(localStorage.getItem("maguitare:v1") || "{}");
         s.current = id; s.view = "cours"; localStorage.setItem("maguitare:v1", JSON.stringify(s));
         localStorage.setItem("maguitare:prof", "0");
       }, c.id);
-      await page.reload();
+      await page.goto(url);
       await page.waitForSelector(".bloc-head");
       for (const h of await page.$$(".bloc-head")) {
         if ((await h.getAttribute("aria-expanded")) === "false") await h.click();

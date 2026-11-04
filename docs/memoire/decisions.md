@@ -1,6 +1,6 @@
 # Décisions déjà prises
 
-_Mis à jour le 2026-11-02 (app v48)._
+_Mis à jour le 2026-11-04 (app v49, MAJ 01)._
 
 Les dates viennent des notes du projet et de l'historique du dépôt. « À confirmer » signale une date ou une raison que les notes ne donnent pas.
 
@@ -38,7 +38,7 @@ Les dates viennent des notes du projet et de l'historique du dépôt. « À conf
 | 2026-10-28 | « Recommencer » ne change pas de couleur après une erreur. | Sa demande (v46). |
 | 2026-10-28 | Le manche en haut du cours montre la progression du palier, une case par cours. | « Les couleurs qui avancent avec les cours », confirmé (v47). |
 | 2026-10-25 | Tablatures : Songsterr d'abord, pas d'Ultimate Guitar sauf en dernier recours (v43). | Il préfère Songsterr. |
-| 2026-10-25 | Pas de mise en ligne des données : chaque appareil garde les siennes, et un lien les copie de l'un à l'autre. | Pas de serveur. |
+| 2026-10-25 | Pas de mise en ligne des données : chaque appareil garde les siennes, et un lien les copie de l'un à l'autre. | Pas de serveur. **Remis en cause par MAJ 01 (§14) : synchro automatique prévue (Firebase recommandé, choix en attente).** |
 | 2026-10-26 | Polices dans le dépôt, sons non embarqués dans Mon manche (v39). | App plus légère et hors ligne dès la première ouverture (audit). |
 | 2026-10-26 | Le son acier reste téléchargé à l'installation. | Il sert au son Manouche, qui est le son par défaut. |
 | 2026-10-27 | Pas de réécriture de l'historique Git, même si le dépôt pèse lourd. | Ce serait destructif. |
@@ -52,3 +52,15 @@ Les dates viennent des notes du projet et de l'historique du dépôt. « À conf
 | 2026-10-25 | Deux voix gardées : Rémy et Vivienne (sa préférée). Les versions HD, Céleste et Yvette sont annulées. | Le quota gratuit est de 500 000 caractères par mois. |
 | 2026-10-28 | Rémy terminée (1 495 phrases, PR #4). Vivienne en pause à 372. | Elle reprend quand il le demande. |
 | permanent | La clé Azure n'apparaît jamais dans le chat, le dépôt ni la mémoire. | Sécurité. |
+
+## MAJ 01 (validée le 2026-11-04)
+| Date | Décision | Raison |
+|---|---|---|
+| 2026-11-04 | Le prof tutoie et reste proche de l'utilisateur. Plus de prénom en dur ni de « tu connais déjà » fondé sur le niveau de Timothée ; le prénom viendra d'un questionnaire (plus tard). | App destinée à des bêta-testeurs puis au grand public. Dans ses cahiers des charges, « l'utilisateur » s'adresse à Claude. |
+| 2026-11-04 | Chaque exercice porte sa durée, son type (Découverte, Révision, Approfondissement, Pratique), ses vidéos et ses schémas. Les vidéos non essentielles vont dans « Pour aller plus loin, hors séance ». « Lire » devient « Relire » après la première lecture. | Cours 1 trop long (2 h), ressources à trouver dans l'exercice. |
+| 2026-11-04 | Araignée en deux variantes. L'avancée se débloque quand la simple est propre à 60 bpm (3/3) dans 2 cours ; chacune a son tempo et son record. Exercice combiné au palier 2. | Q3 du document MAJ 01. |
+| 2026-11-04 | « Propre » : 3/3 reste affiché, l'utilisateur choisit de monter (+4 bpm). Record = tempo le plus haut d'un exercice, tous cours confondus. | Q4. |
+| 2026-11-04 | Pas de Galère/Correct/Facile sur le jeu facile, les étirements et « Lire « Comprendre les barrés » » (les autres exercices de barrés les gardent). | Q4. |
+| 2026-11-04 | Pause : fenêtre à valider après 25 min de pratique effective, 15 min sur les blocs physiques (échauffement, barrés), entre deux exercices. | Q5. |
+| 2026-11-04 | Un seul bloc ouvert ; un bloc fini se ferme et le suivant s'ouvre. « Écouter » d'un bloc lit aussi « Pourquoi c'est utile » et les explications ; « Écouter tout le cours » lit tout, avec Pause et « Bloc suivant ». | §8.1, §9, Q6. |
+| 2026-11-04 | Forme La, tableau des barrés et dièses passent au palier 2 ; le Mi grave n'est révisé dans les jeux qu'au palier 3. | §5, §11.2. |
