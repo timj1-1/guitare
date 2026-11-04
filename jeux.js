@@ -185,7 +185,8 @@
   const session = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
   // demandes de micro en cours : tant qu'il en reste une, on ne repasse pas en « playback » (sinon la nouvelle écoute est sourde)
   let attente = 0;
-  async function startMic(onNote, onLevel, isCurrent) {
+  // brut : (signal, fréquence d'échantillonnage) à chaque trame, à la place de la détection de notes (l'accordeur)
+  async function startMic(onNote, onLevel, isCurrent, { brut = null, taille = 4096 } = {}) {
     if (chromeMac) throw new Error("chrome-mac");
     if (!navigator.mediaDevices?.getUserMedia) throw new Error("micro");
     // Safari : le micro est interdit quand la page est en « lecture » (playback) : on passe en lecture et enregistrement
@@ -200,12 +201,13 @@
     stopMic(true);
     const c = Sons.ctx(); if (c.state === "suspended") await c.resume();
     const src = c.createMediaStreamSource(stream), an = c.createAnalyser(), mute = c.createGain();
-    an.fftSize = 4096; mute.gain.value = 0;
+    an.fftSize = taille; mute.gain.value = 0;
     src.connect(an); an.connect(mute); mute.connect(c.destination);
     const buf = new Float32Array(an.fftSize);
     let cand = null, count = 0, last = null, quiet = 0;
     const id = setInterval(() => {
       an.getFloatTimeDomainData(buf);
+      if (brut) { brut(buf, c.sampleRate); return; }
       const p = pitchOf(buf, c.sampleRate);
       onLevel?.(p.rms);
       if (window.Sons?.parle()) { cand = null; count = 0; return; }
@@ -639,7 +641,7 @@
     sous: "Deux cordes plus loin vers l'aigu : +2 cases depuis le Mi grave ou le La, +3 depuis le Ré ou le Sol.",
     cases: [[6, 3, "root", "Sol"], [4, 5, "root", "Sol"], [5, 2, "note", "Si"], [3, 4, "note", "Si"], [4, 2, "root", "Mi"], [2, 5, "root", "Mi"], [3, 2, "note", "La"], [1, 5, "note", "La"]] });
 
-  window.Jeux = { open, resume, MODES, NOM_CORDE, ecouteEnCours: () => !!mic,
+  window.Jeux = { open, resume, MODES, NOM_CORDE, ecouteEnCours: () => !!mic, micro: { start: startMic, stop: stopMic },
     // pour les jeux à niveaux (niveaux.js)
     base: { Board, cadre, grille, points, schema, aideBtn, schemaNotes, schemaOctaves, el, aff, FR, NATURALS, PC, OPEN, NOM_CORDE, pcOf, nameOf, shuffle, pick, play, nomsBtn, son: { get: () => soundOn, set: v => { soundOn = !!v; try { localStorage.setItem("maguitare:son", soundOn ? "1" : "0"); } catch {} } } } };
 })();
