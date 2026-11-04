@@ -6,14 +6,21 @@ from explications import EXPL, PLUS, GARDE, POSITIONS
 V = lambda t, u: {"t": t, "u": u}
 
 ETIREMENTS = {
-    "id": "etirements", "label": "Étirements (2 min)",
+    "id": "etirements", "label": "Étirements (2 min)", "ressenti": False,
     "aide": "Ouvre et ferme les mains, étire doucement chaque doigt et les poignets, 10 secondes chacun, sans jamais forcer.",
 }
+# L'araignée en deux variantes (MAJ 01, §2) : la simple d'abord ; l'avancée se débloque quand la simple est
+# propre à 60 bpm (3 passages propres) lors de deux cours différents. Chaque variante a son tempo et son record.
+ARAIGNEE = {"id": "araignee", "label": "Araignée, variante simple : cases 5 à 8", "tempo": 60, "duree": 7}
+ARAIGNEE_AVANCEE = {"id": "araignee-avancee", "label": "Araignée, variante avancée : cases 5 à 8", "tempo": 60, "duree": 4,
+                    "debloque": {"exo": "b1/araignee", "bpm": 60, "cours": 2}}
+ARAIGNEE_COMBINEE = {"id": "araignee-combinee", "label": "Araignée combinée : 1 min simple, 1 min avancée, en enchaînant", "tempo": 60, "duree": 2, "theme": "technique"}
+
 # Séance de 1 h 30 : chaque échauffement commence par 4 minutes de jeu facile, les mains chauffent avant l'effort
-FACILE = {"id": "facile", "label": "Jeu facile : arpèges lents ou gamme lente, sans forcer (4 min)"}
+FACILE = {"id": "facile", "label": "Jeu facile : arpèges lents ou gamme lente, sans forcer (4 min)", "ressenti": False}
 # ce que « jeu facile » veut dire selon ce que tu sais déjà jouer (2026-10-26 : au début, pas encore de gamme)
 FACILE_LABEL = {
-    (1, 0): "Jeu facile : tes accords ouverts en arpèges lents (Do, La mineur, Mi mineur), ou l'intro de Fragile (4 min)",
+    (1, 0): "Jeu facile : Do, La mineur, Mi mineur en arpèges lents (4 min)",
     (1, 1): "Jeu facile : Do, La mineur, Mi mineur en arpèges lents, ou la gamme de Do majeur, lentement (4 min)",
     (2, 0): "Jeu facile : arpèges lents sur tes accords, ou la gamme de Do majeur, lentement (4 min)",
     (2, 1): "Jeu facile : arpèges lents sur tes accords, ou la gamme de Do majeur, lentement (4 min)",
@@ -43,10 +50,10 @@ PALIERS = [
         "videos": [V("Bien s'échauffer avant de jouer, sans puis avec la guitare", "https://www.youtube.com/watch?v=YHSqWScgQvU"), V("L'araignée, cases 5 à 8, pas à pas (en anglais)", "https://www.youtube.com/watch?v=Msj5ZwcUAQQ"), V("Jouer des arpèges aux doigts : pouce sur la basse, i-m-a sur les cordes aiguës", "https://www.youtube.com/watch?v=sNZqpUwu-Hc"), V("Les 120 arpèges de Giuliani, avec le PDF (en anglais)", "https://www.youtube.com/watch?v=AXWetJHbUhA")],
         "positions": [{"label": "Do", "code": "x32010"}, {"label": "Sol7", "code": "320001"}],
         "moities": [
-          {"faire": "Jeu facile (4 min), étirements (2 min), araignée cases 5 à 8 à 60 bpm (7 min), arpèges p-i-m-a et p-a-m-i sur Do puis Sol7 (7 min).",
-           "ex": [FACILE, ETIREMENTS, {"id": "araignee", "label": "Araignée cases 5 à 8", "tempo": 60}, {"id": "arpeges", "label": "Arpèges p-i-m-a et p-a-m-i sur Do puis Sol7", "tempo": 60}]},
-          {"faire": "Jeu facile (4 min), étirements (2 min), araignée cases 5 à 8 à 60 bpm (7 min), arpège p-i-m-a-m-i sur Do puis Sol7 (7 min).",
-           "ex": [FACILE, ETIREMENTS, {"id": "araignee", "label": "Araignée cases 5 à 8", "tempo": 60}, {"id": "arpeges", "label": "Arpège p-i-m-a-m-i sur Do puis Sol7", "tempo": 60}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), araignée cases 5 à 8, variante simple, vers 60 bpm (7 min), arpèges p-i-m-a et p-a-m-i sur Do puis Sol7 (7 min).",
+           "ex": [FACILE, ETIREMENTS, ARAIGNEE, {"id": "arpeges", "label": "Arpèges p-i-m-a et p-a-m-i sur Do puis Sol7", "tempo": 60, "duree": 7}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), araignée variante simple (3 min), puis la variante avancée si elle est débloquée (4 min, sinon la simple encore), arpège p-i-m-a-m-i sur Do puis Sol7 (7 min).",
+           "ex": [FACILE, ETIREMENTS, {**ARAIGNEE, "duree": 3}, ARAIGNEE_AVANCEE, {"id": "arpeges", "label": "Arpège p-i-m-a-m-i sur Do puis Sol7", "tempo": 60, "duree": 7}]},
         ],
       },
       {
@@ -73,8 +80,8 @@ PALIERS = [
         ],
         "videos": [V("Pentatonique : les 5 positions expliquées facilement", "https://www.youtube.com/watch?v=OfyoYXtti04"), V("Apprendre vos 5 positions en 10 min", "https://www.youtube.com/watch?v=YH6KGcpHUOg")],
         "moities": [
-          {"faire": "La position 1 (case 5), que tu connais déjà, au métronome à 70 bpm, en alternant i-m (8 min). Puis en disant le nom de chaque note (3 min), et le jeu Pentatonique du bloc (4 min).",
-           "ex": [{"id": "penta1", "label": "Position 1 (case 5), alternance i-m", "tempo": 70}, {"id": "penta1-noms", "label": "Position 1 en disant le nom des notes (3 min)"}]},
+          {"faire": "La position 1 (case 5), au métronome à 70 bpm, en alternant i-m (8 min). Puis en lisant le nom de chaque note sur le schéma (3 min), et le jeu Pentatonique du bloc (4 min).",
+           "ex": [{"id": "penta1", "label": "Position 1 (case 5), alternance i-m", "tempo": 70}, {"id": "penta1-noms", "label": "Position 1 en lisant le nom des notes sur le schéma (3 min)"}]},
           {"faire": "La position 2, cases 7 à 10 (5 min). Puis relier 1 et 2 : monte dans la position 1, glisse dans la 2 sans t'arrêter, et redescends (6 min). Enfin le jeu du bloc (4 min).",
            "ex": [{"id": "penta2", "label": "Position 2 (cases 7 à 10)", "tempo": 70}, {"id": "penta12", "label": "Relier les positions 1 et 2", "tempo": 70}]},
         ],
@@ -102,22 +109,16 @@ PALIERS = [
             "Le sillet. C'est la petite barre blanche au bout du manche, côté mécaniques. Il bloque les cordes à vide. Dans un barré, ton index couché sur les cordes devient un sillet que tu déplaces où tu veux.",
             "Un barré, c'est un accord ouvert déplacé. Joue Mi majeur avec le majeur, l'annulaire et l'auriculaire, pour libérer l'index. Fais glisser cette forme d'une case et couche l'index derrière : il joue les cordes qui étaient à vide. Toutes les notes montent d'une case, donc l'accord monte aussi.",
             "Pourquoi case 1 = Fa. Entre Mi et Fa, il n'y a qu'une case (un demi-ton). Mi monté d'une case donne Fa, donc l'accord de Mi monté d'une case donne l'accord de Fa.",
-            "Le nom de l'accord = la note sous l'index, sur la 6e corde. Cette note s'appelle la fondamentale : c'est elle qui donne son nom à l'accord. Tu connais les notes du Mi grave, donc tu peux trouver tous les accords forme Mi : case 3 = Sol, case 5 = La, case 8 = Do. Les barrés se ressemblent tous parce que c'est la même forme : seule la case change, et donc le nom.",
+            "Le nom de l'accord = la note sous l'index, sur la 6e corde. Cette note s'appelle la fondamentale : c'est elle qui donne son nom à l'accord. Sur la 6e corde, case 1 = Fa, case 3 = Sol, case 5 = La : ce sont les seules à retenir pour l'instant. Les barrés se ressemblent tous parce que c'est la même forme : seule la case change, et donc le nom.",
             "Majeur ou mineur, c'est un seul doigt. Mi mineur, c'est Mi majeur sans le doigt sur la corde de Sol. Barré, c'est pareil : enlève le doigt 2 et l'index joue aussi la corde de Sol. Tu obtiens Fa mineur, Sol mineur, La mineur avec la même forme.",
           ], "ordonnee": True},
-          "La 2e forme : la forme La (au palier 2). Même idée, mais à partir de La majeur. Monte la forme de deux cases et couche l'index : tu obtiens Si majeur (de La à Si, il y a deux cases). Ici, la fondamentale est sur la 5e corde, la corde de La que tu apprends au bloc 4. La 6e corde ne se joue pas.",
-          "Pourquoi deux formes ? Pour jouer près de l'endroit où ta main se trouve déjà. Do existe en forme La case 3 et en forme Mi case 8 : tu prends celle qui t'évite de sauter sur le manche. Avec ce tableau, tu trouves n'importe quel accord :",
-          {"table": [["Accord", "Forme Mi (fondamentale sur la 6e corde)", "Forme La (fondamentale sur la 5e corde)"],
-                     ["Fa", "case 1", "case 8"], ["Sol", "case 3", "case 10"], ["La", "case 5", "accord ouvert, ou case 12"],
-                     ["Si", "case 7", "case 2"], ["Do", "case 8", "case 3"], ["Ré", "case 10", "case 5"], ["Mi", "accord ouvert, ou case 12", "case 7"]]},
-          "Les accords en dièse ou en bémol sont entre les deux : Fa# (Fa dièse) = forme Mi case 2, Sib (Si bémol) = forme La case 1.",
           "Bien jouer un barré : index légèrement tourné côté pouce, tout près de la frette. La force vient du poids du bras, pas du pouce qui écrase. Si une corde ne sonne pas, déplace un peu l'index au lieu d'appuyer plus fort. Plus haut sur le manche, les cases sont plus étroites : le barré y est souvent plus facile qu'en case 1.",
         ],
         "videos": [V("Les noms des accords barrés (FooJayProd)", "https://www.youtube.com/watch?v=mSX-Q9PVvcw"), V("Les accords barrés : principes, conseils et exemples (Terafab)", "https://www.youtube.com/watch?v=4BsSPpe0V2Y"), V("Réussir le Fa et les barrés en position de Mi", "https://www.youtube.com/watch?v=i09S-nNoJDY"), V("Le secret pour faire facilement des accords barrés", "https://www.youtube.com/watch?v=WctfgDPpwHw")],
         "moities": [
-          {"faire": "Commence par lire « Comprendre les barrés » (Explication). Puis la forme Mi majeur en case 1 (Fa, que tu maîtrises déjà), en case 3 (Sol) et en case 5 (La), en disant le nom de chaque accord. Enchaîne Fa → Sol → La → Sol → Fa, 4 temps par accord.",
+          {"faire": "Commence par lire « Comprendre les barrés » (Explication). Puis la forme Mi majeur en case 1 (Fa), en case 3 (Sol) et en case 5 (La), en disant le nom de chaque accord. Enchaîne Fa → Sol → La → Sol → Fa, 4 temps par accord.",
            "positions": [{"label": "Fa (case 1)", "code": "133211"}, {"label": "Sol (case 3)", "code": "355433"}, {"label": "La (case 5)", "code": "577655"}],
-           "ex": [{"id": "comprendre", "label": "Lire « Comprendre les barrés en 5 idées »"}, {"id": "majeurs", "label": "Forme Mi : Fa, Sol, La, en disant leur nom"}, {"id": "enchainement", "label": "Enchaînement Fa → Sol → La → Sol → Fa", "tempo": 60}]},
+           "ex": [{"id": "comprendre", "label": "Lire « Comprendre les barrés en 5 idées »", "duree": 4, "ressenti": False}, {"id": "majeurs", "label": "Forme Mi : Fa, Sol, La, en disant leur nom"}, {"id": "enchainement", "label": "Enchaînement Fa → Sol → La → Sol → Fa", "tempo": 60}]},
           {"faire": "La version mineure aux mêmes cases (Fa mineur, Sol mineur, La mineur), puis alterne majeur et mineur sur la même case : Sol → Sol mineur → Sol.",
            "positions": [{"label": "Fa mineur", "code": "133111"}, {"label": "Sol mineur", "code": "355333"}, {"label": "La mineur (case 5)", "code": "577555"}, {"label": "Sol (case 3)", "code": "355433"}],
            "ex": [{"id": "mineurs", "label": "Forme Mi mineure : Fa, Sol, La mineurs"}, {"id": "alterne", "label": "Sol → Sol mineur → Sol", "tempo": 60}, {"id": "enchainement", "label": "Enchaînement Fa → Sol → La → Sol → Fa", "tempo": 60}]},
@@ -161,10 +162,10 @@ PALIERS = [
         ],
         "videos": [V("Indépendance et contrôle des doigts de la main gauche", "https://www.youtube.com/watch?v=0HIJv86vSWs"), V("Apprendre à jouer les hammer / pull-off", "https://www.youtube.com/watch?v=COzP3U5OG1A"), V("3 conseils pour des liés faciles en guitare classique (en anglais)", "https://www.youtube.com/watch?v=b4Vxf-TCIhE")],
         "moities": [
-          {"faire": "Jeu facile (4 min), étirements (2 min), permutations 1-3-2-4 puis 1-4-2-3 cases 5 à 8 à 60 bpm (7 min), liés ascendants (7 min).",
-           "ex": [FACILE, ETIREMENTS, {"id": "permutations", "label": "Permutations 1-3-2-4 puis 1-4-2-3", "tempo": 60}, {"id": "lies", "label": "Liés ascendants"}]},
-          {"faire": "Jeu facile (4 min), étirements (2 min), permutations 1-3-2-4 puis 1-4-2-3 cases 5 à 8 à 60 bpm (7 min), liés descendants (7 min).",
-           "ex": [FACILE, ETIREMENTS, {"id": "permutations", "label": "Permutations 1-3-2-4 puis 1-4-2-3", "tempo": 60}, {"id": "lies", "label": "Liés descendants"}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), permutations 1-3-2-4 puis 1-4-2-3 cases 5 à 8 à 60 bpm (5 min), l'araignée combinée (2 min), liés ascendants (7 min).",
+           "ex": [FACILE, ETIREMENTS, {"id": "permutations", "label": "Permutations 1-3-2-4 puis 1-4-2-3", "tempo": 60, "duree": 5}, ARAIGNEE_COMBINEE, {"id": "lies", "label": "Liés ascendants"}]},
+          {"faire": "Jeu facile (4 min), étirements (2 min), permutations 1-3-2-4 puis 1-4-2-3 cases 5 à 8 à 60 bpm (5 min), l'araignée combinée (2 min), liés descendants (7 min).",
+           "ex": [FACILE, ETIREMENTS, {"id": "permutations", "label": "Permutations 1-3-2-4 puis 1-4-2-3", "tempo": 60, "duree": 5}, ARAIGNEE_COMBINEE, {"id": "lies", "label": "Liés descendants"}]},
         ],
       },
       {
@@ -344,7 +345,7 @@ PALIERS = [
         "titre": "Notes du manche : quiz et harmoniques", "duree": 10,
         "sert": "Connaître tout le manche, pour trouver n'importe quelle note ou n'importe quel accord sans chercher.",
         "explication": [
-          "La corde de Mi aigu porte les mêmes notes que le Mi grave, que tu connais déjà.",
+          "La corde de Mi aigu porte les mêmes notes que le Mi grave : mêmes cases, mêmes noms.",
         ],
         "videos": [V("Apprenez TOUTES les notes sur le manche en 10 minutes", "https://www.youtube.com/watch?v=oV6d2degxdw"), V("Apprendre les notes de son manche avec efficacité", "https://www.youtube.com/watch?v=jHH9N-l-Jb0")],
         "moities": [
@@ -537,21 +538,102 @@ FRAGILE_ENTRETIEN = {"id": "fragile", "label": "Fragile une fois en entier, pour
 
 
 # Jeux du manche, selon la corde travaillée à ce moment du parcours (cordes : 6 = Mi grave … 1 = Mi aigu).
+# « vues » : les cordes déjà apprises (MAJ 01 : le Mi grave n'est appris qu'avec le Mi aigu, au palier 3).
 JEUX_NOTES = {
-    (1, 0): {"corde": 5, "vues": [6, 5], "note": "La", "octave": [6, 5]},
-    (1, 1): {"corde": 4, "vues": [6, 5, 4], "note": "Ré", "octave": [6, 5, 4]},
-    (2, 0): {"corde": 3, "vues": [6, 5, 4, 3], "note": "Sol", "octave": [6, 5, 4, 3]},
-    (2, 1): {"corde": 2, "vues": [6, 5, 4, 3, 2], "note": "Si", "octave": [6, 5, 4, 3]},
+    (1, 0): {"corde": 5, "vues": [5], "note": "La", "octave": [6, 5]},
+    (1, 1): {"corde": 4, "vues": [5, 4], "note": "Ré", "octave": [6, 5, 4]},
+    (2, 0): {"corde": 3, "vues": [5, 4, 3], "note": "Sol", "octave": [6, 5, 4, 3]},
+    (2, 1): {"corde": 2, "vues": [5, 4, 3, 2], "note": "Si", "octave": [6, 5, 4, 3]},
     (3, 0): {"corde": 1, "vues": [6, 5, 4, 3, 2, 1], "note": "Mi", "octave": [6, 5, 4, 3]},
 }
 
 
 # Schémas du cours (data/schemas.json, repris du Claude Doc), par palier puis par bloc.
 SCHEMAS = {
-    1: [["araignee", "main-droite"], ["do-majeur", "butee-pince"], ["penta-1", "penta-2"], ["notes-manche", "octaves"], ["forme-mi", "forme-la"], ["main-droite"]],
-    2: [["permutations", "lies"], ["sol-majeur"], ["penta-3", "penta-1"], ["notes-manche", "octaves"], ["sib-sim", "rumba", "cadence-andalouse"], ["cadence-andalouse"]],
+    1: [["araignee", "main-droite"], ["do-majeur", "butee-pince"], ["penta-1", "penta-2"], ["notes-manche", "octaves"], ["forme-mi"], ["main-droite"]],
+    2: [["permutations", "lies"], ["sol-majeur"], ["penta-3", "penta-1"], ["notes-manche", "octaves"], ["sib-sim", "forme-la", "rumba", "cadence-andalouse"], ["cadence-andalouse"]],
     3: [["ecartement", "lies"], ["la-mineur"], ["penta-4-5", "penta-5-positions"], ["notes-manche", "octaves"], ["rasgueado", "rumba"], ["cadence-andalouse", "penta-1"]],
 }
+
+# MAJ 01 (§4, §6) : chaque exercice reçoit ses vidéos et ses schémas. Clé (palier, bloc) ou (palier, bloc, moitié).
+# Vidéos : indices dans la liste du bloc (vidéos du bloc, puis celles « plus » de la moitié). Une vidéo qu'aucun
+# exercice ne prend va dans « Pour aller plus loin (hors séance) ». Schémas : leurs noms (data/schemas.json) ;
+# un schéma qu'aucun exercice ne prend reste au niveau du bloc.
+VIDEO_EXO = {
+    (1, 1): {"etirements": [0], "araignee": [1], "araignee-avancee": [1], "arpeges": [2]},
+    (1, 2): {"alternance": [1], "gamme": [0], "gamme-pince": [1]},
+    (1, 3): {"penta1": [0], "penta2": [0], "penta12": [0]},
+    (1, 4): {"corde": [0], "octaves": [1]},
+    (1, 5): {"comprendre": [0], "majeurs": [2], "mineurs": [2]},
+    (1, 6): {"passages": [0], "entier": [0]},
+    (2, 1): {"permutations": [0], "lies": [1], "araignee-combinee": [0]},
+    (2, 2): {"gamme": [0], "segovia": [1]},
+    (2, 3): {"penta3": [0], "penta23": [0], "penta123": [0], "glissando": [2], "impro": [1]},
+    (2, 4): {"corde": [0], "octaves": [1]},
+    (2, 5): {"barres": [0], "rumba": [1]},
+    (2, 6): {"grille": [0], "morceau": [1]},
+    (3, 1): {"ecartement": [0], "lies": [1]},
+    (3, 2): {"gamme": [0], "gamme-am": [0], "picado": [2]},
+    (3, 3): {"penta45": [1], "penta-tout": [0], "vibrato": [3], "impro": [2]},
+    (3, 4): {"quiz": [0], "harmoniques": [2]},
+    (3, 5, 0): {"rasgueado": [0]},
+    (3, 5, 1): {"rasgueado": [1], "apagado": [2]},
+    (3, 6): {"morceau": [0], "impro": [1]},
+}
+SCHEMA_EXO = {
+    (1, 1): {"araignee": ["araignee"], "araignee-avancee": ["araignee"], "arpeges": ["main-droite"]},
+    (1, 2): {"alternance": ["butee-pince"], "gamme": ["do-majeur", "butee-pince"], "gamme-pince": ["do-majeur", "butee-pince"]},
+    (1, 3): {"penta1": ["penta-1"], "penta1-noms": ["penta-1-notes"], "penta2": ["penta-2"], "penta12": ["penta-1", "penta-2"]},
+    (1, 4): {"corde": ["notes-manche"], "octaves": ["octaves"]},
+    (1, 5): {"comprendre": ["forme-mi"], "majeurs": ["forme-mi"], "mineurs": ["forme-mi"], "enchainement": ["forme-mi"], "alterne": ["forme-mi"]},
+    (1, 6): {"passages": ["main-droite"], "entier": ["main-droite"]},
+    (2, 1): {"permutations": ["permutations"], "lies": ["lies"], "araignee-combinee": ["araignee"]},
+    (2, 2): {"gamme": ["sol-majeur"]},
+    (2, 3): {"penta3": ["penta-3"], "penta23": ["penta-3"], "penta123": ["penta-1", "penta-3"], "impro": ["penta-1"]},
+    (2, 4): {"corde": ["notes-manche"], "octaves": ["octaves"]},
+    (2, 5): {"barres": ["sib-sim", "forme-la"], "enchainement": ["sib-sim"], "rumba": ["rumba"]},
+    (2, 6): {"grille": ["cadence-andalouse"], "morceau": ["cadence-andalouse"]},
+    (3, 1): {"ecartement": ["ecartement"], "lies": ["lies"]},
+    (3, 2): {"gamme": ["la-mineur"], "gamme-am": ["la-mineur"], "triolets": ["la-mineur"], "picado": ["la-mineur"]},
+    (3, 3): {"penta45": ["penta-4-5"], "penta-tout": ["penta-5-positions"], "impro": ["penta-5-positions"]},
+    (3, 4): {"quiz": ["notes-manche"], "revoir": ["notes-manche"]},
+    (3, 5): {"rasgueado": ["rasgueado"], "rumba": ["rumba"]},
+    (3, 6): {"morceau": ["cadence-andalouse"], "impro": ["penta-1"]},
+}
+SANS_TYPE = {"facile", "etirements"}  # échauffement de base : ni « nouveau », ni « révision »
+
+
+def duree_ex(faire, ex):
+    """MAJ 01 §3 : la durée prévue de chaque exercice. Explicite (« duree »), sinon « (N min) » dans son nom,
+    sinon prise dans l'ordre des « (N min) » de la consigne (sans les jeux du bloc)."""
+    def du_label(e):
+        m = re.search(r"\((\d+) min\)", e["label"])
+        return int(m.group(1)) if m else None
+    morceaux = [(t, int(n)) for t, n in re.findall(r"([^().]*?)\((\d+) min\)", faire)]
+    morceaux = [n for t, n in morceaux if not (re.search(r"\bjeu\b", t, re.I) and "facile" not in t.lower())]
+    out = []
+    for i, e in enumerate(ex):
+        d = e.get("duree") or du_label(e)
+        if d is None and len(morceaux) == len(ex):
+            d = morceaux[i]
+        out.append(d)
+    return out
+
+
+def complete_durees(ex, duree_bloc, faire):
+    """Les exercices sans durée se partagent le temps du bloc qui reste (moins les jeux du bloc)."""
+    jeux = sum(int(n) for t, n in re.findall(r"([^().]*?)\((\d+) min\)", faire)
+               if re.search(r"\bjeu\b", t, re.I) and "facile" not in t.lower())
+    manque = [e for e in ex if not e.get("duree")]
+    if not manque:
+        return
+    reste = duree_bloc - jeux - sum(e["duree"] for e in ex if e.get("duree"))
+    if reste < len(manque):
+        return
+    part, extra = divmod(reste, len(manque))
+    for i, e in enumerate(manque):
+        e["duree"] = part + (1 if i < extra else 0)
+
 
 # Thèmes des barres de progression de « Mon bilan ».
 THEMES = [
@@ -588,13 +670,19 @@ def theme_of(e):
 
 def jeux_for(palier, moitie, e):
     cfg = JEUX_NOTES.get((palier["num"], moitie))
+    # MAJ 01 (§1.1, §11.2) : au tout début, un jeu par exercice, et seulement sur les cordes déjà apprises
+    debut = (palier["num"], moitie) == (1, 0)
     if e["id"] == "corde" and cfg:
-        return [{"mode": "trouve", "cordes": [cfg["corde"]], "label": "Trouve les notes"},
-                {"mode": "nomme", "cordes": [cfg["corde"]], "label": "Quelle note ?"},
-                {"mode": "nomme", "cordes": cfg["vues"], "label": "Révision : toutes mes cordes"}]
+        j = [{"mode": "trouve", "cordes": [cfg["corde"]], "label": "Trouve les notes"},
+             {"mode": "nomme", "cordes": [cfg["corde"]], "label": "Quelle note ?"}]
+        if cfg["vues"] != [cfg["corde"]]:
+            j.append({"mode": "nomme", "cordes": cfg["vues"], "label": "Révision : toutes mes cordes"})
+        return j
     if e["id"] == "octaves" and cfg:
-        return [{"mode": "partout", "note": cfg["note"], "label": f"Tous les {cfg['note']}"},
-                {"mode": "octave", "cordes": cfg["octave"], "label": "Octaves"}]
+        j = [{"mode": "partout", "note": cfg["note"], "label": f"Tous les {cfg['note']}"}]
+        if not debut:
+            j.append({"mode": "octave", "cordes": cfg["octave"], "label": "Octaves"})
+        return j
     if e["id"] == "quiz":
         return [{"mode": "quiz", "label": "Quiz : une note, toutes les cordes"},
                 {"mode": "nomme", "cordes": [6, 5, 4, 3, 2, 1], "label": "Quelle note ? (6 cordes)"}]
@@ -619,9 +707,8 @@ def voix_explication(b):
             cols = [h.split(" (")[0] for h in head[1:]]
             for r in rows:
                 seg.append(r[0] + " : " + ", ".join(f"{c.lower()} {v}" for c, v in zip(cols, r[1:])) + ".")
-    n = len(b["videos"])
-    if n:
-        seg.append("Il y a aussi une vidéo juste en dessous, pour voir le geste." if n == 1 else f"Il y a aussi {n} vidéos juste en dessous, pour voir le geste.")
+    if b["videos"]:
+        seg.append("Chaque exercice a sa vidéo, juste à côté, pour voir le geste.")
     return seg
 
 
@@ -654,11 +741,24 @@ def bloc_for(palier, b, bi, moitie, seance):
             elif seance == "C":
                 faire = "Au choix : Bamboleo, Fragile ou un morceau que tu aimes. " + faire
     quand = QUAND[palier["num"]][bi] + plus.get("quand", [])
+    # MAJ 01 : vidéos, schémas et durée dans chaque exercice
+    vmap = {**VIDEO_EXO.get(k, {}), **VIDEO_EXO.get((*k, moitie), {})}
+    smap = {**SCHEMA_EXO.get(k, {}), **SCHEMA_EXO.get((*k, moitie), {})}
+    schemas = SCHEMAS[palier["num"]][bi] + plus.get("schemas", [])
+    prises, sch_prises = set(), set()
+    for e, d in zip(ex, duree_ex(faire, ex)):
+        if d: e["duree"] = d
+        v = [i for i in vmap.get(e["id"], []) if i < len(b["videos"])]
+        if v: e["videos"] = [b["videos"][i] for i in v]; prises.update(v)
+        s = smap.get(e["id"], [])
+        if s: e["schemas"] = s; sch_prises.update(s)
+    complete_durees(ex, b["duree"], faire)
+    plus_loin = [v for i, v in enumerate(b["videos"]) if i not in prises]
     return {
         "id": f"b{bi + 1}", "titre": f"{bi + 1}. {titre}", "duree": b["duree"],
         "sert": b["sert"], "quand": quand, "faire": faire, "explication": b["explication"],
-        "videos": b["videos"], "positions": m.get("positions", b.get("positions", [])) + POSITIONS.get((*k, moitie), []),
-        "schemas": SCHEMAS[palier["num"]][bi] + plus.get("schemas", []),
+        "videos": plus_loin, "positions": m.get("positions", b.get("positions", [])) + POSITIONS.get((*k, moitie), []),
+        "schemas": [s for s in schemas if s not in sch_prises],
         "exercices": ex,
         "voix": {
             "consigne": [titre + ".", b["sert"], "À faire : " + faire],
@@ -725,7 +825,7 @@ REPERTOIRE = {
               "Une entrée douce dans le flamenco, avant la rumba du palier 2.", "", "ziKwNEzKw6c", des=1, niveau=1,
               tabs=[("Sevillana de base en Do, d'après Sabicas, tablatures gratuites (Ravenna Flamenco)", "https://ravennaflamenco.com/palos/sevillanas")],
               techniques=["Mesure à 3 temps", "Accents de la main droite", "Accords simples"],
-              interet="Une première porte vers le flamenco, avec des accords que tu connais déjà. Compter en 3 temps et placer les accents prépare la rumba et le rasgueado."),
+              interet="Une première porte vers le flamenco, avec des accords ouverts simples. Compter en 3 temps et placer les accents prépare la rumba et le rasgueado."),
         piece("fields", "Pop", "Fields of Gold", "Sting", "Arpèges sur une grille d'accords, avec un Fa barré.",
               "Si Fragile te plaît : le même style, quand ton Fa barré tient.", "KLVq0IAzh1A", "sj_9-svbePA", des=2, niveau=2,
               tabs=[("Accords et tablature (JustinGuitar)", "https://www.justinguitar.com/songs/sting-fields-of-gold-chords-tabs-guitar-lesson-bs-803"), ("Version fingerstyle (Songsterr)", "https://www.songsterr.com/a/wsa/sting-fields-of-gold-tab-s19570t0")],
@@ -910,9 +1010,13 @@ def intro(c, prev):
     p = next(x for x in PALIERS if x["num"] == c["palier"])
     wk = (c["semaine"] - 1) % 4
     nouveau = c["seance"] == "A" and wk in (0, 2)
-    salut = {"A": "Bonjour Timothée !", "B": "Re-bonjour Timothée !", "C": "Salut Timothée !"}[c["seance"]]
+    salut = {"A": "Bonjour !", "B": "Re-bonjour !", "C": "Salut !"}[c["seance"]]
     I = ["Assieds-toi avec ta guitare, et on commence."]
-    I.append("Bienvenue, Timothée ! C'est ton tout premier cours." if c["num"] == 1 else f"{salut} Bienvenue au cours {c['num']}.")
+    if c["num"] == 1:
+        I.append("Bienvenue ! C'est ton tout premier cours, et je suis content de le commencer avec toi.")
+        I.append("Pour suivre ce parcours, il te suffit de savoir tenir ta guitare et de connaître quelques accords ouverts : Do, La mineur, Mi mineur. Tout le reste, on l'apprend ensemble.")
+    else:
+        I.append(f"{salut} Bienvenue au cours {c['num']}.")
     if wk == 0 and c["seance"] == "A":
         I.append(f"On attaque le palier {p['num']} : {NOMS[p['num']]}. Le but : {lower1(p['but'])}")
         I.append(f"Ta mission d'ici la fin du palier : {lower1(p['mission'])}")
@@ -976,6 +1080,28 @@ PROF = {
     "intro_galere": "Au dernier cours, ce qui t'a donné du mal :",
     "intro_galere_fin": "On y va doucement aujourd'hui, au tempo de départ, en visant un son propre.",
 }
+
+# MAJ 01 (§1.3) : le type de chaque exercice, d'après sa première apparition dans le parcours.
+# Découverte : jamais vu. Révision : une lecture déjà faite (« Lire » devient « Relire »).
+# Approfondissement : même exercice, nouvelle consigne. Pratique : même exercice, même consigne.
+sans_min = lambda t: re.sub(r"\s*\(\d+ min\)$", "", t)
+vus = {}
+for c in cours:
+    for b in c["blocs"]:
+        for e in b["exercices"]:
+            if e["id"] in SANS_TYPE:
+                continue
+            cle, lab = b["id"] + "/" + e["id"], sans_min(e["label"])
+            if cle not in vus:
+                e["type"] = "decouverte"
+            elif lab.startswith("Lire "):
+                e["type"] = "revision"
+                e["label"] = "Re" + e["label"][0].lower() + e["label"][1:]
+            elif vus[cle] != lab:
+                e["type"] = "approfondissement"
+            else:
+                e["type"] = "pratique"
+            vus[cle] = lab
 
 # Adaptations après tes bilans : data/adaptations.json, rangées par cours.
 # {"c4": {"mot": "…", "blocs": {"b2": {"faire": "…", "exercices": [...]}}}}
