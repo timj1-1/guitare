@@ -727,12 +727,9 @@
 
   // Les boutons vidéo ; un touché lit la vidéo juste en dessous, un autre la ferme. Une vidéo qui ne se lit pas ici reste ouverte sur YouTube.
   function lecteurVideos(pz, onChange) {
+    // MAJ 01 §13 : plus de croix ici, on retire une vidéo depuis « Modifier »
     const vids = videosDe(pz);
-    const wrap = lecteur(vids, pz.titre, { apres: (v, bar) => {
-      if (v.a) bar.append(el("button", { class: "link-btn x", type: "button", "aria-label": `Retirer la vidéo ${v.t}`, text: "✕", onclick: () => {
-        const a = ajoutsDe(pz); a.videos = a.videos.filter(x => x !== a.videos.find(y => y.u === v.u && y.t === v.t)); sansAjouts(pz); save(); onChange();
-      } }));
-    } });
+    const wrap = lecteur(vids, pz.titre);
     if (!vids.length) wrap.querySelector(".row-tools").append(el("span", { class: "muted small", text: "Pas encore de vidéo : ajoute-en une ci-dessous." }));
     return wrap;
   }
@@ -794,11 +791,6 @@
       li.append(t.u ? tabCarte(t, { href: t.u, mine: true }) : tabCarte(t, { icone: pdf ? "pdf" : "photo", mine: true, onclick: async () => {
         try { const f = await fichiers.get(t.f); if (!f) throw 0; openFichier(f, t.t); }
         catch { toast("Ce fichier n'est plus sur cet appareil : ajoute-le à nouveau."); }
-      } }));
-      li.append(el("button", { class: "icon-btn tab-x", type: "button", "aria-label": `Retirer ${t.t}`, text: "✕", onclick: async () => {
-        const a = ajoutsDe(pz); a.tabs = a.tabs.filter(x => x !== t); sansAjouts(pz); save();
-        if (t.f) fichiers.del(t.f).catch(() => {});
-        onChange();
       } }));
       ul.append(li);
     });
@@ -895,7 +887,7 @@
     const ecouter = champ("Vidéo principale (à écouter)", pz.ecouter, "url", "https://…"), tuto = champ("Tuto", pz.tuto, "url", "https://…");
     const interet = champ("Pourquoi ce morceau", pz.interet, "area");
     const aj = state.ajouts?.[pz.id] || { videos: [], tabs: [] };
-    // une ligne par vidéo ou tablature : son nom, son lien, et ✕ pour la retirer
+    // une ligne par vidéo ou tablature : son nom, son lien, et ✕ pour la retirer (MAJ 01 §13 : le seul endroit où l'on retire, avec confirmation)
     const liste = (items, phNom) => {
       const lignes = [], ul = el("div", { class: "ed-liste" });
       const ajoute = (it, mine) => {
@@ -904,7 +896,11 @@
         if (lien) lien.value = it.u || "";
         const L = { it, mine, nom, lien, out: false };
         const row = el("div", { class: "ed-ligne" + (mine ? " mine" : "") }, nom, lien || el("span", { class: "muted small ed-fic", text: "Photo ou PDF sur cet appareil" }),
-          el("button", { class: "icon-btn", type: "button", "aria-label": "Retirer", text: "✕", onclick: () => { L.out = true; row.remove(); } }));
+          el("button", { class: "icon-btn", type: "button", "aria-label": "Retirer", text: "✕", onclick: () => {
+            const n = nom.value.trim() || it.t;
+            if (n && !confirm(it.f ? `Retirer « ${n} » ? Le fichier sera effacé de cet appareil quand tu enregistreras.` : `Retirer « ${n} » ? (Annuler la modification la remet.)`)) return;
+            L.out = true; row.remove();
+          } }));
         lignes.push(L); ul.append(row); return nom;
       };
       items.forEach(([it, mine]) => ajoute(it, mine));
@@ -948,6 +944,12 @@
         el("button", { class: "link-btn", type: "button", text: "+ Ajouter un lien de tablature", onclick: () => T.ajoute({}, true).focus() })),
       msg,
       el("div", { class: "ed-actions" },
+        perso ? el("button", { class: "btn ghost danger", type: "button", text: "Supprimer ce morceau", onclick: () => {
+          if (!confirm(`Retirer « ${pz.titre} » de tes morceaux ? Ses photos et PDF seront effacés de cet appareil.`)) return;
+          (state.ajouts?.[pz.id]?.tabs || []).forEach(t => t.f && fichiers.del(t.f).catch(() => {}));
+          delete state.ajouts?.[pz.id];
+          state.mesPieces = (state.mesPieces || []).filter(x => x.id !== pz.id); delete state.morceaux?.[pz.id]; save(); fermer(); refresh();
+        } }) : null,
         state.modifs?.[pz.id] ? el("button", { class: "btn ghost", type: "button", text: "Revenir à l'original", onclick: () => {
           if (!confirm("Remettre ce morceau comme dans le cours ? Tes ajouts à toi restent.")) return;
           delete state.modifs[pz.id]; save(); fermer(); refresh();
@@ -1020,12 +1022,6 @@
       !pz.perso && pz.style ? el("span", { class: "piece-style", text: pz.style }) : null);
     tools.append(meta);
     tools.append(el("button", { class: "link-btn", type: "button", text: "Modifier", title: "Ou appui long sur le morceau (clic droit sur ordi)", onclick: () => editeMorceau(pz, refresh) }));
-    if (pz.perso) tools.append(el("button", { class: "link-btn", type: "button", text: "Supprimer", onclick: () => {
-      if (!confirm(`Retirer « ${pz.titre} » de tes morceaux ?`)) return;
-      (state.ajouts?.[pz.id]?.tabs || []).forEach(t => t.f && fichiers.del(t.f).catch(() => {}));
-      delete state.ajouts?.[pz.id];
-      state.mesPieces = (state.mesPieces || []).filter(x => x.id !== pz.id); delete state.morceaux?.[pz.id]; save(); refresh();
-    } }));
     li.append(head, tools, corps);
     appuiLong(li, () => editeMorceau(pz, refresh));
     return li;
@@ -1652,7 +1648,7 @@
       }
     });
     // les jeux à niveaux joués cette semaine : par jeu et par niveau, le meilleur score, les essais, les notes, et ce qui coince le plus
-    const NOMS_JEUX = { manche: "Notes du manche", gammes: "Gammes", penta: "Pentatonique", accords: "Accords", revision: "Révision du jour" };
+    const NOMS_JEUX = { manche: "Notes du manche", gammes: "Gammes", penta: "Pentatonique", accords: "Accords", barres: "Barrés", revision: "Révision du jour" };
     const parties = (state.niveaux?.log || []).filter(r => r.w === w);
     if (parties.length) {
       const groupes = new Map(), fautes = new Map();
@@ -1929,8 +1925,8 @@
   const JEU_BLOC = {
     1: { f: "gammes", sem: [1, 2, 3, 3, 4, 5, 6, 7, 8, 8, 9, 10] },  // gamme : Do majeur, Sol majeur, La majeur, La mineur
     2: { f: "penta", sem: [1, 2, 3, 4, 5, 5, 6, 6, 7, 7, 8, 9] },    // pentatonique : positions 1 à 5, et seulement elle
-    3: { f: "manche", sem: [3, 3, 4, 4, 5, 5, 5, 5, 6, 7, 8, 9] },   // notes du manche : la corde du moment
-    4: { f: "accords", sem: [5, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9, 10] }, // barrés : forme Mi, forme La, partout, à l'oreille
+    3: { f: "manche", sem: [1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 8, 9] },   // notes du manche : la corde du moment (La, Ré, Sol, Si, puis les deux Mi)
+    4: { f: "barres", sem: [1, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 10] },  // barrés : forme Mi majeure, puis mineure, puis forme La (MAJ 01)
   };
   const NIV = () => window.Jeux?.niveaux;
   if (window.Jeux) {
@@ -1952,8 +1948,8 @@
     const plus = el("button", { class: "icon-btn niv-step", type: "button", "aria-label": "Niveau plus dur", text: "+" });
     const sync = () => {
       const max = N.debloque(J.f);
-      titre.textContent = `${F.titre} · niveau ${n}`; desc.textContent = F.niveaux[n - 1].txt;
-      moins.disabled = n <= 1; plus.disabled = n >= Math.min(10, max);
+      titre.textContent = `${F.titre} · niveau ${n}`; desc.textContent = F.niveaux[n - 1].txt + (n > max ? " (pas encore vu en cours : tu peux t'y essayer en avance)" : "");
+      moins.disabled = n <= 1; plus.disabled = n >= 10;
       const r = dernierEssai(J.f, n), best = N.etat(J.f).best[n];
       last.textContent = r ? `Dernier essai : ${n === 10 ? "série de " + r.s : r.s + "/" + r.t}` + (best != null ? ` · record ${n === 10 ? best : best + "/10"}` : "") : "";
       last.hidden = !r;
@@ -1997,7 +1993,7 @@
     body.replaceChildren(el("div", { class: "cours-head" },
       el("span", { class: "eyebrow", text: "Jeux" }),
       el("h1", { text: "Apprendre en jouant" }),
-      el("p", { class: "sub", text: "10 niveaux par jeu. 8 bonnes réponses sur 10 ouvrent le niveau suivant, et ce que tu rates revient plus souvent." })));
+      el("p", { class: "sub", text: "10 niveaux par jeu. Ils s'ouvrent au fil des cours, ou avec 10 bonnes réponses sur 10. Tu peux aussi essayer un niveau en avance. Ce que tu rates revient plus souvent." })));
     if (!N) return;
     const refresh = () => renderJeux();
     // Révision du jour
@@ -2011,7 +2007,7 @@
       const { max, best } = N.etat(f);
       const auCours = [...new Set(Object.values(JEU_BLOC).filter(x => x.f === f).map(x => x.sem[sem - 1]))];
       state.jeuxNiv ||= {};
-      let n = Math.min(state.jeuxNiv[f] || max, max);
+      let n = Math.min(state.jeuxNiv[f] || max, 10);
       const pips = el("div", { class: "niv-pips", role: "radiogroup", "aria-label": "Choisir un niveau" });
       const desc = el("p", { class: "niv-desc" }), rec = el("p", { class: "muted small niv-rec" });
       const jouer = el("button", { class: "btn primary", type: "button" });
@@ -2019,12 +2015,12 @@
         pips.querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-checked", String(i + 1 === n)));
         desc.replaceChildren(el("strong", { text: `Niveau ${n} : ` }), F.niveaux[n - 1].txt);
         const b = best[n];
-        rec.textContent = (b != null ? (n === 10 ? `Record : série de ${b}` : `Record : ${b}/10`) : "Pas encore joué") + (auCours.includes(n) ? " · c'est le niveau du cours cette semaine" : "");
+        rec.textContent = (b != null ? (n === 10 ? `Record : série de ${b}` : `Record : ${b}/10`) : "Pas encore joué") + (auCours.includes(n) ? " · c'est le niveau du cours cette semaine" : n > max ? " · pas encore vu en cours : à essayer en avance" : "");
         jouer.textContent = `▶ Jouer le niveau ${n}`;
       };
       for (let i = 1; i <= 10; i++) {
         const passe = i === 10 ? best[10] > 0 : best[i] >= 10;
-        const b = el("button", { type: "button", role: "radio", class: "niv-pip" + (passe ? " passe" : "") + (auCours.includes(i) ? " cours" : ""), disabled: i > max, "aria-label": `Niveau ${i}`, text: String(i) });
+        const b = el("button", { type: "button", role: "radio", class: "niv-pip" + (passe ? " passe" : "") + (auCours.includes(i) ? " cours" : "") + (i > max ? " avance" : ""), "aria-label": `Niveau ${i}` + (i > max ? ", pas encore vu en cours" : ""), text: String(i) });
         b.addEventListener("click", () => { n = i; state.jeuxNiv[f] = i; save(); sync(); });
         pips.append(b);
       }

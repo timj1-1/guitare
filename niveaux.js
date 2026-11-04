@@ -1,7 +1,7 @@
-/* Jeux à niveaux : Notes du manche, Gammes, Pentatonique, Accords. Le même moteur pour les quatre :
+/* Jeux à niveaux : Notes du manche, Gammes, Pentatonique, Accords ouverts, Barrés. Le même moteur pour les cinq :
    - une manche = 10 questions ; 10 sur 10 ouvrent le niveau suivant (sa demande, 2026-10-28), et tous les niveaux restent rejouables ;
    - ce que tu rates revient plus souvent (boîtes de Leitner), et 3 questions sur 10 reprennent les niveaux d'avant ;
-   - chrono dès le niveau 5 (8 s, puis 3 s au niveau 10) ;
+   - chrono dès le niveau 5 (8 s, puis 3 s au niveau 10), sauf si le niveau donne le sien (Barrés : seulement aux niveaux 9 et 10) ;
    - le niveau 10 sert à l'entretien : sans fin, 3 vies, il garde ton record.
    Une question est juste du premier coup, sans indice ni chrono dépassé. */
 (() => {
@@ -19,7 +19,7 @@
 
   // ---------- Mémoire : rangée dans l'état de l'app (et donc dans la sauvegarde) ----------
   let local = null;
-  const mem = () => { const m = J.memoire?.() || (local ||= {}); if (m.v !== 2) migre(m); return m; };
+  const mem = () => { const m = J.memoire?.() || (local ||= {}); if (!m.v || m.v < 2) migre(m); if (m.v < 3) migre3(m); return m; };
   const famMem = f => { const m = mem(); return (m[f] ||= { max: 1, best: {}, items: {} }); };
   const sauve = () => { try { J.sauve?.(); } catch {} };
   // boîte 0 = jamais vu, 1 = raté (revient souvent) … 5 = solide (revient rarement)
@@ -59,12 +59,13 @@
   // jamais la case 0 : le nom de la corde à vide est écrit au bout du manche
   const casesDe = (cordes, fmax, ok) => cordes.flatMap(s => Array.from({ length: fmax }, (_, f) => f + 1).filter(f => ok(s, f)).map(f => `m:${s}:${f}`));
   const MANCHE = [
-    { txt: "Mi grave, cases 1 à 5, avec des repères", pool: () => casesDe([6], 5, nat) },
-    { txt: "Mi grave, cases 1 à 12", pool: () => casesDe([6], 12, nat) },
-    { txt: "Corde de La", pool: () => casesDe([5], 12, nat) },
-    { txt: "Corde de Ré", pool: () => casesDe([4], 12, nat) },
-    { txt: "Cordes de Sol et de Si", pool: () => casesDe([3, 2], 12, nat) },
-    { txt: "Mi aigu", pool: () => casesDe([1], 12, nat) },
+    // MAJ 01 : dans l'ordre du cours (La, Ré, Sol, Si, puis les deux Mi au palier 3)
+    { txt: "Corde de La, avec un repère", pool: () => casesDe([5], 12, nat) },
+    { txt: "Corde de Ré, avec un repère", pool: () => casesDe([4], 12, nat) },
+    { txt: "Corde de Sol", pool: () => casesDe([3], 12, nat) },
+    { txt: "Corde de Si", pool: () => casesDe([2], 12, nat) },
+    { txt: "Cordes de La, Ré, Sol et Si mélangées", pool: () => casesDe([5, 4, 3, 2], 12, nat) },
+    { txt: "Les deux Mi : le grave et l'aigu", pool: () => casesDe([6, 1], 12, nat) },
     { txt: "Dièses et bémols, sur toutes les cordes", pool: () => casesDe(STR, 12, (s, f) => !nat(s, f)) },
     { txt: "Toutes les cordes mélangées", pool: () => casesDe(STR, 12, () => true) },
     { txt: "Octaves : la même note, deux cordes plus loin", pool: () => [6, 5, 4, 3].flatMap(s => Array.from({ length: 9 }, (_, f) => f + 1).filter(f => nat(s, f)).map(f => `o:${s}:${f}`)) },
@@ -184,38 +185,52 @@
   }
   const nomAcc = A => A.r + Q[A.q];
   const C = (...ids) => ids.map(id => "c:" + id);
-  const barres = (forme, cases) => cases.flatMap(c => [`${forme}:${c}:maj`, `${forme}:${c}:min`]);
+  const bar = (forme, cases, qs) => cases.flatMap(c => qs.map(q => `${forme}:${c}:${q}`));
+  const MAJ_OUV = C("do", "re", "mi", "sol", "la"), MIN_OUV = C("lam", "rem", "mim"), SEPT = C("do7", "re7", "mi7", "sol7", "la7", "si7"), BOSSA = C("domaj7", "famaj7", "solmaj7", "remaj7", "lamaj7", "lam7", "rem7", "mim7");
+  // MAJ 01 : les accords ouverts d'un côté, les barrés de l'autre (le jeu du bloc des barrés)
   const ACCORDS = [
-    { txt: "Les accords majeurs ouverts : quel est cet accord ?", pool: () => C("do", "re", "mi", "sol", "la"), type: "nom" },
-    { txt: "Les accords mineurs ouverts", pool: () => C("lam", "rem", "mim"), type: "nom" },
-    { txt: "À partir du nom, place l'accord sur le manche", pool: () => C("do", "re", "mi", "sol", "la", "lam", "rem", "mim").map(k => "p" + k), type: "placer" },
-    { txt: "Les accords de 7e", pool: () => C("do7", "re7", "mi7", "sol7", "la7", "si7"), type: "mix" },
-    { txt: "Le Fa barré et la forme Mi (cases 1, 3 et 5)", pool: () => barres("E", [1, 3, 5]), type: "nom" },
-    { txt: "Les barrés forme La (cases 1 à 3)", pool: () => barres("A", [1, 2, 3]), type: "nom" },
-    { txt: "Les barrés, à n'importe quelle case", pool: () => [...barres("E", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), ...barres("A", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])], type: "nom" },
-    { txt: "À l'oreille : majeur ou mineur ?", pool: () => [...C("do", "re", "mi", "sol", "la", "lam", "rem", "mim"), ...barres("E", [1, 3, 5]), ...barres("A", [1, 2, 3])].map(k => "o" + k), type: "oreille" },
-    { txt: "Les accords maj7 et m7, ceux de la bossa", pool: () => C("domaj7", "famaj7", "solmaj7", "remaj7", "lamaj7", "lam7", "rem7", "mim7"), type: "mix" },
+    { txt: "Les accords majeurs ouverts : quel est cet accord ?", pool: () => MAJ_OUV, type: "nom" },
+    { txt: "Les accords mineurs ouverts", pool: () => MIN_OUV, type: "nom" },
+    { txt: "À partir du nom, place l'accord sur le manche", pool: () => [...MAJ_OUV, ...MIN_OUV].map(k => "p" + k), type: "placer" },
+    { txt: "Les accords de 7e", pool: () => SEPT, type: "mix" },
+    { txt: "À l'oreille : majeur ou mineur ?", pool: () => [...MAJ_OUV, ...MIN_OUV].map(k => "o" + k), type: "oreille" },
+    { txt: "Les accords maj7 et m7, ceux de la bossa", pool: () => BOSSA, type: "mix" },
+    { txt: "Place les accords de 7e", pool: () => SEPT.map(k => "p" + k), type: "placer" },
+    { txt: "Place les maj7 et les m7", pool: () => BOSSA.map(k => "p" + k), type: "placer" },
+    { txt: "Tous les accords ouverts : les nommer et les placer", pool: () => [...MAJ_OUV, ...MIN_OUV, ...SEPT, ...BOSSA], type: "mix" },
     { txt: "Tout mélangé", pool: () => [...ACCORDS.slice(0, 9).flatMap(L => L.pool())], type: "mix" },
   ];
-  // de faux noms crédibles : la même forme une ou deux cases à côté, ou l'autre couleur (majeur / mineur)
-  function leurres(key, A) {
-    const [t, a] = key.split(":"), out = new Set();
-    if (t !== "c") {
-      const c = +a;
-      [c - 2, c - 1, c + 1, c + 2].filter(x => x >= 1 && x <= 10).forEach(x => out.add(nomAcc(accord(`${t}:${x}:${A.q}`))));
-      out.add(nomAcc(accord(`${t}:${c}:${A.q === "maj" ? "min" : "maj"}`)));
-    } else {
-      Object.keys(ouverts).map(id => accord("c:" + id)).filter(B => B.q === A.q || B.r === A.r).forEach(B => out.add(nomAcc(B)));
-    }
-    out.delete(nomAcc(A));
-    return shuffle([...out]).slice(0, 3);
+  // chrono : pas de chrono tant qu'une forme est nouvelle, seulement aux niveaux 9 et 10
+  const E_MAJ = bar("E", [1, 3, 5], ["maj"]), E_MIN = bar("E", [1, 3, 5], ["min"]), A_MAJ = bar("A", [1, 3, 5], ["maj"]), A_MIN = bar("A", [2, 3, 5], ["min"]);
+  const BARRES = [
+    { txt: "Forme Mi : Fa, Sol et La (cases 1, 3 et 5)", pool: () => E_MAJ, type: "nom", chrono: 0 },
+    { txt: "Forme Mi mineure : Fa, Sol et La mineurs", pool: () => E_MIN, type: "nom", chrono: 0 },
+    { txt: "Forme Mi, majeurs et mineurs : les nommer et les placer", pool: () => [...E_MAJ, ...E_MIN], type: "mix", chrono: 0 },
+    { txt: "Forme La : Si♭, Do et Ré (cases 1, 3 et 5)", pool: () => A_MAJ, type: "nom", chrono: 0 },
+    { txt: "Forme La mineure : Si, Do et Ré mineurs (cases 2, 3 et 5)", pool: () => A_MIN, type: "nom", chrono: 0 },
+    { txt: "Forme La, majeurs et mineurs : les nommer et les placer", pool: () => [...A_MAJ, ...A_MIN], type: "mix", chrono: 0 },
+    { txt: "Forme Mi ou forme La ? Les accords majeurs", pool: () => [...E_MAJ, ...A_MAJ], type: "nom", chrono: 0 },
+    { txt: "Tous les barrés vus : formes Mi et La, majeurs et mineurs", pool: () => [...E_MAJ, ...E_MIN, ...A_MAJ, ...A_MIN], type: "mix", chrono: 0 },
+    { txt: "Tous les barrés vus, contre la montre", pool: () => [...E_MAJ, ...E_MIN, ...A_MAJ, ...A_MIN], type: "mix", chrono: 6 },
+    { txt: "Tous les barrés vus, sans fin", pool: () => [...E_MAJ, ...E_MIN, ...A_MAJ, ...A_MIN], type: "mix", chrono: 5 },
+  ];
+  const sansPrefixe = k => (k[0] === "p" || k[0] === "o" ? k.slice(1) : k);
+  // de faux noms crédibles, pris seulement parmi les accords déjà vus dans ce jeu (jusqu'au niveau joué) :
+  // d'abord la même forme et la même couleur (majeur / mineur), puis la même couleur, puis le reste
+  function leurres(k, A, NIV, lvl) {
+    const t = k.split(":")[0], nom = nomAcc(A);
+    const vus = [...new Set(NIV.slice(0, lvl).flatMap(L => L.pool()).map(sansPrefixe))].map(x => [x, accord(x)]);
+    const note = ([x, B]) => (B.q === A.q ? 2 : 0) + (x.split(":")[0] === t ? 1 : 0);
+    const out = [];
+    for (const v of shuffle(vus).sort((a, b) => note(b) - note(a))) { const n = nomAcc(v[1]); if (n !== nom && !out.includes(n)) out.push(n); }
+    return out.slice(0, 3);
   }
-  function qAccord(key, lvl, i) {
-    const L = ACCORDS[lvl - 1];
+  const qAccord = NIV => (key, lvl, i) => {
+    const L = NIV[lvl - 1];
     let k = key, type = L.type;
     if (key[0] === "p") { k = key.slice(1); type = "placer"; }
     else if (key[0] === "o") { k = key.slice(1); type = "oreille"; }
-    else if (type === "mix") type = k.startsWith("c:") && i % 2 ? "placer" : "nom";
+    else if (type === "mix") type = i % 2 ? "placer" : "nom";
     const A = accord(k), nom = nomAcc(A), grave = A.fr.findIndex(f => f >= 0);
     const diag = A.fr.map((f, j) => [STR[j], f < 0 ? 0 : f, f < 0 ? "mute" : f === 0 ? "open" : "given", f < 0 ? "×" : ""]);
     const aide = `La note la plus grave jouée, sur ${corde(STR[grave])}, est un ${nomDe(OPEN[STR[grave]] + A.fr[grave])} : c'est souvent le nom de l'accord.`;
@@ -224,14 +239,15 @@
         fin: diag, apres: `C'était ${nom}.`, aide: "Un accord majeur sonne clair et joyeux ; un mineur sonne plus sombre, plus triste." };
     }
     if (type === "placer") {
-      return { key, type: "cases", texte: `Place l'accord de ${nom} sur le manche`, voix: `Place l'accord de ${parle(A.r)}${QP[A.q]}.`,
+      const forme = A.barre ? ` (barré forme ${k[0] === "E" ? "Mi" : "La"})` : "";
+      return { key, type: "cases", texte: `Place l'accord de ${nom}${forme} sur le manche`, voix: `Place l'accord de ${parle(A.r)}${QP[A.q]}.`,
         targets: A.fr.map((f, j) => [STR[j], f]).filter(([, f]) => f > 0), fin: diag, son: A.fr,
-        aide: `Touche chaque case où un doigt appuie (les cordes à vide ne comptent pas). ${aide}` };
+        aide: `Touche chaque case où un doigt appuie (les cordes à vide ne comptent pas${A.barre ? ", et l'index du barré compte sur chaque corde" : ""}). ${aide}` };
     }
     return { key, type: "choix", texte: "Quel est cet accord ?", voix: "Quel est cet accord ?", donnees: diag, son: A.fr,
-      choix: shuffle([nom, ...leurres(k, A)]).map(n => ({ label: n, val: n })), bonne: nom,
+      choix: shuffle([nom, ...leurres(k, A, NIV, lvl)]).map(n => ({ label: n, val: n })), bonne: nom,
       aide: A.barre ? `Barré case ${A.barre} : la note de la corde la plus grave du barré donne le nom. ${aide}` : aide };
-  }
+  };
 
   // =====================================================================
   // Les familles, et le moteur commun
@@ -241,8 +257,8 @@
     const [t, a, b] = key.split(":");
     if (f === "manche") return t === "o" ? `Octave du ${nomDe(OPEN[+a] + +b)} (${NOM_CORDE[+a]}, case ${b})` : `${nomDe(OPEN[+a] + +b)} sur ${NOM_CORDE[+a]} (case ${b})`;
     if (f === "gammes" || f === "penta") return POS[a] ? nomPos(POS[a]) : key;
-    if (f === "accords") {
-      const k = key[0] === "p" || key[0] === "o" ? key.slice(1) : key, A = accord(k);
+    if (f === "accords" || f === "barres") {
+      const k = sansPrefixe(key), A = accord(k);
       const nom = nomAcc(A) + (A.barre ? ` (barré case ${A.barre})` : "");
       return key[0] === "p" ? `Placer ${nom}` : key[0] === "o" ? `${nom} à l'oreille` : nom;
     }
@@ -252,7 +268,8 @@
     manche: { titre: "Notes du manche", niveaux: MANCHE, q: qManche },
     gammes: { titre: "Gammes", niveaux: GAMMES, q: qPos(GAMMES) },
     penta: { titre: "Pentatonique", niveaux: PENTAS, q: qPos(PENTAS) },
-    accords: { titre: "Accords", niveaux: ACCORDS, q: qAccord },
+    accords: { titre: "Accords ouverts", niveaux: ACCORDS, q: qAccord(ACCORDS) },
+    barres: { titre: "Barrés", niveaux: BARRES, q: qAccord(BARRES) },
   };
   // v2 (24 octobre 2026) : « Gammes et penta » devient deux jeux, Gammes et Pentatonique, avec leurs propres niveaux
   function migre(m) {
@@ -265,6 +282,22 @@
     }
     m.gammes = { max: 1, best: {}, items: items.gammes };
     m.penta = { max: 1, best: {}, items: items.penta };
+  }
+  // v3 (MAJ 01, 4 novembre 2026) : Notes du manche dans l'ordre du cours, et les barrés deviennent un jeu à part.
+  // Chaque question retrouve son niveau ; les records suivent les niveaux restés identiques ; le cours rouvre ses niveaux.
+  function migre3(m) {
+    m.v = 3;
+    const garde = { manche: { 3: 1, 4: 2, 7: 7, 8: 8, 9: 9, 10: 10 }, accords: { 1: 1, 2: 2, 3: 3, 4: 4, 9: 6 } };
+    const ou = k => { for (const f of [k.startsWith("m:") || k.startsWith("o:") ? "manche" : null, "accords", "barres"].filter(Boolean)) { const i = FAMILLES[f].niveaux.findIndex(L => L.pool().includes(k)); if (i >= 0) return [f, i + 1]; } return null; };
+    const neuf = { manche: {}, accords: {}, barres: {} };
+    for (const f of ["manche", "accords"]) {
+      const old = m[f]; if (!old) continue;
+      for (const [k, v] of Object.entries(old.items || {})) { const o = ou(k); if (o && neuf[o[0]]) neuf[o[0]][k] = [v[0], v[1], o[1]]; }
+      const best = {};
+      for (const [a, b] of Object.entries(garde[f])) if (old.best?.[a] != null) best[b] = old.best[a];
+      m[f] = { max: Math.max(1, ...Object.entries(garde[f]).filter(([a]) => +a < (old.max || 1)).map(([, b]) => b + 1)), best, items: neuf[f] };
+    }
+    m.barres = { max: 1, best: {}, items: neuf.barres };
   }
   const debloque = f => Math.max(famMem(f).max || 1, J.niveauCours?.(f) || 1);
   const etat = f => ({ max: debloque(f), best: famMem(f).best || {} });
@@ -283,7 +316,7 @@
 
   // ---------- Les schémas d'aide : ce qui sert dans le jeu, jusqu'au niveau joué ----------
   function figuresAide(f, lvl, vertical, rev) {
-    if (rev) return [schemaNotes(STR, vertical), ...figuresAide("gammes", 10, vertical), ...figuresAide("penta", 10, vertical), ...figuresAide("accords", 10, vertical)];
+    if (rev) return [schemaNotes(STR, vertical), ...figuresAide("gammes", 10, vertical), ...figuresAide("penta", 10, vertical), ...figuresAide("accords", 10, vertical), ...figuresAide("barres", 10, vertical)];
     if (f === "manche") return [schemaNotes(STR, vertical), lvl >= 7 ? schema({ titre: "Dièses et bémols", vertical, sous: "Un dièse monte d'une case, un bémol descend d'une case : Fa♯ = Sol♭.",
       cases: STR.flatMap(s => Array.from({ length: 13 }, (_, k) => k).filter(k => !nat(s, k)).map(k => [s, k, "note", FR[pcOf(s, k)].replace("♯", "#")])) }) : null, lvl >= 9 ? schemaOctaves(vertical) : null].filter(Boolean);
     if (f === "gammes" || f === "penta") {
@@ -295,7 +328,7 @@
       });
     }
     // accords : les ouverts du jeu, puis les deux formes de barré
-    const keys = [...new Set(ACCORDS.slice(0, lvl).flatMap(L => L.pool()).map(k => (k[0] === "p" || k[0] === "o" ? k.slice(1) : k)))];
+    const keys = [...new Set(FAMILLES[f].niveaux.slice(0, lvl).flatMap(L => L.pool()).map(sansPrefixe))];
     const figs = keys.filter(k => k.startsWith("c:")).map(k => {
       const A = accord(k), hi = Math.max(3, ...A.fr);
       return schema({ titre: nomAcc(A), cases: A.fr.map((fr, j) => [STR[j], Math.max(0, fr), fr < 0 ? "mute" : fr === 0 ? "note" : "note", fr > 0 ? nomDe(OPEN[STR[j]] + fr) : fr === 0 ? nomDe(OPEN[STR[j]]) : ""]).map(c => (pcOf(c[0], c[1]) === PC_DE(A.r) && c[2] !== "mute" ? [c[0], c[1], "root", c[3]] : c)), f0: 0, f1: hi, vertical });
@@ -319,7 +352,7 @@
     if (!dlg) { dlg = el("dialog", { class: "sheet jeu-sheet niv-sheet", "aria-labelledby": "nivTitre" }); document.body.append(dlg); dlg.addEventListener("close", () => { if (!dlg.open) stop(); }); } // rouvert entre-temps : on garde la partie
     return dlg;
   }
-  const say = t => { if (t) window.Sons?.dire(t); };
+  const say = t => { if (t) window.Sons?.dire(t, { suite: true }); }; // MAJ 01 §8.2 : attend la fin de la phrase précédente
 
   // opts : { revision: [{ f, key, lvl }], onDone(res) }
   function ouvrir(f, lvl, opts = {}) {
@@ -380,7 +413,7 @@
     const k2 = (s, fr) => s + ":" + fr;
     const reste = Q => Q.targets.filter(([s, fr]) => !run.found.has(k2(s, fr)));
     const secs = Q => {
-      const base = rev ? 0 : CHRONO[lvl - 1];
+      const base = rev ? 0 : L.chrono ?? CHRONO[lvl - 1];
       return base ? base * (Q.type === "cases" ? Math.max(1, Math.ceil(Q.targets.length * 0.6)) : 1) : 0;
     };
     const dessine = cells => cells?.forEach(([s, fr, st, lab]) => board.set(s, fr, st, lab));
@@ -541,7 +574,7 @@
     poser();
   }
 
-  // ---------- Révision du jour : tout ce qui a été raté (boîtes 1 et 2), les 4 jeux mélangés ----------
+  // ---------- Révision du jour : tout ce qui a été raté (boîtes 1 et 2), tous les jeux mélangés ----------
   const aReviser = () => Object.keys(FAMILLES).flatMap(f => Object.entries(famMem(f).items).filter(([, v]) => v[0] <= 2).map(([key, v]) => ({ f, key, lvl: v[2] || 1 })))
     .filter(x => FAMILLES[x.f].niveaux[x.lvl - 1]);
   function revision(opts = {}) {

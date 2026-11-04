@@ -232,7 +232,10 @@
   ["pointerdown", "touchend"].forEach(ev => document.addEventListener(ev, prepareLecteur, { capture: true, passive: true }));
   let tour = 0, source = null, parleJusqua = 0;
   const manque = new Set();
-  function tais() {
+  // MAJ 01 §8.2 : tais() (appelé de l'extérieur) coupe aussi les phrases en attente ; coupe() seulement la phrase en cours
+  let annules = 0, file = Promise.resolve();
+  function tais() { annules++; coupe(); }
+  function coupe() {
     tour++;
     try { source?.stop(); } catch {}
     source = null;
@@ -250,10 +253,20 @@
   }
   // texte : une phrase ou une liste de phrases, lues à la suite
   // onSeg(i) : appelé quand la phrase i commence (l'app met sa partie en avant à l'écran)
-  async function dire(texte, { force = false, nom = voixNom, onSeg = null } = {}) {
+  // suite : true -> attend la fin de ce qui est en train d'être dit (les jeux), au lieu de le couper
+  // si plusieurs phrases attendent, seule la plus récente sera dite (la voix ne prend pas de retard sur l'écran)
+  let derniere = 0;
+  function dire(texte, opts = {}) {
+    const a = opts.suite ? annules : ++annules, n = ++derniere;
+    const lance = () => (a === annules && (!opts.suite || n === derniere) ? direMaintenant(texte, opts) : undefined);
+    const p = opts.suite ? file.then(lance) : lance();
+    file = Promise.resolve(p).catch(() => {});
+    return Promise.resolve(p);
+  }
+  async function direMaintenant(texte, { force = false, nom = voixNom, onSeg = null } = {}) {
     const segs = (Array.isArray(texte) ? texte : [texte]).map(t => String(t || "").replace(/\s+/g, " ").trim()).filter(Boolean);
     if (!segs.length || (!voixOn && !force)) return;
-    tais();
+    coupe();
     const moi = ++tour;
     parleJusqua = Infinity;
     try { unlock(); } catch {}

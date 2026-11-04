@@ -1,6 +1,6 @@
-# Carte du code (dépôt timj1-1/guitare, v48)
+# Carte du code (dépôt timj1-1/guitare, v50)
 
-_Mis à jour le 2026-11-04 (app v49, MAJ 01)._
+_Mis à jour le 2026-11-04 (app v50, MAJ 01)._
 
 L'app est en JavaScript sans framework ni étape de compilation. Les cours sont générés en Python. Les chemins sont relatifs à la racine du dépôt.
 
@@ -10,7 +10,7 @@ L'app est en JavaScript sans framework ni étape de compilation. Les cours sont 
 | `index.html` | Page unique : les 5 onglets, charge les scripts. | 8 Ko |
 | `app.js` | Cœur de l'app : onglets (`go`), Mon cours (`renderCours`, `renderBloc`, `renderExo`, `programme`, `rangeBloc`), le prof qui parle (`parle`, `montre`), Mes morceaux (`renderMorceaux`, `ficheMorceau`, `editeMorceau`, `listeTabs`), fin de cours et bilan de la semaine (`finish`, `recapSemaine`), Mon bilan (`renderBilan`, `pliSons`, `pliReglages`, `pliDonnees`, `restaure`), minuteurs, métronome, maintien de l'écran allumé. | 2 320 lignes |
 | `jeux.js` | Jeux du manche intégrés aux blocs : indice, Résoudre, Réessayer, mode écoute au micro (détection de notes YIN, AudioWorklet). | 645 lignes |
-| `niveaux.js` | Onglet Jeux : 4 jeux à 10 niveaux (Notes du manche, Gammes, Pentatonique, Accords), un seul moteur, répétition des erreurs (boîtes de Leitner), chrono, mode sans fin, journal des parties pour le bilan. `PASSE = 10`. | 559 lignes |
+| `niveaux.js` | Onglet Jeux : 5 jeux à 10 niveaux (Notes du manche, Gammes, Pentatonique, Accords ouverts, Barrés), un seul moteur, mémoire v3 (`migre3` remet chaque question à son niveau), répétition des erreurs (boîtes de Leitner), chrono, mode sans fin, journal des parties pour le bilan. `PASSE = 10`. | 559 lignes |
 | `sons.js` | Contexte audio, petits sons en notes de guitare, « musique du cours » (12 gammes rares, `GAMMES`), et la voix (`Sons.dire`). | 307 lignes |
 | `reglages.js` | Réglages partagés (`window.Reglages`), thème, timbre de guitare (`Reglages.TIMBRES`). Chargé aussi par manche.html. | 56 lignes |
 | `manche.html` | Mon manche, affiché dans un cadre. C'est une copie adaptée de l'Artifact « Mon manche » : elle n'embarque pas les sons depuis la v39. | 1 734 lignes |

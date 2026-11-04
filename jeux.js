@@ -295,7 +295,7 @@
   }
   let run = null;
   const stopRun = () => { stopMic(); quiet = false; window.Sons?.tais(); if (run) { clearTimeout(run.timer); run = null; } };
-  const say = t => window.Sons?.dire(t);
+  const say = t => window.Sons?.dire(t, { suite: true }); // MAJ 01 §8.2 : une phrase attend la fin de la précédente
   const ICON_MIC = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
   function open(cfg, onDone) {
