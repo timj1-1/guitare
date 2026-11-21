@@ -1,6 +1,6 @@
 # Backlog : bugs et idées
 
-_Mis à jour le 2026-11-04 (app v50, MAJ 01)._
+_Mis à jour le 2026-11-15 (app v51, contrôle de la mémoire)._
 
 Statuts : **ouvert** (à faire), **en pause**, **plus tard** (idée gardée, à ne pas traiter maintenant), **refusé**, **fait** (pour mémoire).
 
@@ -12,7 +12,7 @@ Statuts : **ouvert** (à faire), **en pause**, **plus tard** (idée gardée, à 
 | README du dépôt en retard | ouvert | Il dit « 8/10 ouvre le niveau suivant » alors que le code demande 10/10 (`PASSE = 10`), et il présente encore Kokoro comme voix de repli. |
 | Fichiers de Rémy en trop | à confirmer | `voix/remy/` contient 1 585 fichiers pour 1 495 phrases : sans doute d'anciennes phrases. À vérifier avant tout nettoyage. |
 | Claude Doc « le cours » plus à jour | ouvert | Il ne reprend pas les changements depuis la v37. *Faut-il le mettre à jour ?* |
-| app.js en un seul bloc (2 320 lignes) | ouvert, sans urgence | À découper par onglet au fil des modifications (audit point 14). |
+| app.js en un seul bloc (2 448 lignes) | ouvert, sans urgence | À découper par onglet au fil des modifications (audit point 14). |
 | Fonctions trop longues | ouvert, sans urgence | `open` de jeux.js et `ouvrir` de niveaux.js. Reporté faute de tests automatiques. |
 | Poids du dépôt (88 Mo d'historique Git) | ouvert, sans urgence | Chaque réenregistrement de voix l'alourdit. On ne réécrit pas l'historique. |
 | Audit v37 (13 points) | fait | Points 1 à 10 en v38 et v39, 11 à 13 en grande partie en v42. |
@@ -60,3 +60,5 @@ Statuts : **ouvert** (à faire), **en pause**, **plus tard** (idée gardée, à 
 | Moment à regarder dans chaque vidéo | ouvert | Araignée faite (`VIDEO_MOMENT` dans build_cours.py : simple 0:00-5:50, avancée dès 5:50, donné par Timothée). Les autres vidéos : il faut les minutes de début et de fin. |
 | Bilan envoyé au prof | plus tard | « Envoie-moi ton bilan » et le mot du prof (`data/retours.json`) supposent que Claude adapte le cours de Timothée : à repenser pour d'autres utilisateurs. |
 | Profil (prénom, guitare, main, goûts) | ouvert | Prévu avec la synchro (lot 5) puis le questionnaire (MAJ 02). |
+| Lot 5 : synchronisation entre appareils | en attente de toi | Firebase (Firestore + connexion) recommandé (Q8), plus un bouton « Signaler un problème » proposé. Rien n'est codé avant ta réponse. |
+| Lot 7 : voix et compte rendu final | ouvert | Réenregistrer les phrases changées par la MAJ 01 (environ 75 au 2026-11-04, `tools/voix.py --azure`), puis le compte rendu fait / partiel / non fait qui servira de base à la MAJ 02. |

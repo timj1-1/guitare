@@ -1,6 +1,6 @@
 # Fichiers en doublon ou obsolètes (2 novembre 2026)
 
-_Mis à jour le 2026-11-02 (app v48)._
+_Mis à jour le 2026-11-15 (app v51, contrôle de la mémoire)._
 
 Je n'ai rien supprimé ni déplacé. C'est à toi de décider.
 
@@ -18,7 +18,8 @@ Je n'ai rien supprimé ni déplacé. C'est à toi de décider.
 ## Doublons de l'app
 | Fichier | Pourquoi |
 |---|---|
-| `app-guitare/` (tout le dossier sauf `reprise-fil-app.md`) | Ancienne copie du dépôt, qui fait double emploi avec GitHub. Elle est en retard : v47 au lieu de v48. Il lui manque `samples-acier.js`, `lib/pdfjs/`, `tools/explications.py` et `tools/schemas/effets/`. Son `voix/` ne contient que les 953 anciens fichiers de Siwis, sans Rémy ni Vivienne, et son README est celui de « Ma guitare » (23 octobre). **Le dépôt GitHub fait foi.** |
+| `app-guitare/` (tout le dossier sauf `reprise-fil-app.md`) | Ancienne copie du dépôt, qui fait double emploi avec GitHub. Elle est en retard : v47 alors que le dépôt est en v51. Il lui manque notamment `accordeur.js`, `samples-acier.js`, `lib/pdfjs/`, `tools/explications.py`, `tools/tests/` et `tools/schemas/effets/`. Son `voix/` ne contient que les 953 anciens fichiers de Siwis, sans Rémy ni Vivienne, et son README est celui de « Ma guitare » (23 octobre). **Le dépôt GitHub fait foi.** |
+| `memoire-projet/backlog.md`, `carte-du-code.md`, `decisions.md`, `doublons-obsoletes.md` | Anciennes copies (2 novembre, v48) des fiches du dépôt, restées dans le dossier du projet. Seuls `resume.md` et `pedagogie.md` doivent y rester ; les autres fiches font foi dans `docs/memoire/`. |
 | `manche-guitare/manche.html` et `manche-guitare/Mon manche.html` | Deux versions presque identiques (1,86 Mo chacune, 23 octobre) : la source de l'Artifact « Mon manche » et la version pour Mac. L'app a sa propre version, plus récente, qui n'embarque plus les sons. À garder seulement si tu utilises encore l'Artifact ou la version Mac. *À confirmer.* |
 
 ## Documents de travail terminés (à archiver, pas à suivre)
